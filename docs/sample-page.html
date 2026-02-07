@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Claude Brand Core */
+            --bg-primary: #141413;
+            --bg-secondary: #1a1a18;
+            --bg-card: #1f1f1c;
+            --bg-card-hover: #27271f;
+            --bg-elevated: #2a2a26;
+            --border: #2e2e28;
+            --border-hover: #3d3d34;
+            --text-primary: #faf9f5;
+            --text-secondary: #b0aea5;
+            --text-muted: #6b6961;
+
+            /* Claude Accent Palette */
+            --accent-orange: #d97757;
+            --accent-orange-soft: #d9775720;
+            --accent-orange-mid: #d9775740;
+            --accent-blue: #6a9bcc;
+            --accent-blue-soft: #6a9bcc20;
+            --accent-blue-mid: #6a9bcc40;
+            --accent-green: #788c5d;
+            --accent-green-soft: #788c5d20;
+            --accent-green-mid: #788c5d40;
+
+            /* Extended from brand */
+            --accent-sand: #c4a882;
+            --accent-sand-soft: #c4a88220;
+            --accent-rose: #b86b6b;
+            --accent-rose-soft: #b86b6b20;
+            --accent-sage: #8a9e78;
+            --accent-sage-soft: #8a9e7820;
+            --light-cream: #e8e6dc;
+
+            --radius: 14px;
+            --radius-sm: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Subtle warm noise texture */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -20%, #d9775706, transparent),
+                radial-gradient(circle at 80% 80%, #6a9bcc04, transparent),
+                radial-gradient(circle at 20% 60%, #788c5d04, transparent);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Subtle dot grid */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle, #b0aea508 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ═══════════ SIDEBAR ═══════════ */
+        .sidebar {
+            width: 72px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            gap: 8px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 10;
+        }
+
+        .sidebar-logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-sand));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--bg-primary);
+            margin-bottom: 20px;
+            box-shadow: 0 0 24px var(--accent-orange-soft);
+            animation: logoPulse 4s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 0 20px var(--accent-orange-soft); }
+            50% { box-shadow: 0 0 32px #d9775735; }
+        }
+
+        .sidebar-item {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-muted);
+            position: relative;
+        }
+
+        .sidebar-item:hover {
+            background: var(--bg-card);
+            color: var(--text-secondary);
+        }
+
+        .sidebar-item.active {
+            background: var(--accent-orange-soft);
+            color: var(--accent-orange);
+        }
+
+        .sidebar-item.active::before {
+            content: '';
+            position: absolute;
+            left: -14px;
+            width: 3px;
+            height: 20px;
+            background: var(--accent-orange);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .sidebar-item svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .sidebar-spacer { flex: 1; }
+
+        /* ═══════════ MAIN CONTENT ═══════════ */
+        .main {
+            flex: 1;
+            margin-left: 72px;
+            padding: 28px 32px;
+        }
+
+        /* ═══════════ HEADER ═══════════ */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 32px;
+        }
+
+        .header-left h1 {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .header-left h1 span {
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-sand));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-left p {
+            font-family: 'Lora', Georgia, serif;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-date {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            padding: 8px 14px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .header-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-rose));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        /* ═══════════ LIFE SCORE RING ═══════════ */
+        .top-section {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .life-score-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .life-score-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 30%, #d9775708, transparent 70%);
+        }
+
+        .score-ring-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin-bottom: 16px;
+        }
+
+        .score-ring-container svg {
+            width: 160px;
+            height: 160px;
+            transform: rotate(-90deg);
+        }
+
+        .score-ring-bg {
+            fill: none;
+            stroke: var(--border);
+            stroke-width: 8;
+        }
+
+        .score-ring-fill {
+            fill: none;
+            stroke: url(#scoreGradient);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 408;
+            stroke-dashoffset: 90;
+            animation: ringFill 2s ease-out forwards;
+        }
+
+        @keyframes ringFill {
+            from { stroke-dashoffset: 408; }
+            to { stroke-dashoffset: 90; }
+        }
+
+        .score-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .score-value .number {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -2px;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--accent-orange), var(--accent-sand));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .score-value .label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 2px;
+        }
+
+        .score-subtitle {
+            font-family: 'Lora', Georgia, serif;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .score-trend {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--accent-green);
+            margin-top: 4px;
+        }
+
+        /* ═══════════ AREA SCORES ═══════════ */
+        .areas-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .area-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .area-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .area-card:hover {
+            border-color: transparent;
+            transform: translateY(-2px);
+        }
+
+        .area-card:hover::after { opacity: 1; }
+
+        .area-card.health::after { background: linear-gradient(90deg, var(--accent-green), var(--accent-sage)); }
+        .area-card.health:hover { border-color: var(--accent-green-mid); box-shadow: 0 4px 20px var(--accent-green-soft); }
+
+        .area-card.finance::after { background: linear-gradient(90deg, var(--accent-sand), var(--accent-orange)); }
+        .area-card.finance:hover { border-color: var(--accent-orange-mid); box-shadow: 0 4px 20px var(--accent-orange-soft); }
+
+        .area-card.projects::after { background: linear-gradient(90deg, var(--accent-blue), #8bb0d4); }
+        .area-card.projects:hover { border-color: var(--accent-blue-mid); box-shadow: 0 4px 20px var(--accent-blue-soft); }
+
+        .area-card.family::after { background: linear-gradient(90deg, var(--accent-rose), var(--accent-orange)); }
+        .area-card.family:hover { border-color: #b86b6b40; box-shadow: 0 4px 20px var(--accent-rose-soft); }
+
+        .area-card.growth::after { background: linear-gradient(90deg, var(--accent-sand), var(--accent-blue)); }
+        .area-card.growth:hover { border-color: #c4a88240; box-shadow: 0 4px 20px var(--accent-sand-soft); }
+
+        .area-card.leisure::after { background: linear-gradient(90deg, var(--accent-sage), var(--accent-green)); }
+        .area-card.leisure:hover { border-color: #8a9e7840; box-shadow: 0 4px 20px var(--accent-sage-soft); }
+
+        .area-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .area-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .area-card.health .area-icon { background: var(--accent-green-soft); }
+        .area-card.finance .area-icon { background: var(--accent-orange-soft); }
+        .area-card.projects .area-icon { background: var(--accent-blue-soft); }
+        .area-card.family .area-icon { background: var(--accent-rose-soft); }
+        .area-card.growth .area-icon { background: var(--accent-sand-soft); }
+        .area-card.leisure .area-icon { background: var(--accent-sage-soft); }
+
+        .area-score-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .area-card.health .area-score-badge { color: var(--accent-green); }
+        .area-card.finance .area-score-badge { color: var(--accent-orange); }
+        .area-card.projects .area-score-badge { color: var(--accent-blue); }
+        .area-card.family .area-score-badge { color: var(--accent-rose); }
+        .area-card.growth .area-score-badge { color: var(--accent-sand); }
+        .area-card.leisure .area-score-badge { color: var(--accent-sage); }
+
+        .area-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .area-detail {
+            font-family: 'Lora', Georgia, serif;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .area-bar {
+            height: 3px;
+            background: var(--border);
+            border-radius: 3px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .area-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1.5s ease;
+        }
+
+        .area-card.health .area-bar-fill { background: linear-gradient(90deg, var(--accent-green), var(--accent-sage)); width: 82%; }
+        .area-card.finance .area-bar-fill { background: linear-gradient(90deg, var(--accent-orange), var(--accent-sand)); width: 65%; }
+        .area-card.projects .area-bar-fill { background: linear-gradient(90deg, var(--accent-blue), #8bb0d4); width: 74%; }
+        .area-card.family .area-bar-fill { background: linear-gradient(90deg, var(--accent-rose), var(--accent-orange)); width: 58%; }
+        .area-card.growth .area-bar-fill { background: linear-gradient(90deg, var(--accent-sand), var(--accent-blue)); width: 70%; }
+        .area-card.leisure .area-bar-fill { background: linear-gradient(90deg, var(--accent-sage), var(--accent-green)); width: 45%; }
+
+        /* ═══════════ BOTTOM GRID ═══════════ */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 340px;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px;
+        }
+
+        .card-title {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            animation: dotPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes dotPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* ═══════════ GOALS / OKRs ═══════════ */
+        .goal-item {
+            padding: 14px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .goal-item:last-child { border-bottom: none; }
+
+        .goal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .goal-name {
+            font-family: 'Lora', Georgia, serif;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .goal-pct {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--accent-orange);
+        }
+
+        .goal-bar {
+            height: 4px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .goal-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-orange), var(--accent-sand));
+            border-radius: 4px;
+            transition: width 1.5s ease;
+        }
+
+        .goal-meta {
+            display: flex;
+            gap: 12px;
+            margin-top: 6px;
+        }
+
+        .goal-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .goal-tag.q1 { background: var(--accent-blue-soft); color: var(--accent-blue); }
+        .goal-tag.on-track { background: var(--accent-green-soft); color: var(--accent-green); }
+        .goal-tag.at-risk { background: var(--accent-orange-soft); color: var(--accent-orange); }
+
+        /* ═══════════ HABITS ═══════════ */
+        .habits-grid-visual {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .habit-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .habit-label {
+            width: 80px;
+            font-family: 'Lora', Georgia, serif;
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .habit-cells {
+            display: flex;
+            gap: 3px;
+            flex: 1;
+        }
+
+        .habit-cell {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+        }
+
+        .habit-cell:hover {
+            transform: scale(1.3);
+            z-index: 2;
+        }
+
+        .habit-cell.empty { background: var(--border); opacity: 0.3; }
+
+        /* Green family */
+        .habit-cell.l1 { background: #788c5d30; }
+        .habit-cell.l2 { background: #788c5d60; }
+        .habit-cell.l3 { background: #788c5d; }
+
+        /* Blue family */
+        .habit-cell.blue.l1 { background: #6a9bcc30; }
+        .habit-cell.blue.l2 { background: #6a9bcc60; }
+        .habit-cell.blue.l3 { background: #6a9bcc; }
+
+        /* Orange family */
+        .habit-cell.orange.l1 { background: #d9775730; }
+        .habit-cell.orange.l2 { background: #d9775760; }
+        .habit-cell.orange.l3 { background: #d97757; }
+
+        /* Sand family */
+        .habit-cell.sand.l1 { background: #c4a88230; }
+        .habit-cell.sand.l2 { background: #c4a88260; }
+        .habit-cell.sand.l3 { background: #c4a882; }
+
+        /* Sage family */
+        .habit-cell.sage.l1 { background: #8a9e7830; }
+        .habit-cell.sage.l2 { background: #8a9e7860; }
+        .habit-cell.sage.l3 { background: #8a9e78; }
+
+        .habit-days-header {
+            display: flex;
+            gap: 3px;
+            margin-left: 90px;
+            margin-bottom: 6px;
+        }
+
+        .habit-day-label {
+            width: 18px;
+            text-align: center;
+            font-size: 9px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .habit-streak {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        .streak-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .streak-fire { font-size: 14px; }
+
+        .streak-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-orange);
+        }
+
+        .streak-label {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* ═══════════ DAILY FOCUS / TODAY ═══════════ */
+        .today-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .focus-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .focus-item:last-child { border-bottom: none; }
+
+        .focus-check {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 2px solid var(--border);
+            flex-shrink: 0;
+            margin-top: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .focus-check:hover { border-color: var(--accent-orange); }
+
+        .focus-check.done {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+
+        .focus-check.done::after {
+            content: '✓';
+            font-size: 11px;
+            color: var(--bg-primary);
+            font-weight: 700;
+        }
+
+        .focus-content { flex: 1; }
+
+        .focus-title {
+            font-family: 'Lora', Georgia, serif;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .focus-title.completed {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .focus-tag {
+            display: inline-block;
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 4px;
+        }
+
+        .focus-tag.meuflip { background: var(--accent-blue-soft); color: var(--accent-blue); }
+        .focus-tag.fitness { background: var(--accent-green-soft); color: var(--accent-green); }
+        .focus-tag.picpay { background: var(--accent-sand-soft); color: var(--accent-sand); }
+        .focus-tag.family { background: var(--accent-rose-soft); color: var(--accent-rose); }
+
+        .daily-checkin {
+            margin-top: 16px;
+            padding: 14px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .checkin-label {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .mood-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mood-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: none;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mood-btn:hover { background: var(--bg-card); transform: scale(1.1); }
+        .mood-btn.selected { border-color: var(--accent-orange); background: var(--accent-orange-soft); }
+
+        /* ═══════════ WEEKLY OVERVIEW BAR ═══════════ */
+        .weekly-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-info .stat-label {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-info .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .stat-info .stat-sub {
+            font-family: 'Lora', Georgia, serif;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .stat-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 40px;
+        }
+
+        .stat-bar {
+            width: 6px;
+            border-radius: 3px;
+            transition: height 1s ease;
+        }
+
+        /* ═══════════ ANIMATIONS ═══════════ */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        .delay-1 { animation-delay: 0.05s; }
+        .delay-2 { animation-delay: 0.1s; }
+        .delay-3 { animation-delay: 0.15s; }
+        .delay-4 { animation-delay: 0.2s; }
+        .delay-5 { animation-delay: 0.25s; }
+        .delay-6 { animation-delay: 0.3s; }
+        .delay-7 { animation-delay: 0.35s; }
+        .delay-8 { animation-delay: 0.4s; }
+
+        /* ═══════════ RESPONSIVE ═══════════ */
+        @media (max-width: 1200px) {
+            .bottom-grid { grid-template-columns: 1fr 1fr; }
+            .bottom-grid .card:last-child { grid-column: 1 / -1; }
+        }
+
+        @media (max-width: 900px) {
+            .top-section { grid-template-columns: 1fr; }
+            .areas-grid { grid-template-columns: repeat(2, 1fr); }
+            .bottom-grid { grid-template-columns: 1fr; }
+            .weekly-bar { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- SIDEBAR -->
+        <nav class="sidebar">
+            <div class="sidebar-logo">MC</div>
+            <div class="sidebar-item active" title="Dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </div>
+            <div class="sidebar-item" title="Metas">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            </div>
+            <div class="sidebar-item" title="Hábitos">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="sidebar-item" title="Finanças">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="sidebar-item" title="Agenda">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div class="sidebar-item" title="Journal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </div>
+            <div class="sidebar-spacer"></div>
+            <div class="sidebar-item" title="Configurações">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </div>
+        </nav>
+
+        <!-- MAIN -->
+        <main class="main">
+            <!-- HEADER -->
+            <header class="header animate-in delay-1">
+                <div class="header-left">
+                    <h1>Bom dia, <span>Bruno</span> 🚀</h1>
+                    <p>Sua semana está 74% no caminho certo. 3 metas precisam de atenção.</p>
+                </div>
+                <div class="header-right">
+                    <div class="header-date">06 FEV 2026 · SEX</div>
+                    <div class="header-avatar">BG</div>
+                </div>
+            </header>
+
+            <!-- WEEKLY STATS -->
+            <div class="weekly-bar animate-in delay-2">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">Foco Semanal</div>
+                        <div class="stat-value" style="color: var(--accent-blue);">18<span style="font-size:16px;color:var(--text-muted);">/24</span></div>
+                        <div class="stat-sub">tarefas concluídas</div>
+                    </div>
+                    <div class="stat-chart">
+                        <div class="stat-bar" style="height:60%;background:#6a9bcc40;"></div>
+                        <div class="stat-bar" style="height:80%;background:#6a9bcc60;"></div>
+                        <div class="stat-bar" style="height:45%;background:#6a9bcc40;"></div>
+                        <div class="stat-bar" style="height:90%;background:#6a9bcc80;"></div>
+                        <div class="stat-bar" style="height:70%;background:#6a9bcc;"></div>
+                        <div class="stat-bar" style="height:30%;background:#6a9bcc30;"></div>
+                        <div class="stat-bar" style="height:15%;background:#6a9bcc20;"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">Horas Produtivas</div>
+                        <div class="stat-value" style="color: var(--accent-green);">32<span style="font-size:16px;color:var(--text-muted);">h</span></div>
+                        <div class="stat-sub">↑ 12% vs semana passada</div>
+                    </div>
+                    <div class="stat-chart">
+                        <div class="stat-bar" style="height:50%;background:#788c5d40;"></div>
+                        <div class="stat-bar" style="height:65%;background:#788c5d60;"></div>
+                        <div class="stat-bar" style="height:70%;background:#788c5d60;"></div>
+                        <div class="stat-bar" style="height:85%;background:#788c5d80;"></div>
+                        <div class="stat-bar" style="height:90%;background:#788c5d;"></div>
+                        <div class="stat-bar" style="height:40%;background:#788c5d30;"></div>
+                        <div class="stat-bar" style="height:20%;background:#788c5d20;"></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">Saldo do Mês</div>
+                        <div class="stat-value" style="color: var(--accent-orange);">R$4.2<span style="font-size:16px;color:var(--text-muted);">k</span></div>
+                        <div class="stat-sub">receita líquida</div>
+                    </div>
+                    <div class="stat-chart">
+                        <div class="stat-bar" style="height:40%;background:#d9775740;"></div>
+                        <div class="stat-bar" style="height:55%;background:#d9775750;"></div>
+                        <div class="stat-bar" style="height:60%;background:#d9775760;"></div>
+                        <div class="stat-bar" style="height:50%;background:#d9775750;"></div>
+                        <div class="stat-bar" style="height:75%;background:#d9775780;"></div>
+                        <div class="stat-bar" style="height:85%;background:#d97757;"></div>
+                        <div class="stat-bar" style="height:20%;background:#d9775720;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TOP: LIFE SCORE + AREAS -->
+            <div class="top-section animate-in delay-3">
+                <div class="life-score-card">
+                    <svg width="0" height="0"><defs><linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#d97757"/><stop offset="100%" stop-color="#c4a882"/></linearGradient></defs></svg>
+                    <div class="score-ring-container">
+                        <svg viewBox="0 0 140 140">
+                            <circle class="score-ring-bg" cx="70" cy="70" r="65"/>
+                            <circle class="score-ring-fill" cx="70" cy="70" r="65"/>
+                        </svg>
+                        <div class="score-value">
+                            <div class="number">78</div>
+                            <div class="label">Life Score</div>
+                        </div>
+                    </div>
+                    <div class="score-subtitle">Semana 6 de 2026</div>
+                    <div class="score-trend">▲ +3 pts vs semana passada</div>
+                </div>
+
+                <div class="areas-grid">
+                    <div class="area-card health animate-in delay-3">
+                        <div class="area-header">
+                            <div class="area-icon">💪</div>
+                            <div class="area-score-badge">82</div>
+                        </div>
+                        <div class="area-name">Saúde & Fitness</div>
+                        <div class="area-detail">4 treinos · 12km corrida</div>
+                        <div class="area-bar"><div class="area-bar-fill"></div></div>
+                    </div>
+                    <div class="area-card finance animate-in delay-4">
+                        <div class="area-header">
+                            <div class="area-icon">💰</div>
+                            <div class="area-score-badge">65</div>
+                        </div>
+                        <div class="area-name">Finanças</div>
+                        <div class="area-detail">85% do orçamento usado</div>
+                        <div class="area-bar"><div class="area-bar-fill"></div></div>
+                    </div>
+                    <div class="area-card projects animate-in delay-5">
+                        <div class="area-header">
+                            <div class="area-icon">🚀</div>
+                            <div class="area-score-badge">74</div>
+                        </div>
+                        <div class="area-name">Projetos & Trabalho</div>
+                        <div class="area-detail">MeuFlip: 3 PRs merged</div>
+                        <div class="area-bar"><div class="area-bar-fill"></div></div>
+                    </div>
+                    <div class="area-card family animate-in delay-6">
+                        <div class="area-header">
+                            <div class="area-icon">👨‍👧</div>
+                            <div class="area-score-badge">58</div>
+                        </div>
+                        <div class="area-name">Família</div>
+                        <div class="area-detail">Reunião da Gabi pendente</div>
+                        <div class="area-bar"><div class="area-bar-fill"></div></div>
+                    </div>
+                    <div class="area-card growth animate-in delay-7">
+                        <div class="area-header">
+                            <div class="area-icon">📚</div>
+                            <div class="area-score-badge">70</div>
+                        </div>
+                        <div class="area-name">Desenvolvimento</div>
+                        <div class="area-detail">Go: cap 4 concluído</div>
+                        <div class="area-bar"><div class="area-bar-fill"></div></div>
+                    </div>
+                    <div class="area-card leisure animate-in delay-8">
+                        <div class="area-header">
+                            <div class="area-icon">⚽</div>
+                            <div class="area-score-badge">45</div>
+                        </div>
+                        <div class="area-name">Lazer</div>
+                        <div class="area-detail">Jogo do Coxa: domingo</div>
+                        <div class="area-bar"><div class="area-bar-fill"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTTOM: GOALS + HABITS + TODAY -->
+            <div class="bottom-grid">
+                <!-- GOALS -->
+                <div class="card animate-in delay-5">
+                    <div class="card-title">
+                        <span class="dot" style="background:var(--accent-orange);"></span>
+                        Metas Q1 2026
+                    </div>
+                    <div class="goal-item">
+                        <div class="goal-header">
+                            <div class="goal-name">Lançar MVP do MeuFlip</div>
+                            <div class="goal-pct">68%</div>
+                        </div>
+                        <div class="goal-bar"><div class="goal-bar-fill" style="width:68%;"></div></div>
+                        <div class="goal-meta">
+                            <span class="goal-tag q1">Q1</span>
+                            <span class="goal-tag on-track">On Track</span>
+                        </div>
+                    </div>
+                    <div class="goal-item">
+                        <div class="goal-header">
+                            <div class="goal-name">Correr 150km no trimestre</div>
+                            <div class="goal-pct">42%</div>
+                        </div>
+                        <div class="goal-bar"><div class="goal-bar-fill" style="width:42%;"></div></div>
+                        <div class="goal-meta">
+                            <span class="goal-tag q1">Q1</span>
+                            <span class="goal-tag at-risk">At Risk</span>
+                        </div>
+                    </div>
+                    <div class="goal-item">
+                        <div class="goal-header">
+                            <div class="goal-name">Reserva de emergência: R$15k</div>
+                            <div class="goal-pct">78%</div>
+                        </div>
+                        <div class="goal-bar"><div class="goal-bar-fill" style="width:78%;"></div></div>
+                        <div class="goal-meta">
+                            <span class="goal-tag q1">Q1</span>
+                            <span class="goal-tag on-track">On Track</span>
+                        </div>
+                    </div>
+                    <div class="goal-item">
+                        <div class="goal-header">
+                            <div class="goal-name">Completar curso de Go</div>
+                            <div class="goal-pct">55%</div>
+                        </div>
+                        <div class="goal-bar"><div class="goal-bar-fill" style="width:55%;"></div></div>
+                        <div class="goal-meta">
+                            <span class="goal-tag q1">Q1</span>
+                            <span class="goal-tag on-track">On Track</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HABITS -->
+                <div class="card animate-in delay-6">
+                    <div class="card-title">
+                        <span class="dot" style="background:var(--accent-green);"></span>
+                        Hábitos · Últimas 4 Semanas
+                    </div>
+                    <div class="habit-days-header">
+                        <div class="habit-day-label">S</div><div class="habit-day-label">T</div><div class="habit-day-label">Q</div><div class="habit-day-label">Q</div><div class="habit-day-label">S</div><div class="habit-day-label">S</div><div class="habit-day-label">D</div>
+                        <div class="habit-day-label" style="margin-left:4px;">S</div><div class="habit-day-label">T</div><div class="habit-day-label">Q</div><div class="habit-day-label">Q</div><div class="habit-day-label">S</div><div class="habit-day-label">S</div><div class="habit-day-label">D</div>
+                        <div class="habit-day-label" style="margin-left:4px;">S</div><div class="habit-day-label">T</div><div class="habit-day-label">Q</div><div class="habit-day-label">Q</div><div class="habit-day-label">S</div><div class="habit-day-label">S</div><div class="habit-day-label">D</div>
+                        <div class="habit-day-label" style="margin-left:4px;">S</div><div class="habit-day-label">T</div><div class="habit-day-label">Q</div><div class="habit-day-label">Q</div><div class="habit-day-label">S</div><div class="habit-day-label">S</div><div class="habit-day-label">D</div>
+                    </div>
+                    <div class="habits-grid-visual">
+                        <div class="habit-row">
+                            <div class="habit-label">Academia</div>
+                            <div class="habit-cells">
+                                <div class="habit-cell l3"></div><div class="habit-cell empty"></div><div class="habit-cell l3"></div><div class="habit-cell empty"></div><div class="habit-cell l3"></div><div class="habit-cell empty"></div><div class="habit-cell empty"></div>
+                                <div class="habit-cell l3"></div><div class="habit-cell l2"></div><div class="habit-cell l3"></div><div class="habit-cell empty"></div><div class="habit-cell l3"></div><div class="habit-cell empty"></div><div class="habit-cell empty"></div>
+                                <div class="habit-cell l3"></div><div class="habit-cell empty"></div><div class="habit-cell l3"></div><div class="habit-cell l2"></div><div class="habit-cell l3"></div><div class="habit-cell empty"></div><div class="habit-cell empty"></div>
+                                <div class="habit-cell l3"></div><div class="habit-cell empty"></div><div class="habit-cell l3"></div><div class="habit-cell empty"></div><div class="habit-cell empty"></div><div class="habit-cell empty"></div><div class="habit-cell empty"></div>
+                            </div>
+                        </div>
+                        <div class="habit-row">
+                            <div class="habit-label">Corrida</div>
+                            <div class="habit-cells">
+                                <div class="habit-cell blue empty"></div><div class="habit-cell blue l2"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue l3"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue l3"></div><div class="habit-cell blue empty"></div>
+                                <div class="habit-cell blue empty"></div><div class="habit-cell blue l3"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue l2"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue l3"></div><div class="habit-cell blue empty"></div>
+                                <div class="habit-cell blue empty"></div><div class="habit-cell blue l3"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue l3"></div><div class="habit-cell blue empty"></div>
+                                <div class="habit-cell blue empty"></div><div class="habit-cell blue l2"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue l3"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue empty"></div><div class="habit-cell blue empty"></div>
+                            </div>
+                        </div>
+                        <div class="habit-row">
+                            <div class="habit-label">Jiu-Jitsu</div>
+                            <div class="habit-cells">
+                                <div class="habit-cell orange empty"></div><div class="habit-cell orange l3"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange l3"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div>
+                                <div class="habit-cell orange empty"></div><div class="habit-cell orange l3"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange l3"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div>
+                                <div class="habit-cell orange empty"></div><div class="habit-cell orange l2"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange l3"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div>
+                                <div class="habit-cell orange empty"></div><div class="habit-cell orange l3"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div><div class="habit-cell orange empty"></div>
+                            </div>
+                        </div>
+                        <div class="habit-row">
+                            <div class="habit-label">Leitura</div>
+                            <div class="habit-cells">
+                                <div class="habit-cell sand l2"></div><div class="habit-cell sand l3"></div><div class="habit-cell sand l1"></div><div class="habit-cell sand l3"></div><div class="habit-cell sand l2"></div><div class="habit-cell sand empty"></div><div class="habit-cell sand l1"></div>
+                                <div class="habit-cell sand l3"></div><div class="habit-cell sand l2"></div><div class="habit-cell sand l3"></div><div class="habit-cell sand l1"></div><div class="habit-cell sand l3"></div><div class="habit-cell sand empty"></div><div class="habit-cell sand l2"></div>
+                                <div class="habit-cell sand l3"></div><div class="habit-cell sand l3"></div><div class="habit-cell sand l2"></div><div class="habit-cell sand l3"></div><div class="habit-cell sand l1"></div><div class="habit-cell sand empty"></div><div class="habit-cell sand l3"></div>
+                                <div class="habit-cell sand l2"></div><div class="habit-cell sand l3"></div><div class="habit-cell sand l3"></div><div class="habit-cell sand empty"></div><div class="habit-cell sand l1"></div><div class="habit-cell sand empty"></div><div class="habit-cell sand empty"></div>
+                            </div>
+                        </div>
+                        <div class="habit-row">
+                            <div class="habit-label">Natação</div>
+                            <div class="habit-cells">
+                                <div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage l3"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage l2"></div><div class="habit-cell sage empty"></div>
+                                <div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage l3"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage l3"></div><div class="habit-cell sage empty"></div>
+                                <div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage l2"></div><div class="habit-cell sage empty"></div>
+                                <div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage l3"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div><div class="habit-cell sage empty"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="habit-streak">
+                        <div class="streak-item">
+                            <span class="streak-fire">🔥</span>
+                            <span class="streak-num">12</span>
+                            <span class="streak-label">dias<br>academia</span>
+                        </div>
+                        <div class="streak-item">
+                            <span class="streak-fire">📖</span>
+                            <span class="streak-num">18</span>
+                            <span class="streak-label">dias<br>leitura</span>
+                        </div>
+                        <div class="streak-item">
+                            <span class="streak-fire">🥋</span>
+                            <span class="streak-num">6</span>
+                            <span class="streak-label">sem.<br>jiu-jitsu</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TODAY -->
+                <div class="card animate-in delay-7">
+                    <div class="card-title">
+                        <span class="dot" style="background:var(--accent-rose);"></span>
+                        Foco de Hoje
+                    </div>
+                    <div class="today-section">
+                        <div class="focus-item">
+                            <div class="focus-check done"></div>
+                            <div class="focus-content">
+                                <div class="focus-title completed">Review PR #47 — auth module</div>
+                                <span class="focus-tag meuflip">MeuFlip</span>
+                            </div>
+                        </div>
+                        <div class="focus-item">
+                            <div class="focus-check done"></div>
+                            <div class="focus-content">
+                                <div class="focus-title completed">Treino de perna + 30min esteira</div>
+                                <span class="focus-tag fitness">Fitness</span>
+                            </div>
+                        </div>
+                        <div class="focus-item">
+                            <div class="focus-check"></div>
+                            <div class="focus-content">
+                                <div class="focus-title">Implementar endpoint de goals API</div>
+                                <span class="focus-tag meuflip">MeuFlip</span>
+                            </div>
+                        </div>
+                        <div class="focus-item">
+                            <div class="focus-check"></div>
+                            <div class="focus-content">
+                                <div class="focus-title">Entrevista técnica 15h — Java Sr</div>
+                                <span class="focus-tag picpay">PicPay</span>
+                            </div>
+                        </div>
+                        <div class="focus-item">
+                            <div class="focus-check"></div>
+                            <div class="focus-content">
+                                <div class="focus-title">Buscar Gabi na escola 17h30</div>
+                                <span class="focus-tag family">Família</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="daily-checkin">
+                        <div class="checkin-label">Como você está hoje?</div>
+                        <div class="mood-selector">
+                            <button class="mood-btn">😫</button>
+                            <button class="mood-btn">😐</button>
+                            <button class="mood-btn selected">😊</button>
+                            <button class="mood-btn">🔥</button>
+                            <button class="mood-btn">🚀</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.querySelectorAll('.focus-check:not(.done)').forEach(check => {
+            check.addEventListener('click', function() {
+                this.classList.toggle('done');
+                const title = this.nextElementSibling.querySelector('.focus-title');
+                title.classList.toggle('completed');
+            });
+        });
+
+        document.querySelectorAll('.mood-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        document.querySelectorAll('.habit-cell:not(.empty)').forEach(cell => {
+            cell.style.cursor = 'pointer';
+            cell.title = 'Concluído';
+        });
+    </script>
+</body>
+</html>
