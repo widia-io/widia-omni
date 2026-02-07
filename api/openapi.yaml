@@ -1,0 +1,458 @@
+openapi: 3.1.0
+info:
+  title: Mission Control API
+  description: Personal life management SaaS platform
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        email:
+          type: string
+          format: email
+        avatar_url:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+        locale:
+          type: string
+        default_workspace_id:
+          type: string
+          format: uuid
+          nullable: true
+        onboarding_completed:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserPreferences:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        week_starts_on:
+          type: integer
+        daily_focus_limit:
+          type: integer
+        notification_email:
+          type: boolean
+        notification_push:
+          type: boolean
+        weekly_review_day:
+          type: integer
+        weekly_review_time:
+          type: string
+        theme:
+          type: string
+        currency:
+          type: string
+        score_weights:
+          type: object
+
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        owner_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorkspaceUsage:
+      type: object
+      properties:
+        counters:
+          type: object
+          properties:
+            areas_count:
+              type: integer
+            goals_count:
+              type: integer
+            habits_count:
+              type: integer
+            tasks_created_today:
+              type: integer
+            transactions_month_count:
+              type: integer
+            storage_bytes_used:
+              type: integer
+        limits:
+          type: object
+          properties:
+            max_areas:
+              type: integer
+            max_goals:
+              type: integer
+            max_habits:
+              type: integer
+            max_tasks_per_day:
+              type: integer
+            max_transactions_per_month:
+              type: integer
+            finance_enabled:
+              type: boolean
+            export_enabled:
+              type: boolean
+            storage_mb:
+              type: integer
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        user:
+          type: object
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+
+  /ready:
+    get:
+      summary: Readiness check (DB + Redis)
+      security: []
+      responses:
+        '200':
+          description: Ready
+        '503':
+          description: Not ready
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      security: []
+      responses:
+        '200':
+          description: Prometheus text format
+
+  /auth/register:
+    post:
+      summary: Register new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+                data:
+                  type: object
+                  properties:
+                    display_name:
+                      type: string
+              required: [email, password]
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      summary: Login with email/password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+              required: [email, password]
+      responses:
+        '200':
+          description: JWT tokens returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+              required: [refresh_token]
+      responses:
+        '200':
+          description: New tokens returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/logout:
+    post:
+      summary: Logout (invalidate token)
+      security: []
+      responses:
+        '200':
+          description: Logged out
+
+  /auth/forgot-password:
+    post:
+      summary: Send password recovery email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+              required: [email]
+      responses:
+        '200':
+          description: Recovery email sent
+
+  /auth/reset-password:
+    post:
+      summary: Reset password with token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                access_token:
+                  type: string
+                password:
+                  type: string
+              required: [access_token, password]
+      responses:
+        '200':
+          description: Password updated
+
+  /auth/verify-email:
+    post:
+      summary: Verify email address
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token_hash:
+                  type: string
+                type:
+                  type: string
+              required: [token_hash, type]
+      responses:
+        '200':
+          description: Email verified
+
+  /api/v1/me:
+    get:
+      summary: Get current user profile
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+    put:
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name:
+                  type: string
+                avatar_url:
+                  type: string
+                  nullable: true
+                timezone:
+                  type: string
+                locale:
+                  type: string
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+    delete:
+      summary: Delete account (GDPR)
+      responses:
+        '200':
+          description: Account deleted
+
+  /api/v1/me/preferences:
+    get:
+      summary: Get user preferences
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+    put:
+      summary: Update user preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '200':
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+
+  /api/v1/workspace:
+    get:
+      summary: Get current workspace
+      responses:
+        '200':
+          description: Workspace details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+    put:
+      summary: Update workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+      responses:
+        '200':
+          description: Updated workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+
+  /api/v1/workspace/usage:
+    get:
+      summary: Get workspace usage (counters vs limits)
+      responses:
+        '200':
+          description: Usage data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceUsage'
+        '429':
+          description: Rate limit exceeded
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+            X-RateLimit-Reset:
+              schema:
+                type: integer

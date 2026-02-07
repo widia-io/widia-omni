@@ -1115,17 +1115,17 @@ go.opentelemetry.io/otel              # Tracing (optional)
 
 ## 🚀 Milestones
 
-### Milestone 1 — Foundation
-- [ ] Supabase + full migrations
-- [ ] Go scaffold: config, Chi, zerolog
-- [ ] Auth middleware (JWT → user → workspace → entitlements)
-- [ ] Entitlement gate middleware (feature + limit check O(1))
-- [ ] Rate limit (token bucket per workspace + route group)
-- [ ] Request ID + CORS + observability logger
-- [ ] User profile + preferences CRUD
-- [ ] Health / ready / metrics endpoints
-- [ ] Docker + Traefik
-- [ ] OpenAPI spec skeleton
+### Milestone 1 — Foundation ✅
+- [x] Supabase + full migrations
+- [x] Go scaffold: config, Chi, zerolog
+- [x] Auth middleware (JWT → user → workspace → entitlements)
+- [x] Entitlement gate middleware (feature + limit check O(1))
+- [x] Rate limit (token bucket per workspace + route group)
+- [x] Request ID + CORS + observability logger
+- [x] User profile + preferences CRUD
+- [x] Health / ready / metrics endpoints
+- [x] Docker + Traefik
+- [x] OpenAPI spec skeleton
 
 ### Milestone 2 — Core + Billing Skeleton
 - [ ] Life Areas CRUD (soft delete, counter triggers)
@@ -1174,3 +1174,31 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - [ ] Family plan (workspace members)
 - [ ] Mobile app
 - [ ] Referral system
+
+---
+
+## Changelog
+
+### M1 — Foundation (2026-02-07)
+
+~80 files, all compiling (`go build` + `go vet` clean).
+
+| Phase | Arquivos | Detalhe |
+|-------|----------|---------|
+| Phase 0 — Project Init | go.mod, .gitignore, .env.example, Makefile, dirs | Go 1.24, chi/v5, pgx/v5, go-redis/v9, zerolog, caarlos0/env, prometheus |
+| Phase 1 — Config + Observability | config.go, logger.go, metrics.go | Env parsing via struct tags, zerolog JSON, Prometheus histogram + counter |
+| Phase 2 — Migrations | 40 SQL files (20 up/down) | Extensions, workspaces, plans, entitlements, counters, profiles, areas, goals, habits, tasks, finances, journal, scores, notifications, audit, stripe events, RLS, indexes, triggers, seed |
+| Phase 3 — sqlc | sqlc.yaml + 4 query files | workspaces.sql, entitlements.sql, counters.sql, users.sql |
+| Phase 4 — Domain | 5 models | Workspace, User, Entitlement (com helpers CanCreate*), Plan, Counter |
+| Phase 5 — Middleware | 7 files + context.go | RequestID, Logger, CORS, Auth (JWT/HMAC), Tenant (Redis cache 5min), Entitlement gate, RateLimit (token bucket) |
+| Phase 6 — Services | 5 services | Auth (Supabase REST direto), User, Workspace, Entitlement (cache + derive), Counter |
+| Phase 7 — Handlers | 5 handlers | Health (/health, /ready), Auth (register/login/refresh/logout/forgot/reset/verify), User (CRUD + prefs), Workspace (get/update/usage), Response helpers |
+| Phase 8 — Router + Server | router.go, cmd/api, cmd/worker | Chi router com middleware stack, graceful shutdown, worker stub |
+| Phase 9 — Docker | Dockerfile, docker-compose.yml, .dockerignore | Multi-stage build, Traefik v3, Redis 7, replicas 2, LetsEncrypt |
+| Phase 10 — OpenAPI | api/openapi.yaml | OpenAPI 3.1, JWT bearer, todos endpoints M1, schemas completos |
+
+**Pendente para rodar:**
+1. Setup Supabase em `/Users/bruno/Developer/infra`
+2. `.env` com valores reais
+3. `make migrate-up`
+4. `make dev` → `curl localhost:8080/health`

@@ -1,0 +1,22 @@
+SET search_path TO widia_omni;
+
+DROP INDEX IF EXISTS idx_stripe_events_date;
+DROP INDEX IF EXISTS idx_audit_entity;
+DROP INDEX IF EXISTS idx_audit_ws;
+DROP INDEX IF EXISTS idx_notif_unread;
+DROP INDEX IF EXISTS idx_life_scores_ws;
+DROP INDEX IF EXISTS idx_area_scores_ws;
+DROP INDEX IF EXISTS idx_journal_ws;
+DROP INDEX IF EXISTS idx_txn_tags;
+DROP INDEX IF EXISTS idx_txn_ws_cat;
+DROP INDEX IF EXISTS idx_txn_ws_type;
+DROP INDEX IF EXISTS idx_txn_ws_date;
+DROP INDEX IF EXISTS idx_tasks_pending;
+DROP INDEX IF EXISTS idx_tasks_focus;
+DROP INDEX IF EXISTS idx_tasks_ws;
+DROP INDEX IF EXISTS idx_habits_active;
+DROP INDEX IF EXISTS idx_habit_entries_habit;
+DROP INDEX IF EXISTS idx_habit_entries_ws;
+DROP INDEX IF EXISTS idx_goals_active;
+DROP INDEX IF EXISTS idx_goals_parent;
+DROP INDEX IF EXISTS idx_goals_ws_period;
