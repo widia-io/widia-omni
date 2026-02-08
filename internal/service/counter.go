@@ -60,6 +60,24 @@ func (s *CounterService) IncrementTransactionsMonth(ctx context.Context, wsID uu
 	return err
 }
 
+func (s *CounterService) IncrementStorage(ctx context.Context, wsID uuid.UUID, bytes int64) error {
+	_, err := s.db.Exec(ctx, `
+		UPDATE workspace_counters
+		SET storage_bytes_used = storage_bytes_used + $2
+		WHERE workspace_id = $1
+	`, wsID, bytes)
+	return err
+}
+
+func (s *CounterService) DecrementStorage(ctx context.Context, wsID uuid.UUID, bytes int64) error {
+	_, err := s.db.Exec(ctx, `
+		UPDATE workspace_counters
+		SET storage_bytes_used = GREATEST(0, storage_bytes_used - $2)
+		WHERE workspace_id = $1
+	`, wsID, bytes)
+	return err
+}
+
 func (s *CounterService) ResetDaily(ctx context.Context) error {
 	_, err := s.db.Exec(ctx, `
 		UPDATE workspace_counters

@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/widia-io/widia-omni/internal/domain"
+	"github.com/widia-io/widia-omni/internal/observability"
 )
 
 type HabitService struct {
@@ -58,6 +59,7 @@ func (s *HabitService) Create(ctx context.Context, wsID uuid.UUID, limits *domai
 		return nil, err
 	}
 	if !limits.CanCreateHabit(counters.HabitsCount) {
+		observability.EntitlementLimitReachedTotal.WithLabelValues("habits").Inc()
 		return nil, errors.New("habit limit reached")
 	}
 

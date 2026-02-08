@@ -76,3 +76,11 @@ func (l *EntitlementLimits) CanCreateTask(todayCount int) bool {
 func (l *EntitlementLimits) CanCreateTransaction(monthCount int) bool {
 	return l.IsUnlimited(l.MaxTransactionsPerMonth) || monthCount < l.MaxTransactionsPerMonth
 }
+
+func (l *EntitlementLimits) CanUseStorage(currentBytes, additionalBytes int64) bool {
+	if l.IsUnlimited(l.StorageMB) {
+		return true
+	}
+	limitBytes := int64(l.StorageMB) * 1024 * 1024
+	return currentBytes+additionalBytes <= limitBytes
+}

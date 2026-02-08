@@ -65,6 +65,21 @@ func main() {
 
 	r := router.New(cfg, logger, db, rdb)
 
+	// Background: refresh subscription gauge every 5min
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		observability.RefreshSubscriptionGauge(ctx, db, logger) // initial
+		for {
+			select {
+			case <-ticker.C:
+				observability.RefreshSubscriptionGauge(ctx, db, logger)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
 		Handler:      r,

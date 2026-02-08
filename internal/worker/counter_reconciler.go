@@ -6,6 +6,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
+	"github.com/widia-io/widia-omni/internal/observability"
 )
 
 type CounterReconcilerHandler struct {
@@ -26,6 +27,7 @@ func (h *CounterReconcilerHandler) ProcessTask(ctx context.Context, _ *asynq.Tas
 			updated_at = now()
 	`)
 	if err != nil {
+		observability.AsynqJobFailuresTotal.WithLabelValues(TypeCounterReconcile).Inc()
 		return err
 	}
 

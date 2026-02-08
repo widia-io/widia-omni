@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/widia-io/widia-omni/internal/domain"
+	"github.com/widia-io/widia-omni/internal/observability"
 )
 
 type GoalService struct {
@@ -107,6 +108,7 @@ func (s *GoalService) Create(ctx context.Context, wsID uuid.UUID, limits *domain
 		return nil, err
 	}
 	if !limits.CanCreateGoal(counters.GoalsCount) {
+		observability.EntitlementLimitReachedTotal.WithLabelValues("goals").Inc()
 		return nil, errors.New("goal limit reached")
 	}
 

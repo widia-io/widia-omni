@@ -3,25 +3,50 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/widia-io/widia-omni/internal/domain"
 )
 
 type ScoreService struct {
-	db *pgxpool.Pool
+	db  *pgxpool.Pool
+	rdb *redis.Client
 }
 
-func NewScoreService(db *pgxpool.Pool) *ScoreService {
-	return &ScoreService{db: db}
+func NewScoreService(db *pgxpool.Pool, rdb *redis.Client) *ScoreService {
+	return &ScoreService{db: db, rdb: rdb}
+}
+
+func (s *ScoreService) InvalidateCache(ctx context.Context, wsID uuid.UUID) {
+	if s.rdb == nil {
+		return
+	}
+	s.rdb.Del(ctx, fmt.Sprintf("ws:%s:score:current", wsID.String()))
+	iter := s.rdb.Scan(ctx, 0, fmt.Sprintf("ws:%s:score:hist:*", wsID.String()), 100).Iterator()
+	for iter.Next(ctx) {
+		s.rdb.Del(ctx, iter.Val())
+	}
 }
 
 func (s *ScoreService) GetHistory(ctx context.Context, wsID uuid.UUID, weeks int) (*domain.ScoreHistory, error) {
 	if weeks <= 0 || weeks > 52 {
 		weeks = 4
+	}
+
+	cacheKey := fmt.Sprintf("ws:%s:score:hist:%d", wsID.String(), weeks)
+	if s.rdb != nil {
+		cached, err := s.rdb.Get(ctx, cacheKey).Bytes()
+		if err == nil {
+			var h domain.ScoreHistory
+			if json.Unmarshal(cached, &h) == nil {
+				return &h, nil
+			}
+		}
 	}
 
 	lifeRows, err := s.db.Query(ctx, `
@@ -65,10 +90,28 @@ func (s *ScoreService) GetHistory(ctx context.Context, wsID uuid.UUID, weeks int
 		areaScores = append(areaScores, as)
 	}
 
-	return &domain.ScoreHistory{LifeScores: lifeScores, AreaScores: areaScores}, nil
+	history := &domain.ScoreHistory{LifeScores: lifeScores, AreaScores: areaScores}
+
+	if s.rdb != nil {
+		data, _ := json.Marshal(history)
+		s.rdb.Set(ctx, cacheKey, data, 10*time.Minute)
+	}
+
+	return history, nil
 }
 
 func (s *ScoreService) GetCurrent(ctx context.Context, wsID uuid.UUID) (*domain.LifeScore, error) {
+	cacheKey := fmt.Sprintf("ws:%s:score:current", wsID.String())
+	if s.rdb != nil {
+		cached, err := s.rdb.Get(ctx, cacheKey).Bytes()
+		if err == nil {
+			var ls domain.LifeScore
+			if json.Unmarshal(cached, &ls) == nil {
+				return &ls, nil
+			}
+		}
+	}
+
 	var ls domain.LifeScore
 	err := s.db.QueryRow(ctx, `
 		SELECT id, workspace_id, score, week_start, area_scores, created_at
@@ -79,6 +122,12 @@ func (s *ScoreService) GetCurrent(ctx context.Context, wsID uuid.UUID) (*domain.
 	if err != nil {
 		return nil, err
 	}
+
+	if s.rdb != nil {
+		data, _ := json.Marshal(ls)
+		s.rdb.Set(ctx, cacheKey, data, 10*time.Minute)
+	}
+
 	return &ls, nil
 }
 

@@ -1183,12 +1183,12 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - [x] Transaction counter enforcement (monthly limit via counterSvc)
 - [x] Finance entitlement gate on all endpoints (finance_enabled check)
 
-### Milestone 5 — Scale & Polish
-- [ ] Redis caching (dashboard, scores)
-- [ ] Storage usage tracking
-- [ ] Admin endpoints + entitlement overrides
-- [ ] Prometheus metrics refinement
-- [ ] OpenAPI spec complete
+### Milestone 5 — Scale & Polish ✅
+- [x] Redis caching (dashboard, scores)
+- [x] Storage usage tracking
+- [x] Admin endpoints + entitlement overrides
+- [x] Prometheus metrics refinement
+- [x] OpenAPI spec complete
 
 ### Milestone 6 — Frontend
 - [ ] React SPA (from HTML mock)
@@ -1284,3 +1284,15 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - Budgets: upsert creates new budget, upsert same category+month updates amount (600→600), list by month (2), hard delete
 - Summary: income=5000, expenses=375, investments=1000, net_balance=3625, 3 category breakdowns, 2 budget comparisons (Groceries 62.5% spent, Stocks 0%)
 - Counter: transactions_month_count=4 after 4 creates, transactions_month=2026-02
+
+### M5 — Scale & Polish (2026-02-08)
+
+21 files changed (3 new + 18 modified), `go build` + `go vet` clean.
+
+| Phase | Files | Detail |
+|-------|-------|--------|
+| Phase 1 — Redis Caching | 4 modified | DashboardService: added `rdb *redis.Client`, cache key `ws:{wsID}:dash` TTL 2min. ScoreService: added `rdb *redis.Client`, cache `ws:{wsID}:score:current` + `ws:{wsID}:score:hist:{weeks}` TTL 10min, `InvalidateCache` with SCAN. ScoreSnapshotWorker: calls InvalidateCache after Calculate. Router: updated constructors to pass rdb. |
+| Phase 2 — Storage Tracking | 2 modified | CounterService: `IncrementStorage(ctx, wsID, bytes)` and `DecrementStorage(ctx, wsID, bytes)` with GREATEST(0, ...) floor. EntitlementLimits: `CanUseStorage(currentBytes, additionalBytes)` converting StorageMB to bytes. |
+| Phase 3 — Admin Endpoints | 3 new, 1 modified | AdminAuth middleware (X-Service-Key header). AdminService: GetMetrics (users/workspaces/subs by tier), ListUsers (paginated join), GetUser (detail + counters + entitlement), GetWorkspaceUsage (counters + limits), OverrideEntitlement (tx: deactivate current → insert new source='admin' → invalidate cache). AdminHandler (5 endpoints). Router: `/admin` group with 5 routes. |
+| Phase 4 — Prometheus Metrics | 11 modified | 4 new metrics: `active_subscriptions` GaugeVec (tier), `asynq_queue_depth` GaugeVec (queue), `asynq_job_failures_total` CounterVec (task_type), `entitlement_limit_reached_total` CounterVec (limit_type). `RefreshSubscriptionGauge` func (5min goroutine in api). Worker: metrics HTTP on :9090, Inspector polling queue depths every 30s. 4 worker files: increment failure counter on errors. 5 service files (area/goal/habit/task/finance): increment limit counter on rejection. |
+| Phase 5 — OpenAPI Spec | 1 rewritten | Full `api/openapi.yaml` (~2800 lines): 60+ endpoints, 30+ schemas, 18 tags, bearerAuth + serviceKeyAuth, standard error responses (400/401/403/404/429), all request/response bodies. |

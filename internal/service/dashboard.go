@@ -2,17 +2,22 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 type DashboardService struct {
-	db *pgxpool.Pool
+	db  *pgxpool.Pool
+	rdb *redis.Client
 }
 
-func NewDashboardService(db *pgxpool.Pool) *DashboardService {
-	return &DashboardService{db: db}
+func NewDashboardService(db *pgxpool.Pool, rdb *redis.Client) *DashboardService {
+	return &DashboardService{db: db, rdb: rdb}
 }
 
 type DashboardData struct {
@@ -28,6 +33,18 @@ type DashboardData struct {
 }
 
 func (s *DashboardService) GetDashboard(ctx context.Context, wsID, userID uuid.UUID) (*DashboardData, error) {
+	cacheKey := fmt.Sprintf("ws:%s:dash", wsID.String())
+
+	if s.rdb != nil {
+		cached, err := s.rdb.Get(ctx, cacheKey).Bytes()
+		if err == nil {
+			var d DashboardData
+			if json.Unmarshal(cached, &d) == nil {
+				return &d, nil
+			}
+		}
+	}
+
 	var d DashboardData
 	err := s.db.QueryRow(ctx, `
 		SELECT
@@ -47,5 +64,11 @@ func (s *DashboardService) GetDashboard(ctx context.Context, wsID, userID uuid.U
 	if err != nil {
 		return nil, err
 	}
+
+	if s.rdb != nil {
+		data, _ := json.Marshal(d)
+		s.rdb.Set(ctx, cacheKey, data, 2*time.Minute)
+	}
+
 	return &d, nil
 }

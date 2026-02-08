@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/widia-io/widia-omni/internal/domain"
+	"github.com/widia-io/widia-omni/internal/observability"
 	"github.com/widia-io/widia-omni/internal/service"
 )
 
@@ -35,6 +36,7 @@ func (h *ScoreSnapshotHandler) ProcessTask(ctx context.Context, _ *asynq.Task) e
 		JOIN subscriptions s ON s.workspace_id = w.id AND s.status IN ('active', 'trialing')
 	`)
 	if err != nil {
+		observability.AsynqJobFailuresTotal.WithLabelValues(TypeScoreSnapshot).Inc()
 		return err
 	}
 	defer rows.Close()
@@ -58,6 +60,7 @@ func (h *ScoreSnapshotHandler) ProcessTask(ctx context.Context, _ *asynq.Task) e
 			h.logger.Error().Err(err).Str("workspace_id", t.wsID.String()).Msg("score snapshot: calculation failed")
 			continue
 		}
+		h.scoreSvc.InvalidateCache(ctx, t.wsID)
 
 		body := "Your weekly life score has been updated."
 		h.notifSvc.Create(ctx, service.CreateNotificationRequest{

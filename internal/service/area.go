@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/widia-io/widia-omni/internal/domain"
+	"github.com/widia-io/widia-omni/internal/observability"
 )
 
 type AreaService struct {
@@ -58,6 +59,7 @@ func (s *AreaService) Create(ctx context.Context, wsID uuid.UUID, limits *domain
 		return nil, err
 	}
 	if !limits.CanCreateArea(counters.AreasCount) {
+		observability.EntitlementLimitReachedTotal.WithLabelValues("areas").Inc()
 		return nil, errors.New("area limit reached")
 	}
 

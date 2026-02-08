@@ -7,6 +7,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog"
 	"github.com/widia-io/widia-omni/internal/email"
+	"github.com/widia-io/widia-omni/internal/observability"
 )
 
 type SendNotificationPayload struct {
@@ -27,10 +28,12 @@ func NewSendNotificationHandler(emailSender email.Sender, logger zerolog.Logger)
 func (h *SendNotificationHandler) ProcessTask(ctx context.Context, t *asynq.Task) error {
 	var p SendNotificationPayload
 	if err := json.Unmarshal(t.Payload(), &p); err != nil {
+		observability.AsynqJobFailuresTotal.WithLabelValues(TypeSendNotification).Inc()
 		return err
 	}
 
 	if err := h.emailSender.Send(ctx, p.Email, p.Subject, p.HTML); err != nil {
+		observability.AsynqJobFailuresTotal.WithLabelValues(TypeSendNotification).Inc()
 		h.logger.Error().Err(err).Str("to", p.Email).Msg("failed to send email")
 		return err
 	}

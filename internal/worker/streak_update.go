@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 	"github.com/widia-io/widia-omni/internal/domain"
+	"github.com/widia-io/widia-omni/internal/observability"
 	"github.com/widia-io/widia-omni/internal/service"
 )
 
@@ -36,6 +37,7 @@ func (h *StreakUpdateHandler) ProcessTask(ctx context.Context, _ *asynq.Task) er
 			)
 	`)
 	if err != nil {
+		observability.AsynqJobFailuresTotal.WithLabelValues(TypeStreakUpdate).Inc()
 		return err
 	}
 	defer rows.Close()

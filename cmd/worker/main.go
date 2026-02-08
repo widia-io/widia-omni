@@ -3,13 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/widia-io/widia-omni/internal/config"
@@ -58,8 +61,12 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to parse redis url")
 	}
 
+	// Redis client for caching
+	rdb := redis.NewClient(redisOpt)
+	defer rdb.Close()
+
 	// Services
-	scoreSvc := service.NewScoreService(db)
+	scoreSvc := service.NewScoreService(db, rdb)
 	notifSvc := service.NewNotificationService(db)
 	emailSender := email.NewLogSender(logger)
 
@@ -108,6 +115,36 @@ func main() {
 		}
 	}()
 
+	// Metrics HTTP server on :9090
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("/metrics", promhttp.Handler())
+	metricsSrv := &http.Server{Addr: ":9090", Handler: metricsMux}
+	go func() {
+		if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error().Err(err).Msg("metrics server error")
+		}
+	}()
+
+	// Poll asynq queue depths every 30s
+	inspector := asynq.NewInspector(asynq.RedisClientOpt{Addr: redisOpt.Addr, Password: redisOpt.Password, DB: redisOpt.DB})
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				for _, q := range []string{"default", "critical", "low"} {
+					info, err := inspector.GetQueueInfo(q)
+					if err == nil {
+						observability.AsynqQueueDepth.WithLabelValues(q).Set(float64(info.Pending))
+					}
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	logger.Info().Msg("worker running with scheduled tasks")
 
 	quit := make(chan os.Signal, 1)
@@ -115,8 +152,11 @@ func main() {
 	<-quit
 
 	logger.Info().Msg("shutting down worker")
+	cancel()
 	srv.Shutdown()
 	scheduler.Shutdown()
+	inspector.Close()
+	metricsSrv.Close()
 	logger.Info().Msg("worker stopped")
 }
 

@@ -11,6 +11,26 @@ servers:
 security:
   - bearerAuth: []
 
+tags:
+  - name: Health
+  - name: Auth
+  - name: User
+  - name: Workspace
+  - name: Areas
+  - name: Goals
+  - name: Habits
+  - name: Tasks
+  - name: Billing
+  - name: Onboarding
+  - name: Journal
+  - name: Scores
+  - name: Notifications
+  - name: Finances
+  - name: Dashboard
+  - name: Export
+  - name: Admin
+  - name: Webhooks
+
 components:
   securitySchemes:
     bearerAuth:
@@ -18,6 +38,74 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Supabase JWT token
+    serviceKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Service-Key
+      description: Supabase service role key for admin endpoints
+
+  parameters:
+    idPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    limitQuery:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 50
+    offsetQuery:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        default: 0
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
 
   schemas:
     Error:
@@ -26,6 +114,16 @@ components:
         error:
           type: string
       required: [error]
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        user:
+          type: object
 
     UserProfile:
       type: object
@@ -82,6 +180,12 @@ components:
           type: string
         score_weights:
           type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     Workspace:
       type: object
@@ -107,53 +211,707 @@ components:
       type: object
       properties:
         counters:
-          type: object
-          properties:
-            areas_count:
-              type: integer
-            goals_count:
-              type: integer
-            habits_count:
-              type: integer
-            tasks_created_today:
-              type: integer
-            transactions_month_count:
-              type: integer
-            storage_bytes_used:
-              type: integer
+          $ref: '#/components/schemas/WorkspaceCounters'
         limits:
-          type: object
-          properties:
-            max_areas:
-              type: integer
-            max_goals:
-              type: integer
-            max_habits:
-              type: integer
-            max_tasks_per_day:
-              type: integer
-            max_transactions_per_month:
-              type: integer
-            finance_enabled:
-              type: boolean
-            export_enabled:
-              type: boolean
-            storage_mb:
-              type: integer
+          $ref: '#/components/schemas/EntitlementLimits'
 
-    AuthResponse:
+    WorkspaceCounters:
       type: object
       properties:
-        access_token:
+        areas_count:
+          type: integer
+        goals_count:
+          type: integer
+        habits_count:
+          type: integer
+        tasks_created_today:
+          type: integer
+        transactions_month_count:
+          type: integer
+        storage_bytes_used:
+          type: integer
+          format: int64
+
+    EntitlementLimits:
+      type: object
+      properties:
+        max_areas:
+          type: integer
+        max_goals:
+          type: integer
+        max_habits:
+          type: integer
+        max_tasks_per_day:
+          type: integer
+        max_transactions_per_month:
+          type: integer
+        journal_enabled:
+          type: boolean
+        finance_enabled:
+          type: boolean
+        export_enabled:
+          type: boolean
+        score_history_weeks:
+          type: integer
+        api_rate_limit_per_minute:
+          type: integer
+        storage_mb:
+          type: integer
+        ai_insights:
+          type: boolean
+        api_access:
+          type: boolean
+
+    LifeArea:
+      type: object
+      properties:
+        id:
           type: string
-        refresh_token:
+          format: uuid
+        workspace_id:
           type: string
-        user:
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        weight:
+          type: number
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Goal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        area_id:
+          type: string
+          format: uuid
+          nullable: true
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        period:
+          type: string
+          enum: [yearly, quarterly, monthly, weekly]
+        status:
+          type: string
+          enum: [not_started, on_track, at_risk, behind, completed, cancelled]
+        target_value:
+          type: number
+          nullable: true
+        current_value:
+          type: number
+        unit:
+          type: string
+          nullable: true
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Habit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        area_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+        color:
+          type: string
+        frequency:
+          type: string
+          enum: [daily, weekly, custom]
+        target_per_week:
+          type: integer
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    HabitEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        habit_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        intensity:
+          type: integer
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    HabitStreak:
+      type: object
+      properties:
+        habit_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        current_streak:
+          type: integer
+        longest_streak:
+          type: integer
+        last_check_in:
+          type: string
+          nullable: true
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        area_id:
+          type: string
+          format: uuid
+          nullable: true
+        goal_id:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        is_completed:
+          type: boolean
+        is_focus:
+          type: boolean
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    JournalEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        mood:
+          type: integer
+          nullable: true
+        energy:
+          type: integer
+          nullable: true
+        wins:
+          type: array
+          items:
+            type: string
+        challenges:
+          type: array
+          items:
+            type: string
+        gratitude:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    LifeScore:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        score:
+          type: integer
+        week_start:
+          type: string
+          format: date
+        area_scores:
           type: object
+        created_at:
+          type: string
+          format: date-time
+
+    AreaScore:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        area_id:
+          type: string
+          format: uuid
+        score:
+          type: integer
+        week_start:
+          type: string
+          format: date
+        breakdown:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    ScoreHistory:
+      type: object
+      properties:
+        life_scores:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifeScore'
+        area_scores:
+          type: array
+          items:
+            $ref: '#/components/schemas/AreaScore'
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [weekly_review, streak_at_risk, goal_deadline, trial_ending, plan_changed, score_update, habit_reminder, system]
+        channel:
+          type: string
+          enum: [in_app, email, push]
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        data:
+          type: object
+        is_read:
+          type: boolean
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Plan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tier:
+          type: string
+          enum: [free, pro, premium]
+        name:
+          type: string
+        price_monthly:
+          type: number
+        price_yearly:
+          type: number
+        limits:
+          $ref: '#/components/schemas/EntitlementLimits'
+        is_active:
+          type: boolean
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        plan_id:
+          type: string
+          format: uuid
+        tier:
+          type: string
+        status:
+          type: string
+          enum: [trialing, active, past_due, canceled, paused, unpaid]
+        currency:
+          type: string
+        current_period_start:
+          type: string
+          format: date-time
+          nullable: true
+        current_period_end:
+          type: string
+          format: date-time
+          nullable: true
+        trial_end:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FinanceCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [income, expense, investment, transfer]
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        is_system:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        area_id:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+          enum: [income, expense, investment, transfer]
+        amount:
+          type: number
+        description:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date
+        is_recurring:
+          type: boolean
+        recurrence_rule:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Budget:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        month:
+          type: string
+        amount:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    FinanceSummary:
+      type: object
+      properties:
+        month:
+          type: string
+        total_income:
+          type: number
+        total_expenses:
+          type: number
+        total_investments:
+          type: number
+        net_balance:
+          type: number
+        by_category:
+          type: array
+          items:
+            type: object
+            properties:
+              category_id:
+                type: string
+                format: uuid
+                nullable: true
+              category_name:
+                type: string
+                nullable: true
+              type:
+                type: string
+              total:
+                type: number
+              count:
+                type: integer
+        budget_status:
+          type: array
+          items:
+            type: object
+            properties:
+              category_id:
+                type: string
+                format: uuid
+                nullable: true
+              category_name:
+                type: string
+                nullable: true
+              budget_amount:
+                type: number
+              spent_amount:
+                type: number
+              remaining:
+                type: number
+              percentage:
+                type: number
+
+    DashboardData:
+      type: object
+      properties:
+        areas_count:
+          type: integer
+        active_goals:
+          type: integer
+        today_tasks:
+          type: integer
+        completed_today:
+          type: integer
+        habits_today:
+          type: integer
+        current_streaks:
+          type: integer
+        life_score:
+          type: integer
+          nullable: true
+        journal_today:
+          type: boolean
+        unread_notifications:
+          type: integer
+
+    Entitlement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        tier:
+          type: string
+        limits:
+          type: object
+        source:
+          type: string
+          enum: [free, stripe, trial, promo, admin]
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+          nullable: true
+        is_current:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    AdminMetrics:
+      type: object
+      properties:
+        total_users:
+          type: integer
+        total_workspaces:
+          type: integer
+        active_subscriptions:
+          type: object
+          additionalProperties:
+            type: integer
+
+    AdminUser:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+        workspace_id:
+          type: string
+          format: uuid
+        tier:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    AdminUserDetail:
+      allOf:
+        - $ref: '#/components/schemas/AdminUser'
+        - type: object
+          properties:
+            counters:
+              $ref: '#/components/schemas/WorkspaceCounters'
+            entitlement:
+              $ref: '#/components/schemas/Entitlement'
+
+    AdminWorkspaceUsage:
+      type: object
+      properties:
+        workspace_id:
+          type: string
+          format: uuid
+        counters:
+          $ref: '#/components/schemas/WorkspaceCounters'
+        limits:
+          $ref: '#/components/schemas/EntitlementLimits'
 
 paths:
+  # --- Health ---
   /health:
     get:
+      tags: [Health]
       summary: Health check
       security: []
       responses:
@@ -169,6 +927,7 @@ paths:
 
   /ready:
     get:
+      tags: [Health]
       summary: Readiness check (DB + Redis)
       security: []
       responses:
@@ -179,14 +938,17 @@ paths:
 
   /metrics:
     get:
+      tags: [Health]
       summary: Prometheus metrics
       security: []
       responses:
         '200':
           description: Prometheus text format
 
+  # --- Auth ---
   /auth/register:
     post:
+      tags: [Auth]
       summary: Register new user
       security: []
       requestBody:
@@ -216,14 +978,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/BadRequest'
 
   /auth/login:
     post:
+      tags: [Auth]
       summary: Login with email/password
       security: []
       requestBody:
@@ -246,10 +1005,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
         '401':
-          description: Invalid credentials
+          $ref: '#/components/responses/Unauthorized'
 
   /auth/refresh:
     post:
+      tags: [Auth]
       summary: Refresh access token
       security: []
       requestBody:
@@ -272,6 +1032,7 @@ paths:
 
   /auth/logout:
     post:
+      tags: [Auth]
       summary: Logout (invalidate token)
       security: []
       responses:
@@ -280,6 +1041,7 @@ paths:
 
   /auth/forgot-password:
     post:
+      tags: [Auth]
       summary: Send password recovery email
       security: []
       requestBody:
@@ -298,6 +1060,7 @@ paths:
 
   /auth/reset-password:
     post:
+      tags: [Auth]
       summary: Reset password with token
       security: []
       requestBody:
@@ -318,6 +1081,7 @@ paths:
 
   /auth/verify-email:
     post:
+      tags: [Auth]
       summary: Verify email address
       security: []
       requestBody:
@@ -336,8 +1100,10 @@ paths:
         '200':
           description: Email verified
 
+  # --- User ---
   /api/v1/me:
     get:
+      tags: [User]
       summary: Get current user profile
       responses:
         '200':
@@ -346,7 +1112,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     put:
+      tags: [User]
       summary: Update current user profile
       requestBody:
         required: true
@@ -371,14 +1140,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     delete:
+      tags: [User]
       summary: Delete account (GDPR)
       responses:
         '200':
           description: Account deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api/v1/me/preferences:
     get:
+      tags: [User]
       summary: Get user preferences
       responses:
         '200':
@@ -387,14 +1162,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     put:
+      tags: [User]
       summary: Update user preferences
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserPreferences'
+              type: object
+              properties:
+                week_starts_on:
+                  type: integer
+                daily_focus_limit:
+                  type: integer
+                notification_email:
+                  type: boolean
+                notification_push:
+                  type: boolean
+                weekly_review_day:
+                  type: integer
+                weekly_review_time:
+                  type: string
+                theme:
+                  type: string
+                currency:
+                  type: string
+                score_weights:
+                  type: object
       responses:
         '200':
           description: Updated preferences
@@ -402,9 +1199,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/me/export:
+    post:
+      tags: [Export]
+      summary: Export all user data (JSON)
+      responses:
+        '200':
+          description: Exported data
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # --- Workspace ---
   /api/v1/workspace:
     get:
+      tags: [Workspace]
       summary: Get current workspace
       responses:
         '200':
@@ -413,7 +1230,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Workspace'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     put:
+      tags: [Workspace]
       summary: Update workspace
       requestBody:
         required: true
@@ -433,9 +1253,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Workspace'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api/v1/workspace/usage:
     get:
+      tags: [Workspace]
       summary: Get workspace usage (counters vs limits)
       responses:
         '200':
@@ -444,15 +1267,1548 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WorkspaceUsage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '429':
-          description: Rate limit exceeded
-          headers:
-            X-RateLimit-Limit:
+          $ref: '#/components/responses/RateLimited'
+
+  # --- Areas ---
+  /api/v1/areas:
+    get:
+      tags: [Areas]
+      summary: List all areas
+      responses:
+        '200':
+          description: Array of areas
+          content:
+            application/json:
               schema:
-                type: integer
-            X-RateLimit-Remaining:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LifeArea'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Areas]
+      summary: Create area
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                slug:
+                  type: string
+                icon:
+                  type: string
+                color:
+                  type: string
+                weight:
+                  type: number
+                sort_order:
+                  type: integer
+              required: [name, slug]
+      responses:
+        '201':
+          description: Created area
+          content:
+            application/json:
               schema:
-                type: integer
-            X-RateLimit-Reset:
+                $ref: '#/components/schemas/LifeArea'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/areas/{id}:
+    put:
+      tags: [Areas]
+      summary: Update area
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                icon:
+                  type: string
+                color:
+                  type: string
+                weight:
+                  type: number
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated area
+          content:
+            application/json:
               schema:
-                type: integer
+                $ref: '#/components/schemas/LifeArea'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Areas]
+      summary: Delete area (soft)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/areas/{id}/reorder:
+    patch:
+      tags: [Areas]
+      summary: Reorder area
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sort_order:
+                  type: integer
+              required: [sort_order]
+      responses:
+        '200':
+          description: Reordered
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # --- Goals ---
+  /api/v1/goals:
+    get:
+      tags: [Goals]
+      summary: List goals
+      parameters:
+        - name: area_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [yearly, quarterly, monthly, weekly]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [not_started, on_track, at_risk, behind, completed, cancelled]
+      responses:
+        '200':
+          description: Array of goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Goal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Goals]
+      summary: Create goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                area_id:
+                  type: string
+                  format: uuid
+                parent_id:
+                  type: string
+                  format: uuid
+                title:
+                  type: string
+                description:
+                  type: string
+                period:
+                  type: string
+                  enum: [yearly, quarterly, monthly, weekly]
+                target_value:
+                  type: number
+                unit:
+                  type: string
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+              required: [title, period, start_date, end_date]
+      responses:
+        '201':
+          description: Created goal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Goal'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/goals/{id}:
+    get:
+      tags: [Goals]
+      summary: Get goal by ID
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Goal detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Goal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Goals]
+      summary: Update goal
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                area_id:
+                  type: string
+                  format: uuid
+                title:
+                  type: string
+                description:
+                  type: string
+                period:
+                  type: string
+                  enum: [yearly, quarterly, monthly, weekly]
+                status:
+                  type: string
+                  enum: [not_started, on_track, at_risk, behind, completed, cancelled]
+                target_value:
+                  type: number
+                unit:
+                  type: string
+                start_date:
+                  type: string
+                  format: date
+                end_date:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Updated goal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Goal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Goals]
+      summary: Delete goal (soft)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/goals/{id}/progress:
+    patch:
+      tags: [Goals]
+      summary: Update goal progress
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_value:
+                  type: number
+              required: [current_value]
+      responses:
+        '200':
+          description: Updated goal with progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Goal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # --- Habits ---
+  /api/v1/habits:
+    get:
+      tags: [Habits]
+      summary: List habits
+      responses:
+        '200':
+          description: Array of habits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Habit'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Habits]
+      summary: Create habit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                area_id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                color:
+                  type: string
+                frequency:
+                  type: string
+                  enum: [daily, weekly, custom]
+                target_per_week:
+                  type: integer
+                sort_order:
+                  type: integer
+              required: [name, frequency, target_per_week]
+      responses:
+        '201':
+          description: Created habit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Habit'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/habits/{id}:
+    put:
+      tags: [Habits]
+      summary: Update habit
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+                frequency:
+                  type: string
+                  enum: [daily, weekly, custom]
+                target_per_week:
+                  type: integer
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Updated habit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Habit'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Habits]
+      summary: Delete habit (soft)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/habits/{id}/check-in:
+    post:
+      tags: [Habits]
+      summary: Check in to habit
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date:
+                  type: string
+                  format: date
+                intensity:
+                  type: integer
+                notes:
+                  type: string
+              required: [date, intensity]
+      responses:
+        '200':
+          description: Check-in recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HabitEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Habits]
+      summary: Delete check-in
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Check-in deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/habits/entries:
+    get:
+      tags: [Habits]
+      summary: List habit entries
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Array of entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HabitEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/habits/streaks:
+    get:
+      tags: [Habits]
+      summary: Get habit streaks
+      responses:
+        '200':
+          description: Array of streaks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HabitStreak'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # --- Tasks ---
+  /api/v1/tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks
+      parameters:
+        - name: area_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: goal_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: is_completed
+          in: query
+          schema:
+            type: boolean
+        - name: due_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: due_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Array of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Tasks]
+      summary: Create task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                area_id:
+                  type: string
+                  format: uuid
+                goal_id:
+                  type: string
+                  format: uuid
+                title:
+                  type: string
+                description:
+                  type: string
+                priority:
+                  type: string
+                  enum: [low, medium, high, critical]
+                due_date:
+                  type: string
+                  format: date
+                is_focus:
+                  type: boolean
+              required: [title, priority]
+      responses:
+        '201':
+          description: Created task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/tasks/{id}:
+    put:
+      tags: [Tasks]
+      summary: Update task
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                area_id:
+                  type: string
+                  format: uuid
+                goal_id:
+                  type: string
+                  format: uuid
+                title:
+                  type: string
+                description:
+                  type: string
+                priority:
+                  type: string
+                  enum: [low, medium, high, critical]
+                due_date:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Tasks]
+      summary: Delete task (soft)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/tasks/{id}/complete:
+    patch:
+      tags: [Tasks]
+      summary: Mark task as completed
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Completed task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tasks/{id}/focus:
+    patch:
+      tags: [Tasks]
+      summary: Toggle task focus
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # --- Journal ---
+  /api/v1/journal:
+    get:
+      tags: [Journal]
+      summary: List journal entries
+      parameters:
+        - $ref: '#/components/parameters/limitQuery'
+        - $ref: '#/components/parameters/offsetQuery'
+      responses:
+        '200':
+          description: Array of entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JournalEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/journal/{date}:
+    get:
+      tags: [Journal]
+      summary: Get journal entry by date
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Journal entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Journal]
+      summary: Create or update journal entry
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mood:
+                  type: integer
+                energy:
+                  type: integer
+                wins:
+                  type: array
+                  items:
+                    type: string
+                challenges:
+                  type: array
+                  items:
+                    type: string
+                gratitude:
+                  type: array
+                  items:
+                    type: string
+                notes:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Upserted entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [Journal]
+      summary: Delete journal entry
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # --- Scores ---
+  /api/v1/scores/history:
+    get:
+      tags: [Scores]
+      summary: Get score history
+      parameters:
+        - name: weeks
+          in: query
+          schema:
+            type: integer
+            default: 4
+      responses:
+        '200':
+          description: Score history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreHistory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/scores/current:
+    get:
+      tags: [Scores]
+      summary: Get current life score
+      responses:
+        '200':
+          description: Current score
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifeScore'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # --- Notifications ---
+  /api/v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      parameters:
+        - $ref: '#/components/parameters/limitQuery'
+        - $ref: '#/components/parameters/offsetQuery'
+        - name: unread
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Array of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark notification as read
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Marked as read
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/notifications/read-all:
+    patch:
+      tags: [Notifications]
+      summary: Mark all notifications as read
+      responses:
+        '200':
+          description: All marked as read
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/notifications/unread-count:
+    get:
+      tags: [Notifications]
+      summary: Get unread notification count
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # --- Billing ---
+  /api/v1/billing/plans:
+    get:
+      tags: [Billing]
+      summary: List available plans
+      responses:
+        '200':
+          description: Array of plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Plan'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/billing/subscription:
+    get:
+      tags: [Billing]
+      summary: Get current subscription
+      responses:
+        '200':
+          description: Subscription details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/billing/checkout:
+    post:
+      tags: [Billing]
+      summary: Create Stripe checkout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                price_id:
+                  type: string
+              required: [price_id]
+      responses:
+        '200':
+          description: Checkout URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/billing/portal:
+    post:
+      tags: [Billing]
+      summary: Create Stripe customer portal session
+      responses:
+        '200':
+          description: Portal URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # --- Onboarding ---
+  /api/v1/onboarding/status:
+    get:
+      tags: [Onboarding]
+      summary: Get onboarding status
+      responses:
+        '200':
+          description: Onboarding status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  completed:
+                    type: boolean
+                  steps:
+                    type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/onboarding/areas:
+    post:
+      tags: [Onboarding]
+      summary: Setup initial areas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                areas:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                      icon:
+                        type: string
+                      color:
+                        type: string
+              required: [areas]
+      responses:
+        '200':
+          description: Areas created
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/onboarding/goals:
+    post:
+      tags: [Onboarding]
+      summary: Setup initial goals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                goals:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Goals created
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/onboarding/habits:
+    post:
+      tags: [Onboarding]
+      summary: Setup initial habits
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                habits:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Habits created
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/onboarding/complete:
+    post:
+      tags: [Onboarding]
+      summary: Mark onboarding complete
+      responses:
+        '200':
+          description: Onboarding completed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # --- Finances ---
+  /api/v1/finances/summary:
+    get:
+      tags: [Finances]
+      summary: Get monthly finance summary
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Format YYYY-MM
+      responses:
+        '200':
+          description: Finance summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinanceSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/finances/transactions:
+    get:
+      tags: [Finances]
+      summary: List transactions
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [income, expense, investment, transfer]
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: area_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/limitQuery'
+        - $ref: '#/components/parameters/offsetQuery'
+      responses:
+        '200':
+          description: Array of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Finances]
+      summary: Create transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                area_id:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum: [income, expense, investment, transfer]
+                amount:
+                  type: number
+                description:
+                  type: string
+                date:
+                  type: string
+                  format: date
+                is_recurring:
+                  type: boolean
+                recurrence_rule:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+              required: [type, amount, date]
+      responses:
+        '201':
+          description: Created transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/finances/transactions/{id}:
+    put:
+      tags: [Finances]
+      summary: Update transaction
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                area_id:
+                  type: string
+                  format: uuid
+                type:
+                  type: string
+                  enum: [income, expense, investment, transfer]
+                amount:
+                  type: number
+                description:
+                  type: string
+                date:
+                  type: string
+                  format: date
+                is_recurring:
+                  type: boolean
+                recurrence_rule:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Updated transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Finances]
+      summary: Delete transaction (soft)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/finances/categories:
+    get:
+      tags: [Finances]
+      summary: List categories
+      responses:
+        '200':
+          description: Array of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FinanceCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Finances]
+      summary: Create category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum: [income, expense, investment, transfer]
+                color:
+                  type: string
+                icon:
+                  type: string
+                parent_id:
+                  type: string
+                  format: uuid
+              required: [name, type]
+      responses:
+        '201':
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinanceCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/finances/categories/{id}:
+    put:
+      tags: [Finances]
+      summary: Update category
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+                icon:
+                  type: string
+                parent_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinanceCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Finances]
+      summary: Delete category (soft)
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/finances/budgets:
+    get:
+      tags: [Finances]
+      summary: List budgets
+      parameters:
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: string
+            description: Format YYYY-MM
+      responses:
+        '200':
+          description: Array of budgets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Budget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Finances]
+      summary: Create or update budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                month:
+                  type: string
+                amount:
+                  type: number
+              required: [month, amount]
+      responses:
+        '200':
+          description: Upserted budget
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Budget'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/finances/budgets/{id}:
+    delete:
+      tags: [Finances]
+      summary: Delete budget
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # --- Dashboard ---
+  /api/v1/dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard overview
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # --- Webhooks ---
+  /webhooks/stripe:
+    post:
+      tags: [Webhooks]
+      summary: Stripe webhook endpoint
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook processed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # --- Admin ---
+  /admin/metrics:
+    get:
+      tags: [Admin]
+      summary: Get platform metrics
+      security:
+        - serviceKeyAuth: []
+      responses:
+        '200':
+          description: Admin metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminMetrics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users
+      security:
+        - serviceKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/limitQuery'
+        - $ref: '#/components/parameters/offsetQuery'
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminUser'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Get user detail
+      security:
+        - serviceKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: User detail with counters and entitlement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/workspaces/{id}/usage:
+    get:
+      tags: [Admin]
+      summary: Get workspace usage
+      security:
+        - serviceKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '200':
+          description: Workspace usage with counters and limits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminWorkspaceUsage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/entitlements/override:
+    post:
+      tags: [Admin]
+      summary: Override workspace entitlement
+      security:
+        - serviceKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                workspace_id:
+                  type: string
+                  format: uuid
+                tier:
+                  type: string
+                limits:
+                  $ref: '#/components/schemas/EntitlementLimits'
+              required: [workspace_id, tier, limits]
+      responses:
+        '200':
+          description: Entitlement overridden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'

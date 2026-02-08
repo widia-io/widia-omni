@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/widia-io/widia-omni/internal/domain"
+	"github.com/widia-io/widia-omni/internal/observability"
 )
 
 type TaskService struct {
@@ -98,6 +99,7 @@ func (s *TaskService) Create(ctx context.Context, wsID uuid.UUID, limits *domain
 		return nil, err
 	}
 	if !limits.CanCreateTask(counters.TasksCreatedToday) {
+		observability.EntitlementLimitReachedTotal.WithLabelValues("tasks").Inc()
 		return nil, errors.New("daily task limit reached")
 	}
 

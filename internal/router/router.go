@@ -35,14 +35,15 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	billingSvc := service.NewBillingService(db, entSvc, cfg.StripeSecretKey, cfg.StripeWebhookSecret,
 		cfg.AllowedOrigins[0]+"/billing/success", cfg.AllowedOrigins[0]+"/billing/cancel")
 	onboardingSvc := service.NewOnboardingService(db)
-	dashSvc := service.NewDashboardService(db)
+	dashSvc := service.NewDashboardService(db, rdb)
 	journalSvc := service.NewJournalService(db)
-	scoreSvc := service.NewScoreService(db)
+	scoreSvc := service.NewScoreService(db, rdb)
 	notifSvc := service.NewNotificationService(db)
 	auditSvc := service.NewAuditService(db)
 	_ = auditSvc // used by workers and future middleware
 	exportSvc := service.NewExportService(db)
 	financeSvc := service.NewFinanceService(db, counterSvc)
+	adminSvc := service.NewAdminService(db, entSvc)
 
 	// Handlers
 	healthH := handler.NewHealthHandler(db, rdb)
@@ -62,6 +63,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	notifH := handler.NewNotificationHandler(notifSvc)
 	exportH := handler.NewExportHandler(exportSvc)
 	financeH := handler.NewFinanceHandler(financeSvc)
+	adminH := handler.NewAdminHandler(adminSvc)
 
 	// Public routes
 	r.Get("/health", healthH.Health)
@@ -199,6 +201,16 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 
 		// Dashboard
 		r.Get("/dashboard", dashH.GetDashboard)
+	})
+
+	// Admin routes (service key auth)
+	r.Route("/admin", func(r chi.Router) {
+		r.Use(middleware.AdminAuth(cfg.SupabaseServiceKey))
+		r.Get("/metrics", adminH.GetMetrics)
+		r.Get("/users", adminH.ListUsers)
+		r.Get("/users/{id}", adminH.GetUser)
+		r.Get("/workspaces/{id}/usage", adminH.GetWorkspaceUsage)
+		r.Post("/entitlements/override", adminH.OverrideEntitlement)
 	})
 
 	return r

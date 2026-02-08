@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/widia-io/widia-omni/internal/domain"
+	"github.com/widia-io/widia-omni/internal/observability"
 )
 
 type FinanceService struct {
@@ -254,6 +255,7 @@ func (s *FinanceService) CreateTransaction(ctx context.Context, wsID uuid.UUID, 
 		return nil, err
 	}
 	if !limits.CanCreateTransaction(counters.TransactionsMonthCount) {
+		observability.EntitlementLimitReachedTotal.WithLabelValues("transactions").Inc()
 		return nil, errors.New("monthly transaction limit reached")
 	}
 
