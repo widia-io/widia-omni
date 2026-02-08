@@ -1190,11 +1190,17 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - [x] Prometheus metrics refinement
 - [x] OpenAPI spec complete
 
-### Milestone 6 — Frontend
-- [ ] React SPA (from HTML mock)
-- [ ] Landing page + pricing
-- [ ] Onboarding wizard UI
-- [ ] Billing management UI
+### Milestone 6 — Frontend ✅
+- [x] React SPA scaffold (Vite + React 19 + TS + Tailwind v4 + shadcn/ui)
+- [x] Auth pages (login, register, forgot/reset password)
+- [x] App layout (sidebar + header + notifications)
+- [x] Dashboard (life score ring, areas, goals, habits heatmap, today focus, mood, weekly stats)
+- [x] Core CRUD pages (areas, goals, habits, tasks, journal, finances)
+- [x] Landing page + pricing
+- [x] Onboarding wizard UI
+- [x] Billing management UI
+- [x] Notifications panel
+- [x] Settings (profile, preferences, workspace, account)
 
 ### Milestone 7 — Growth
 - [ ] AI Insights (Premium)
@@ -1296,3 +1302,24 @@ go.opentelemetry.io/otel              # Tracing (optional)
 | Phase 3 — Admin Endpoints | 3 new, 1 modified | AdminAuth middleware (X-Service-Key header). AdminService: GetMetrics (users/workspaces/subs by tier), ListUsers (paginated join), GetUser (detail + counters + entitlement), GetWorkspaceUsage (counters + limits), OverrideEntitlement (tx: deactivate current → insert new source='admin' → invalidate cache). AdminHandler (5 endpoints). Router: `/admin` group with 5 routes. |
 | Phase 4 — Prometheus Metrics | 11 modified | 4 new metrics: `active_subscriptions` GaugeVec (tier), `asynq_queue_depth` GaugeVec (queue), `asynq_job_failures_total` CounterVec (task_type), `entitlement_limit_reached_total` CounterVec (limit_type). `RefreshSubscriptionGauge` func (5min goroutine in api). Worker: metrics HTTP on :9090, Inspector polling queue depths every 30s. 4 worker files: increment failure counter on errors. 5 service files (area/goal/habit/task/finance): increment limit counter on rejection. |
 | Phase 5 — OpenAPI Spec | 1 rewritten | Full `api/openapi.yaml` (~2800 lines): 60+ endpoints, 30+ schemas, 18 tags, bearerAuth + serviceKeyAuth, standard error responses (400/401/403/404/429), all request/response bodies. |
+
+### M6 — Frontend React SPA (2026-02-08)
+
+87 files added under `web/`, `npm run build` clean (1.69s), all pages verified via Playwright E2E.
+
+| Phase | Files | Detail |
+|-------|-------|--------|
+| Phase 1 — Scaffold | ~25 | Vite + React 19 + TS + Tailwind v4 + shadcn/ui. Design tokens from `docs/sample-page.html` (dark theme, Poppins/Lora/JetBrains Mono). api-client.ts (fetch wrapper, token injection, 401 refresh). Zustand stores (auth, ui). TanStack Query v5. React Router v7 with lazy routes. |
+| Phase 2 — Auth Pages | 6 | Login, register, forgot-password, reset-password. Auth hooks (useLogin, useRegister). AuthLayout centered card. Post-login redirect: onboarding if incomplete, else dashboard. |
+| Phase 3 — App Layout | 4 | 72px fixed sidebar (7 nav items with lucide icons + tooltips), collapsible. Header with greeting (Bom dia/Boa tarde/Boa noite), date (JetBrains Mono), notification bell, avatar initials. |
+| Phase 4 — Dashboard | 12 | Life score animated SVG ring. Areas grid (3x2 cards with progress). Goals card with progress bars. Habits heatmap (7-day grid). Today focus list with complete toggle. Mood selector (5 emojis). Weekly stats (3 stat cards). Responsive breakpoints at 1200px/900px. |
+| Phase 5 — Core CRUD | 18 | Areas (card grid + create/edit dialog). Goals (list + filters + progress). Habits (list + check-in + streak badge). Tasks (list + checkbox + priority/area filters). Journal (date nav + mood/energy + wins/challenges/gratitude). Finances (4 tabs: transactions, categories, budgets, summary). |
+| Phase 6 — Landing Page | 7 | Public marketing page: nav, hero with gradient text, 6 feature cards, 3 pricing tiers (Gratis R$0, Pro R$19, Premium R$39), footer. |
+| Phase 7 — Onboarding Wizard | 2 | 4-step wizard: select areas → create goals → create habits → complete. Progress bar. Resumes from correct step via status API. |
+| Phase 8 — Billing | 3 | Subscription status card, plan comparison grid (handles `-1` as unlimited), Stripe checkout redirect, Stripe portal link. Success/cancel callback pages. |
+| Phase 9 — Notifications | 2 | Bell icon with unread count badge. Dropdown panel with emoji type icons, mark read, mark all read, click-outside dismiss. 60s polling. |
+| Phase 10 — Settings | 2 | 4 tabs: Profile (name, email disabled, timezone), Preferences (currency, focus limit, week start), Workspace (name + usage progress bars), Account (data export, danger zone with delete confirmation). |
+
+**Bugs found & fixed during E2E testing:**
+- Onboarding crash: `status?.steps.habits` accessed before query resolved → deferred `derivedStep` after `isLoading` guard
+- Billing "-1 areas" display: backend uses `-1` for unlimited → fixed condition to `< 0 || >= 999`
