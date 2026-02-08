@@ -15,7 +15,7 @@ type Config struct {
 	ResendAPIKey      string   `env:"RESEND_API_KEY"`
 	Port              int      `env:"PORT" envDefault:"8080"`
 	Env               string   `env:"ENV" envDefault:"development"`
-	AllowedOrigins    []string `env:"ALLOWED_ORIGINS" envSeparator:"," envDefault:"http://localhost:3000"`
+	AllowedOrigins    []string `env:"ALLOWED_ORIGINS" envSeparator:"," envDefault:"http://localhost:3000,http://localhost:5173"`
 }
 
 func Load() (*Config, error) {

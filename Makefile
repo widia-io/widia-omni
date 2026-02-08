@@ -25,5 +25,11 @@ docker-up:
 docker-down:
 	docker compose down
 
+dev-api:
+	go run ./cmd/api
+
+dev-web:
+	cd web && npm run dev
+
 lint:
 	golangci-lint run ./...
