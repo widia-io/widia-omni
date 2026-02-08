@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 
 export function Hero() {
   return (
-    <section className="relative flex min-h-[80vh] flex-col items-center justify-center px-6 pt-16 text-center">
+    <section className="relative flex min-h-[70vh] flex-col items-center justify-center px-6 pt-16 text-center">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--color-accent-orange)/8%_0%,transparent_70%)]" />
       <div className="relative z-10">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-bg-card px-4 py-1.5 text-xs text-text-secondary">

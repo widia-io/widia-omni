@@ -4,12 +4,12 @@ import { Header } from "@/components/header";
 
 export function AppLayout() {
   return (
-    <div className="flex min-h-screen">
+    <>
       <Sidebar />
-      <main className="flex-1 ml-[72px] px-8 py-7">
+      <main className="ml-[72px] min-h-screen px-8 py-6">
         <Header />
         <Outlet />
       </main>
-    </div>
+    </>
   );
 }

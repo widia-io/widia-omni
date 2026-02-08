@@ -24,6 +24,7 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
+      { path: "onboarding", lazy: () => import("@/pages/onboarding") },
       {
         element: <AppLayout />,
         children: [
@@ -38,7 +39,6 @@ export const router = createBrowserRouter([
           { path: "billing/success", lazy: () => import("@/pages/billing-success") },
           { path: "billing/cancel", lazy: () => import("@/pages/billing-cancel") },
           { path: "settings", lazy: () => import("@/pages/settings") },
-          { path: "onboarding", lazy: () => import("@/pages/onboarding") },
         ],
       },
     ],
