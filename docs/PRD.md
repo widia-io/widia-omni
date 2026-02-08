@@ -227,7 +227,8 @@ mission-control/
 │   │   ├── 017_rls.sql
 │   │   ├── 018_indexes.sql
 │   │   ├── 019_triggers.sql
-│   │   └── 020_seed.sql
+│   │   ├── 020_seed.sql
+│   │   └── 021_budgets.sql
 │   └── queries/
 │       ├── workspaces.sql
 │       ├── entitlements.sql
@@ -534,6 +535,24 @@ CREATE TABLE transactions (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at      TIMESTAMPTZ
 );
+
+-- ============================================================
+-- BUDGETS (entitlement gated: Pro+)
+-- ============================================================
+CREATE TABLE budgets (
+    id              UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    workspace_id    UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    category_id     UUID REFERENCES finance_categories(id) ON DELETE CASCADE,
+    month           TEXT NOT NULL,       -- YYYY-MM
+    amount          NUMERIC(12,2) NOT NULL CHECK (amount >= 0),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Expression index for upsert ON CONFLICT (handles NULL category_id)
+CREATE UNIQUE INDEX budgets_ws_cat_month
+    ON budgets(workspace_id, COALESCE(category_id, '00000000-0000-0000-0000-000000000000'::uuid), month);
+CREATE INDEX idx_budget_ws_month ON budgets(workspace_id, month);
 
 -- ============================================================
 -- JOURNAL
@@ -953,13 +972,18 @@ PATCH  /api/v1/tasks/:id/complete
 PATCH  /api/v1/tasks/:id/focus
 
 # ─── Finances ─── [gate: finance_enabled]
-GET    /api/v1/finances/summary
-GET    /api/v1/finances/transactions
-POST   /api/v1/finances/transactions    # [limit: max_transactions_per_month]
+GET    /api/v1/finances/summary          # ?month=YYYY-MM (default: current)
+GET    /api/v1/finances/transactions     # ?type,category_id,area_id,date_from,date_to,tag,limit,offset
+POST   /api/v1/finances/transactions     # [limit: max_transactions_per_month]
 PUT    /api/v1/finances/transactions/:id
-DELETE /api/v1/finances/transactions/:id
+DELETE /api/v1/finances/transactions/:id # soft delete
 GET    /api/v1/finances/categories
 POST   /api/v1/finances/categories
+PUT    /api/v1/finances/categories/:id
+DELETE /api/v1/finances/categories/:id   # soft delete
+GET    /api/v1/finances/budgets          # ?month=YYYY-MM (default: current)
+POST   /api/v1/finances/budgets          # upsert (ON CONFLICT update)
+DELETE /api/v1/finances/budgets/:id      # hard delete
 
 # ─── Journal ───
 GET    /api/v1/journal                   # paginated, date DESC
@@ -1151,11 +1175,13 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - [x] Data export (GDPR, entitlement-gated)
 - [x] Dashboard enhanced (life_score, journal_today, unread_notifications)
 
-### Milestone 4 — Finance Module
-- [ ] Finance categories + transactions CRUD
-- [ ] Monthly summary + analytics
-- [ ] Budget tracking
-- [ ] Transaction counter triggers
+### Milestone 4 — Finance Module ✅
+- [x] Finance categories CRUD (create, list, update, soft delete)
+- [x] Transactions CRUD (create, list with filters, update, soft delete)
+- [x] Monthly summary + analytics (totals by type, category breakdown, net balance)
+- [x] Budget tracking (upsert via ON CONFLICT, list, hard delete, comparison in summary)
+- [x] Transaction counter enforcement (monthly limit via counterSvc)
+- [x] Finance entitlement gate on all endpoints (finance_enabled check)
 
 ### Milestone 5 — Scale & Polish
 - [ ] Redis caching (dashboard, scores)
@@ -1238,3 +1264,23 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - Dashboard: life_score=null before first compute, journal_today=true after entry, unread_notifications count
 - Export: blocked on free plan (export_enabled=false), returns full data on pro+
 - Entitlement gating: journal_enabled, export_enabled, score_history_weeks all enforced
+
+### M4 — Finance Module (2026-02-08)
+
+5 new files + 1 modified, `go build` + `go vet` clean. All 24 endpoint tests passed via curl against local Supabase + Redis.
+
+| Area | Files | Detail |
+|------|-------|--------|
+| Migration | 2 new (up/down) | `000021_budgets` — budgets table with expression unique index on (workspace_id, COALESCE(category_id, nil_uuid), month), RLS policy |
+| Domain | 1 new | FinanceCategory, Transaction (TransactionType enum), Budget models |
+| Service | 1 new | FinanceService — categories CRUD, transactions CRUD with dynamic filters (type/category/area/date/tag/limit/offset), budgets CRUD with upsert ON CONFLICT, monthly summary (totals by type, category breakdown, budget comparison with % spent) |
+| Handler | 1 new | FinanceHandler — 12 endpoints, all gated with `finance_enabled` entitlement check. `financeGate()` helper for DRY gate logic. Counter-checked transaction creates. |
+| Router | 1 modified | Wired FinanceService + FinanceHandler, registered `/finances` route group with 12 routes |
+
+**Key behaviors verified:**
+- Finance gate: free plan returns 403 "finance not available on your plan"
+- Categories: create (income/expense/investment), list (3), update name, soft delete (3→2)
+- Transactions: create with counter enforcement, list all (4), filter by type (2 expenses), filter by date range (2), filter by tag (2 with "food"), pagination (limit=2 offset=1), update amount, soft delete (4→3)
+- Budgets: upsert creates new budget, upsert same category+month updates amount (600→600), list by month (2), hard delete
+- Summary: income=5000, expenses=375, investments=1000, net_balance=3625, 3 category breakdowns, 2 budget comparisons (Groceries 62.5% spent, Stocks 0%)
+- Counter: transactions_month_count=4 after 4 creates, transactions_month=2026-02
