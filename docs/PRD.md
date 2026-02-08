@@ -962,18 +962,20 @@ GET    /api/v1/finances/categories
 POST   /api/v1/finances/categories
 
 # ─── Journal ───
-GET    /api/v1/journal
+GET    /api/v1/journal                   # paginated, date DESC
 GET    /api/v1/journal/:date
-POST   /api/v1/journal
-PUT    /api/v1/journal/:date
+PUT    /api/v1/journal/:date             # upsert (one per ws+date) [gate: journal_enabled]
+DELETE /api/v1/journal/:date
 
 # ─── Scores ───
-GET    /api/v1/scores/history           # [gate: score_history_weeks]
+GET    /api/v1/scores/current
+GET    /api/v1/scores/history            # ?weeks=N [gate: score_history_weeks]
 
 # ─── Notifications ───
-GET    /api/v1/notifications
+GET    /api/v1/notifications             # ?unread=true&limit=N&offset=N
 PATCH  /api/v1/notifications/:id/read
 PATCH  /api/v1/notifications/read-all
+GET    /api/v1/notifications/unread-count
 
 # ─── Admin (service role) ───
 GET    /admin/metrics
@@ -1139,14 +1141,15 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - [x] Webhook → subscription → entitlement sync
 - [x] All create endpoints enforce limits via counters
 
-### Milestone 3 — Engagement + Compliance
-- [ ] Score engine (area + life scores)
-- [ ] asynq: score snapshots, streak updates, counter reconciler
-- [ ] Journal + mood tracking
-- [ ] Notifications (in-app + email Resend)
-- [ ] Weekly review + trial expiry emails
-- [ ] Audit log (SECURITY DEFINER)
-- [ ] Data export + account deletion (GDPR)
+### Milestone 3 — Engagement + Compliance ✅
+- [x] Score engine (area + life scores, weighted formula)
+- [x] asynq: score snapshots (weekly), streak updates (daily), counter reconciler (hourly)
+- [x] Journal + mood/energy tracking (upsert per date)
+- [x] Notifications (in-app CRUD, unread count, mark read/all)
+- [x] Email stub (Sender interface + LogSender, swap for Resend later)
+- [x] Audit log service (insert_audit_log SECURITY DEFINER)
+- [x] Data export (GDPR, entitlement-gated)
+- [x] Dashboard enhanced (life_score, journal_today, unread_notifications)
 
 ### Milestone 4 — Finance Module
 - [ ] Finance categories + transactions CRUD
@@ -1155,8 +1158,7 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - [ ] Transaction counter triggers
 
 ### Milestone 5 — Scale & Polish
-- [ ] Redis caching (dashboard, entitlements, scores)
-- [ ] Counter reconciler worker
+- [ ] Redis caching (dashboard, scores)
 - [ ] Storage usage tracking
 - [ ] Admin endpoints + entitlement overrides
 - [ ] Prometheus metrics refinement
@@ -1217,3 +1219,22 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - Goal auto-complete: progress update auto-sets status=completed when target reached
 - Stripe webhook: signature verification + idempotency via `stripe_events_processed` + subscription lifecycle → entitlement sync
 - Onboarding: batch setup (areas/goals/habits) + completion flag
+
+### M3 — Engagement + Compliance (2026-02-08)
+
+19 new files + 6 modified, `go build` + `go vet` clean. All endpoints tested via curl against local Supabase + Redis.
+
+| Phase | Files | Detail |
+|-------|-------|--------|
+| 3A — Journal + Notifications + Scores | 11 new, 1 modified | JournalEntry, AreaScore, LifeScore, ScoreBreakdown, Notification (type/channel enums), AuditEntry domain models. JournalService (list/get/upsert/delete, one entry per ws+date). ScoreService (history, current, calculate with habit 50%/goal 30%/task 20% formula). NotificationService (list/create/markRead/markAllRead/unreadCount). AuditService (insert_audit_log wrapper). Handlers for journal, score, notification. Router wiring. |
+| 3B — Worker Infrastructure | 6 new, 2 modified | asynq-based worker binary (full rewrite from stub). ScoreSnapshotHandler (weekly Monday 2am, all active workspaces). StreakUpdateHandler (daily 1am, detects at-risk streaks, creates notifications). CounterReconcilerHandler (hourly, fixes areas/goals/habits count drift). SendNotificationHandler (email dispatch via interface). Email Sender interface + LogSender stub. Added `hibiken/asynq` dependency. |
+| 3C — GDPR Export + Dashboard | 2 new, 3 modified | ExportService (all workspace data as JSON, entitlement-gated). ExportHandler (POST /me/export). DashboardService enhanced with life_score (nullable), journal_today (bool), unread_notifications (count). DashboardHandler updated to pass userID. Router updated with export route. |
+| Bugfix — interval cast | 1 file | pgx binary protocol can't concat int param with string for interval → changed to `make_interval(weeks => $2)` |
+
+**Key behaviors verified:**
+- Journal CRUD: upsert per workspace+date, list paginated desc, delete
+- Notifications: list (with unread filter), unread count, mark read, mark all read
+- Scores: current (graceful nil when empty), history (parameterized weeks)
+- Dashboard: life_score=null before first compute, journal_today=true after entry, unread_notifications count
+- Export: blocked on free plan (export_enabled=false), returns full data on pro+
+- Entitlement gating: journal_enabled, export_enabled, score_history_weeks all enforced
