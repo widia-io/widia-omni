@@ -42,6 +42,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	auditSvc := service.NewAuditService(db)
 	_ = auditSvc // used by workers and future middleware
 	exportSvc := service.NewExportService(db)
+	financeSvc := service.NewFinanceService(db, counterSvc)
 
 	// Handlers
 	healthH := handler.NewHealthHandler(db, rdb)
@@ -60,6 +61,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	scoreH := handler.NewScoreHandler(scoreSvc)
 	notifH := handler.NewNotificationHandler(notifSvc)
 	exportH := handler.NewExportHandler(exportSvc)
+	financeH := handler.NewFinanceHandler(financeSvc)
 
 	// Public routes
 	r.Get("/health", healthH.Health)
@@ -177,6 +179,22 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 			r.Patch("/{id}/read", notifH.MarkRead)
 			r.Patch("/read-all", notifH.MarkAllRead)
 			r.Get("/unread-count", notifH.UnreadCount)
+		})
+
+		// Finances
+		r.Route("/finances", func(r chi.Router) {
+			r.Get("/summary", financeH.GetSummary)
+			r.Get("/transactions", financeH.ListTransactions)
+			r.Post("/transactions", financeH.CreateTransaction)
+			r.Put("/transactions/{id}", financeH.UpdateTransaction)
+			r.Delete("/transactions/{id}", financeH.DeleteTransaction)
+			r.Get("/categories", financeH.ListCategories)
+			r.Post("/categories", financeH.CreateCategory)
+			r.Put("/categories/{id}", financeH.UpdateCategory)
+			r.Delete("/categories/{id}", financeH.DeleteCategory)
+			r.Get("/budgets", financeH.ListBudgets)
+			r.Post("/budgets", financeH.UpsertBudget)
+			r.Delete("/budgets/{id}", financeH.DeleteBudget)
 		})
 
 		// Dashboard
