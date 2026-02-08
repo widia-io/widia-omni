@@ -1127,17 +1127,17 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - [x] Docker + Traefik
 - [x] OpenAPI spec skeleton
 
-### Milestone 2 — Core + Billing Skeleton
-- [ ] Life Areas CRUD (soft delete, counter triggers)
-- [ ] Goals CRUD (hierarchy, progress)
-- [ ] Habits + Entries + Streaks
-- [ ] Tasks + Daily Focus
-- [ ] Dashboard aggregation
-- [ ] Onboarding wizard API
-- [ ] Stripe checkout + portal + webhook
-- [ ] stripe_events_processed idempotency
-- [ ] Webhook → subscription → entitlement sync
-- [ ] All create endpoints enforce limits via counters
+### Milestone 2 — Core + Billing Skeleton ✅
+- [x] Life Areas CRUD (soft delete, counter triggers)
+- [x] Goals CRUD (hierarchy, progress)
+- [x] Habits + Entries + Streaks
+- [x] Tasks + Daily Focus
+- [x] Dashboard aggregation
+- [x] Onboarding wizard API
+- [x] Stripe checkout + portal + webhook
+- [x] stripe_events_processed idempotency
+- [x] Webhook → subscription → entitlement sync
+- [x] All create endpoints enforce limits via counters
 
 ### Milestone 3 — Engagement + Compliance
 - [ ] Score engine (area + life scores)
@@ -1197,8 +1197,23 @@ go.opentelemetry.io/otel              # Tracing (optional)
 | Phase 9 — Docker | Dockerfile, docker-compose.yml, .dockerignore | Multi-stage build, Traefik v3, Redis 7, replicas 2, LetsEncrypt |
 | Phase 10 — OpenAPI | api/openapi.yaml | OpenAPI 3.1, JWT bearer, todos endpoints M1, schemas completos |
 
-**Pendente para rodar:**
-1. Setup Supabase em `/Users/bruno/Developer/infra`
-2. `.env` com valores reais
-3. `make migrate-up`
-4. `make dev` → `curl localhost:8080/health`
+### M2 — Core + Billing Skeleton (2026-02-07)
+
+19 new files + 1 modified, `go build` + `go vet` clean. All endpoints tested via curl against local Supabase.
+
+| Phase | Files | Detail |
+|-------|-------|--------|
+| Phase 1 — Domain Models | 4 new | LifeArea, Goal (status/period enums), Habit + HabitEntry + HabitStreak (frequency enum), Task (priority enum) |
+| Phase 2 — Services | 7 new | AreaService (CRUD + reorder + limit enforcement), GoalService (CRUD + filtered list + auto-complete on progress), HabitService (CRUD + check-in upsert + entries + streak SQL), TaskService (CRUD + complete + toggle focus + daily limit + counter increment), BillingService (Stripe checkout/portal/webhook + idempotency + entitlement sync), OnboardingService (status + batch setup + complete), DashboardService (aggregated counts) |
+| Phase 3 — Handlers | 8 new | area, goal, habit, task, billing, stripe_webhook (isolated, no auth), onboarding, dashboard — all follow existing pattern |
+| Phase 4 — Router | 1 modified | Wired all services/handlers, registered routes under `/api/v1` (protected) + `/webhooks/stripe` (public), finance routes placeholder for M4 |
+| Phase 5 — Dependencies | go.mod | Added `github.com/stripe/stripe-go/v81` |
+| Bugfix — DATE scanning | 3 domain files | pgx binary format can't scan DATE into `string` → changed `StartDate`, `EndDate`, `DueDate`, `Date`, `TasksTodayDate` to `time.Time` |
+
+**Key behaviors verified:**
+- Limit enforcement: free plan (4 areas) blocks 5th create, soft delete decrements counter allowing new create
+- Dashboard aggregation: areas count, active goals, today tasks, completed today, habits today, streaks
+- Habit streaks: SQL window function calculation
+- Goal auto-complete: progress update auto-sets status=completed when target reached
+- Stripe webhook: signature verification + idempotency via `stripe_events_processed` + subscription lifecycle → entitlement sync
+- Onboarding: batch setup (areas/goals/habits) + completion flag

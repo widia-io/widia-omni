@@ -12,7 +12,7 @@ type WorkspaceCounter struct {
 	GoalsCount             int       `json:"goals_count"`
 	HabitsCount            int       `json:"habits_count"`
 	TasksCreatedToday      int       `json:"tasks_created_today"`
-	TasksTodayDate         string    `json:"tasks_today_date"`
+	TasksTodayDate         time.Time `json:"tasks_today_date"`
 	TransactionsMonthCount int       `json:"transactions_month_count"`
 	TransactionsMonth      string    `json:"transactions_month"`
 	StorageBytesUsed       int64     `json:"storage_bytes_used"`
