@@ -36,3 +36,8 @@ coverage.html
 
 # Build
 dist/
+web/tsconfig.tsbuildinfo
+
+# Playwright
+.playwright-mcp/
+*.png
