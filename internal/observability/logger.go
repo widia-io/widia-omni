@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"io"
 	"os"
 
 	"github.com/rs/zerolog"
@@ -11,9 +12,9 @@ import (
 type ctxKey string
 
 const (
-	loggerKey     ctxKey = "logger"
-	requestIDKey  ctxKey = "request_id"
-	userIDKey     ctxKey = "user_id"
+	loggerKey      ctxKey = "logger"
+	requestIDKey   ctxKey = "request_id"
+	userIDKey      ctxKey = "user_id"
 	workspaceIDKey ctxKey = "workspace_id"
 )
 
@@ -22,17 +23,32 @@ func NewLogger(cfg *config.Config) zerolog.Logger {
 	if cfg.Env == "development" {
 		level = zerolog.DebugLevel
 	}
-
 	zerolog.SetGlobalLevel(level)
 
-	logger := zerolog.New(os.Stdout).
+	_ = os.MkdirAll("logs", 0o755)
+	logFile, err := os.OpenFile("logs/app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	if err != nil {
+		logFile = nil
+	}
+
+	var writers []io.Writer
+	if cfg.Env == "development" {
+		writers = append(writers, zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05"})
+	} else {
+		writers = append(writers, os.Stdout)
+	}
+	if logFile != nil {
+		writers = append(writers, logFile)
+	}
+
+	multi := zerolog.MultiLevelWriter(writers...)
+
+	return zerolog.New(multi).
 		With().
 		Timestamp().
 		Str("service", "widia-omni").
 		Str("env", cfg.Env).
 		Logger()
-
-	return logger
 }
 
 func WithLogger(ctx context.Context, logger zerolog.Logger) context.Context {

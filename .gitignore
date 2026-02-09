@@ -16,6 +16,9 @@
 tmp/
 *.tmp
 
+# Logs
+logs/
+
 # Vendor (if used)
 vendor/
 

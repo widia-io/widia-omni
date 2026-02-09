@@ -6,6 +6,7 @@ export
        test lint \
        migrate-up migrate-down sqlc-gen \
        infra-up infra-down infra-status \
+       obs-up obs-down obs-status \
        install clean check
 
 # ─── Development ─────────────────────────────────────────────
@@ -76,6 +77,17 @@ infra-down: ## Stop Supabase + Redis containers
 
 infra-status: ## Show infra container status
 	@docker compose -f $(INFRA_DIR)/docker-compose.yml ps
+
+# ─── Observability (Prometheus + Grafana + Loki) ──────────────
+
+obs-up: ## Start observability stack
+	docker compose -f $(INFRA_DIR)/docker-compose.yml up -d prometheus loki promtail grafana
+
+obs-down: ## Stop observability stack
+	docker compose -f $(INFRA_DIR)/docker-compose.yml stop prometheus loki promtail grafana
+
+obs-status: ## Show observability container status
+	@docker compose -f $(INFRA_DIR)/docker-compose.yml ps prometheus loki promtail grafana
 
 # ─── Setup ───────────────────────────────────────────────────
 
