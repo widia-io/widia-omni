@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { areaIconMap } from "@/lib/icons";
 import { useAreas, useCreateArea, useUpdateArea, useDeleteArea } from "@/hooks/use-areas";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -89,7 +90,7 @@ export function Component() {
         {(areas ?? []).map((area) => (
           <Card key={area.id} className="cursor-pointer transition-all hover:-translate-y-0.5" onClick={() => { setEditArea(area); setOpen(true); }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-2xl">{area.icon}</span>
+              <span className="text-2xl">{(() => { const Icon = areaIconMap[area.icon]; return Icon ? <Icon size={24} /> : area.icon; })()}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); deleteArea.mutate(area.id); }}
                 className="text-xs text-text-muted hover:text-accent-rose transition-colors"

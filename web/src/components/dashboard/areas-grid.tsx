@@ -2,6 +2,7 @@ import { useAreas } from "@/hooks/use-areas";
 import { useScoreHistory } from "@/hooks/use-scores";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
+import { areaIconMap } from "@/lib/icons";
 
 const colorMap: Record<string, { bg: string; text: string; bar: string; border: string; shadow: string }> = {
   green: {
@@ -68,8 +69,8 @@ export function AreasGrid() {
             <div className={cn("absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r opacity-0 transition-opacity group-hover:opacity-100", c.bar)} />
 
             <div className="flex items-center justify-between mb-3">
-              <div className={cn("flex h-[34px] w-[34px] items-center justify-center rounded-[9px] text-base", c.bg)}>
-                {area.icon}
+              <div className={cn("flex h-[34px] w-[34px] items-center justify-center rounded-[9px]", c.bg)}>
+                {(() => { const Icon = areaIconMap[area.icon]; return Icon ? <Icon size={18} className={c.text} /> : null; })()}
               </div>
               <span className={cn("font-mono text-xl font-bold", c.text)}>{score}</span>
             </div>
