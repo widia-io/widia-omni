@@ -15,19 +15,19 @@ const colorMap: Record<string, { bg: string; text: string; bar: string; border: 
   },
   blue: {
     bg: "bg-accent-blue-soft", text: "text-accent-blue",
-    bar: "from-accent-blue to-[#8bb0d4]", border: "border-accent-blue-mid", shadow: "shadow-accent-blue-soft",
+    bar: "from-accent-blue to-accent-sage", border: "border-accent-blue-mid", shadow: "shadow-accent-blue-soft",
   },
   rose: {
     bg: "bg-accent-rose-soft", text: "text-accent-rose",
-    bar: "from-accent-rose to-accent-orange", border: "border-[#b86b6b40]", shadow: "shadow-accent-rose-soft",
+    bar: "from-accent-rose to-accent-orange", border: "border-accent-rose-soft", shadow: "shadow-accent-rose-soft",
   },
   sand: {
     bg: "bg-accent-sand-soft", text: "text-accent-sand",
-    bar: "from-accent-sand to-accent-blue", border: "border-[#c4a88240]", shadow: "shadow-accent-sand-soft",
+    bar: "from-accent-sand to-accent-blue", border: "border-accent-sand-soft", shadow: "shadow-accent-sand-soft",
   },
   sage: {
     bg: "bg-accent-sage-soft", text: "text-accent-sage",
-    bar: "from-accent-sage to-accent-green", border: "border-[#8a9e7840]", shadow: "shadow-accent-sage-soft",
+    bar: "from-accent-sage to-accent-green", border: "border-accent-sage-soft", shadow: "shadow-accent-sage-soft",
   },
 };
 

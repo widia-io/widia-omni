@@ -6,12 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
 
 const cellColors: Record<string, Record<number, string>> = {
-  green: { 1: "bg-[#788c5d30]", 2: "bg-[#788c5d60]", 3: "bg-[#788c5d]" },
-  blue: { 1: "bg-[#6a9bcc30]", 2: "bg-[#6a9bcc60]", 3: "bg-[#6a9bcc]" },
-  orange: { 1: "bg-[#d9775730]", 2: "bg-[#d9775760]", 3: "bg-[#d97757]" },
-  sand: { 1: "bg-[#c4a88230]", 2: "bg-[#c4a88260]", 3: "bg-[#c4a882]" },
-  sage: { 1: "bg-[#8a9e7830]", 2: "bg-[#8a9e7860]", 3: "bg-[#8a9e78]" },
-  rose: { 1: "bg-[#b86b6b30]", 2: "bg-[#b86b6b60]", 3: "bg-[#b86b6b]" },
+  green: { 1: "bg-accent-green/20", 2: "bg-accent-green/50", 3: "bg-accent-green" },
+  blue: { 1: "bg-accent-blue/20", 2: "bg-accent-blue/50", 3: "bg-accent-blue" },
+  orange: { 1: "bg-accent-orange/20", 2: "bg-accent-orange/50", 3: "bg-accent-orange" },
+  sand: { 1: "bg-accent-sand/20", 2: "bg-accent-sand/50", 3: "bg-accent-sand" },
+  sage: { 1: "bg-accent-sage/20", 2: "bg-accent-sage/50", 3: "bg-accent-sage" },
+  rose: { 1: "bg-accent-rose/20", 2: "bg-accent-rose/50", 3: "bg-accent-rose" },
 };
 
 const dayLabels = ["S", "T", "Q", "Q", "S", "S", "D"];
