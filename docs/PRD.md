@@ -58,10 +58,9 @@ Cada workspace tem seu espaço isolado com metas, hábitos, finanças, journalin
                     │         GO WORKER (asynq)             │
                     │                                      │
                     │  Scheduled (cron):                    │
-                    │   - score_snapshot  (weekly)          │
-                    │   - streak_update   (daily)           │
-                    │   - weekly_review   (weekly)          │
-                    │   - trial_expiry    (daily)           │
+                    │   - score_snapshot  (weekly Mon 2am)  │
+                    │   - streak_update   (daily 1am)       │
+                    │   - insight_generate (weekly Mon 3am) │
                     │   - counter_reconciler (hourly)       │
                     │                                      │
                     │  Event-driven:                        │
@@ -115,7 +114,9 @@ mission-control/
 │   │   ├── auth.go                     # JWT validation → user ctx
 │   │   ├── tenant.go                   # user → workspace → entitlements ctx
 │   │   ├── entitlement.go             # Feature gate + limit check (O(1))
-│   │   ├── ratelimit.go               # Token bucket per ws + route group
+│   │   ├── ratelimit.go               # Token bucket per ws + route group (separate rl:api: bucket)
+│   │   ├── apikey_auth.go            # X-API-Key → workspace ctx (public API)
+│   │   ├── context.go                # Context helpers (userID, wsID, role, entitlements, apiKeyID)
 │   │   ├── idempotency.go            # Idempotency-Key header
 │   │   ├── requestid.go
 │   │   ├── logger.go                  # Request logging
@@ -137,6 +138,8 @@ mission-control/
 │   │   ├── dashboard.go
 │   │   ├── notification.go
 │   │   ├── export.go
+│   │   ├── insight.go                 # AI insights (Premium gate)
+│   │   ├── apikey.go                  # API key management (Premium gate)
 │   │   ├── admin.go
 │   │   └── health.go
 │   │
@@ -158,6 +161,8 @@ mission-control/
 │   │   ├── dashboard.go
 │   │   ├── notification.go
 │   │   ├── export.go
+│   │   ├── insight.go                 # AI insights (data gather + LLM + CRUD)
+│   │   ├── apikey.go                  # Create/List/Revoke + ValidateKey + TouchLastUsed
 │   │   └── audit.go                   # Audit via SECURITY DEFINER
 │   │
 │   ├── repository/sqlc/               # Auto-generated
@@ -175,6 +180,8 @@ mission-control/
 │   │   ├── finance.go
 │   │   ├── journal.go
 │   │   ├── score.go
+│   │   ├── insight.go                # Insight + InsightContent
+│   │   ├── apikey.go                 # APIKey + APIKeyWithSecret
 │   │   └── notification.go
 │   │
 │   ├── billing/
@@ -189,9 +196,13 @@ mission-control/
 │   │   ├── weekly_review.go
 │   │   ├── trial_expiry.go
 │   │   ├── counter_reconciler.go     # Fix drift hourly
+│   │   ├── insight_generate.go      # Weekly AI insight generation
 │   │   ├── send_notification.go
 │   │   ├── process_stripe_event.go
 │   │   └── export_data.go
+│   │
+│   ├── llm/
+│   │   └── openrouter.go              # OpenRouter HTTP client (OpenAI-compatible)
 │   │
 │   ├── email/
 │   │   ├── resend.go
@@ -228,7 +239,9 @@ mission-control/
 │   │   ├── 018_indexes.sql
 │   │   ├── 019_triggers.sql
 │   │   ├── 020_seed.sql
-│   │   └── 021_budgets.sql
+│   │   ├── 021_budgets.sql
+│   │   ├── 022_insights.sql
+│   │   └── 023_api_keys.sql
 │   └── queries/
 │       ├── workspaces.sql
 │       ├── entitlements.sql
@@ -596,6 +609,43 @@ CREATE TABLE life_scores (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(workspace_id, week_start)
 );
+
+-- ============================================================
+-- AI INSIGHTS (entitlement gated: Premium)
+-- ============================================================
+CREATE TABLE workspace_insights (
+    id                UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    workspace_id      UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    type              TEXT NOT NULL CHECK (type IN ('weekly_summary', 'on_demand')),
+    week_start        DATE NOT NULL,
+    content           JSONB NOT NULL,
+    model             TEXT NOT NULL,
+    prompt_tokens     INT NOT NULL DEFAULT 0,
+    completion_tokens INT NOT NULL DEFAULT 0,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_insights_ws_created ON workspace_insights(workspace_id, created_at DESC);
+CREATE INDEX idx_insights_ws_type_week ON workspace_insights(workspace_id, type, week_start);
+
+-- ============================================================
+-- API KEYS (entitlement gated: Premium api_access)
+-- ============================================================
+CREATE TABLE api_keys (
+    id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    created_by   UUID NOT NULL,
+    name         TEXT NOT NULL DEFAULT '',
+    key_hash     TEXT NOT NULL,
+    key_prefix   TEXT NOT NULL,
+    last_used_at TIMESTAMPTZ,
+    revoked_at   TIMESTAMPTZ,
+    expires_at   TIMESTAMPTZ,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX idx_api_keys_hash ON api_keys(key_hash) WHERE revoked_at IS NULL;
+CREATE INDEX idx_api_keys_workspace ON api_keys(workspace_id) WHERE revoked_at IS NULL;
 
 -- ============================================================
 -- NOTIFICATIONS
@@ -995,6 +1045,33 @@ DELETE /api/v1/journal/:date
 GET    /api/v1/scores/current
 GET    /api/v1/scores/history            # ?weeks=N [gate: score_history_weeks]
 
+# ─── AI Insights ─── [gate: ai_insights]
+GET    /api/v1/insights                  # ?limit,offset (paginated, created_at DESC)
+GET    /api/v1/insights/latest           # Redis-cached (1hr TTL)
+POST   /api/v1/insights/generate         # On-demand (rate limit: 1/day via Redis cooldown)
+
+# ─── API Keys ─── [gate: api_access, owner/admin only for create/revoke]
+GET    /api/v1/api-keys                  # List active keys (revoked_at IS NULL)
+POST   /api/v1/api-keys                  # Create key (returns raw key once), max 5/workspace
+DELETE /api/v1/api-keys/:id              # Soft-revoke (sets revoked_at)
+
+# ─── Public API ─── [auth: X-API-Key header, read-only, separate rate limit bucket]
+GET    /public/v1/areas
+GET    /public/v1/goals
+GET    /public/v1/goals/:id
+GET    /public/v1/habits
+GET    /public/v1/habits/entries
+GET    /public/v1/habits/streaks
+GET    /public/v1/tasks
+GET    /public/v1/scores/current
+GET    /public/v1/scores/history
+GET    /public/v1/journal
+GET    /public/v1/journal/:date
+GET    /public/v1/finances/summary
+GET    /public/v1/finances/transactions
+GET    /public/v1/insights
+GET    /public/v1/insights/latest
+
 # ─── Notifications ───
 GET    /api/v1/notifications             # ?unread=true&limit=N&offset=N
 PATCH  /api/v1/notifications/:id/read
@@ -1060,7 +1137,10 @@ Next request loads new entitlements → new limits applied
 ## 📊 Observability
 
 ```
-Logs:     zerolog → JSON → stdout (collected by Docker/Traefik)
+Logs:     zerolog → dual-write:
+          - Dev: ConsoleWriter (colored, human-readable) → stdout
+          - Prod: JSON → stdout
+          - Both: JSON append → logs/app.log (Promtail tails → Loki)
           request_id + workspace_id + user_id em todo request
 
 Metrics:  Prometheus /metrics
@@ -1070,6 +1150,13 @@ Metrics:  Prometheus /metrics
           asynq_queue_depth
           asynq_job_failures_total
           entitlement_limit_reached_total
+
+Dashboards: Grafana (localhost:3001) — auto-provisioned "Widia API" dashboard:
+          Request Rate, Error Rate, Latency p50/p95/p99, Duration Heatmap,
+          Active Subscriptions, Queue Depth, Job Failures, Entitlement Limits
+
+Stack:    Prometheus (:9091) + Loki (:3100) + Promtail + Grafana (:3001)
+          `make obs-up` / `make obs-down` / `make obs-status`
 
 Tracing:  OpenTelemetry (optional, plug when needed)
 ```
@@ -1202,9 +1289,22 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - [x] Notifications panel
 - [x] Settings (profile, preferences, workspace, account)
 
-### Milestone 7 — Growth
-- [ ] AI Insights (Premium)
-- [ ] Public API (Premium)
+### Milestone 7 — AI Insights ✅
+- [x] OpenRouter LLM client (OpenAI-compatible HTTP, 60s timeout, temp=0.3)
+- [x] InsightService (data gathering from 7 sources, prompt construction, LLM call, JSON parsing with fallback)
+- [x] InsightHandler (3 endpoints, Premium entitlement gate, 1/day rate limit via Redis cooldown)
+- [x] Worker: weekly insight generation (Monday 3am, after score snapshots)
+- [x] workspace_insights table (append-only, JSONB content, token tracking)
+
+### Milestone 8 — Public API ✅
+- [x] `api_keys` table (SHA-256 hashed, partial indexes, RLS)
+- [x] APIKey service (Create/List/Revoke/ValidateKey, Redis cache 5min, debounced last_used_at)
+- [x] APIKey handler (3 management endpoints, Premium `api_access` gate, owner/admin only)
+- [x] APIKeyAuth middleware (X-API-Key / Bearer wsk_... → workspace context)
+- [x] Public API `/public/v1/` — 15 read-only endpoints reusing existing handlers
+- [x] Separate rate limit bucket `rl:api:{wsID}`
+
+### Milestone 9 — Growth
 - [ ] Family plan (workspace members)
 - [ ] Mobile app
 - [ ] Referral system
@@ -1323,3 +1423,71 @@ go.opentelemetry.io/otel              # Tracing (optional)
 **Bugs found & fixed during E2E testing:**
 - Onboarding crash: `status?.steps.habits` accessed before query resolved → deferred `derivedStep` after `isLoading` guard
 - Billing "-1 areas" display: backend uses `-1` for unlimited → fixed condition to `< 0 || >= 999`
+
+### Post-M6 — Observability + Polish (2026-02-09)
+
+8 files changed (5 new config + 3 modified), `go build` + `npx tsc --noEmit` clean.
+
+| Area | Files | Detail |
+|------|-------|--------|
+| Observability Stack | 5 new infra configs, 3 modified | Prometheus (scrapes API :8080 + Worker :9090), Loki + Promtail (tails `logs/app.log`, parses JSON, labels by level/service), Grafana (auto-provisioned datasources + 8-panel dashboard). Docker Compose: 4 new services + 2 volumes. Makefile: `obs-up`/`obs-down`/`obs-status`. |
+| Logger Dual-Write | 1 modified | `NewLogger` now writes to `zerolog.MultiLevelWriter`: dev=ConsoleWriter (colored), both modes append JSON to `logs/app.log` for Promtail ingestion. `os.MkdirAll("logs")` on startup. |
+| Area Icons Fix | 3 new/modified | Area icon names (`heart`, `briefcase`, `dollar-sign`, etc.) rendered as raw text → mapped to Lucide SVG components via shared `lib/icons.ts`. Fixed in dashboard grid + areas page. |
+
+### M7 — AI Insights (2026-02-10)
+
+7 new files + 4 modified, `go build` + `go vet` clean. All endpoints tested via curl against local Supabase + Redis + OpenRouter.
+
+| Phase | Files | Detail |
+|-------|-------|--------|
+| Migration | 2 new (up/down) | `000022_insights` — `workspace_insights` table (append-only, JSONB content, token tracking), 2 indexes (ws+created DESC, ws+type+week), RLS policy |
+| Domain | 1 new | `Insight`, `InsightContent` (summary, highlights, concerns, patterns, correlations, recommendations, area_breakdown), `InsightType` enum (weekly_summary, on_demand) |
+| LLM Client | 1 new | `internal/llm/openrouter.go` — OpenRouter HTTP client (OpenAI-compatible), 60s timeout, temp=0.3, max_tokens=4096, returns content + usage tokens |
+| Config | 1 modified | Added `OPENROUTER_API_KEY` + `OPENROUTER_MODEL` (default: `anthropic/claude-sonnet-4`) |
+| Service | 1 new | InsightService — `gatherInsightData` (7 sources: areas+scores, life score, journal, habits, goals, tasks, finance conditional), `buildPrompt` (life coach persona + JSON schema), `Generate` (data→prompt→LLM→parse→DB→Redis cooldown), `List` (paginated), `GetLatest` (Redis 1hr cache), `CanGenerate` (Redis 24hr cooldown) |
+| Handler | 1 new | InsightHandler — 3 endpoints with `insightGate` (Premium `ai_insights` entitlement check). GET list, GET latest, POST generate (429 on cooldown) |
+| Worker | 1 new + 1 modified | `insight_generate.go` — iterates active workspaces, checks `AIInsights` entitlement, generates weekly insight, sends system notification. `worker.go` — added `TypeInsightGenerate` constant. Scheduled Monday 3am (after score snapshots at 2am). |
+| Router + Worker Wiring | 2 modified | Router: wired llmClient → insightSvc → insightH, registered `/insights` route group (3 routes). Worker main: wired entSvc + llmClient + insightSvc + insightGenH, registered handler + Monday 3am cron. |
+
+**Bugs found & fixed during testing:**
+- `h.current_streak` column doesn't exist on habits → removed from query/struct
+- Goals: `g.name` → `g.title`, `g.target_date` → `g.end_date`
+- `EXTRACT(DAY FROM date - date)` fails (postgres date-date returns int, not interval) → simplified to `GREATEST(g.end_date - CURRENT_DATE, 0)::int`
+
+**Key behaviors verified:**
+- Free plan: 403 on all 3 insight endpoints (ai_insights=false)
+- Premium plan: GET /insights returns empty list, POST /generate returns 201 with LLM-generated content
+- InsightContent JSON: summary, highlights, concerns, patterns (habit consistency, mood trends), correlations, recommendations, area_breakdown
+- GET /insights returns paginated list with generated insight
+- GET /insights/latest returns Redis-cached result
+- POST /insights/generate second call within 24h returns 429 (cooldown active)
+
+### M8 — Public API (2026-02-10)
+
+6 new files + 3 modified, `go build` + `go vet` clean. All endpoints tested via curl against local Supabase + Redis.
+
+| Phase | Files | Detail |
+|-------|-------|--------|
+| Migration | 2 new (up/down) | `000023_api_keys` — `api_keys` table (SHA-256 hash, soft-revoke, optional expiry), partial unique index on hash, partial index on workspace, RLS policy |
+| Domain | 1 new | `APIKey` + `APIKeyWithSecret` (raw key returned once on creation) |
+| Context | 1 modified | Added `SetAPIKeyID`/`GetAPIKeyID` to `middleware/context.go` |
+| Service | 1 new | APIKeyService — `Create` (max 5/workspace, `wsk_` + 32 hex, SHA-256 hash), `List`, `Revoke`, `ValidateKey` (Redis 5min cache), `TouchLastUsed` (Redis 1min debounce) |
+| Middleware | 1 new + 1 modified | `apikey_auth.go` — extracts X-API-Key or Bearer wsk_..., validates hash, checks expiry + APIAccess entitlement, sets workspace context. `ratelimit.go` — separate `rl:api:` prefix for API key requests. |
+| Handler | 1 new | APIKeyHandler — 3 endpoints with `apiKeyGate` (Premium `api_access` check + owner/admin for create/revoke) |
+| Router | 1 modified | Wired apiKeySvc → apiKeyH, `/api/v1/api-keys` (3 routes), `/public/v1/` group (15 read-only GET endpoints reusing existing handlers with APIKeyAuth middleware) |
+
+**Key design decisions:**
+- Reuse existing handlers: APIKeyAuth sets same context (wsID + entitlements) as Tenant middleware
+- Key format: `wsk_` + 32 hex chars (16 crypto/rand bytes), SHA-256 hashed for storage
+- Entitlement re-checked on every request: downgrade immediately blocks existing keys
+- Dashboard excluded from public API (requires userID for notifications)
+
+**Behaviors verified:**
+- Free plan: 403 on api-keys management endpoints
+- Premium plan: Create returns 201 with full key (once), List shows prefix only
+- Public API: X-API-Key header → 200, Bearer wsk_... → 200
+- Invalid key → 401, missing key → 401
+- Rate limit headers present (X-RateLimit-Limit/Remaining/Reset)
+- Revoke → 204, then revoked key → 401
+- Entitlement downgrade → existing keys immediately return 403
+- last_used_at updated in DB with debounce
