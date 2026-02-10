@@ -158,6 +158,28 @@ export interface HabitStreak {
   last_check_in: string | null;
 }
 
+// ─── Labels ─────────────────────────────────────────
+export interface Label {
+  id: string;
+  workspace_id: string;
+  name: string;
+  color: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Sections ───────────────────────────────────────
+export interface Section {
+  id: string;
+  workspace_id: string;
+  area_id: string;
+  name: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Tasks ───────────────────────────────────────────
 export type TaskPriority = "low" | "medium" | "high" | "critical";
 
@@ -166,13 +188,18 @@ export interface Task {
   workspace_id: string;
   area_id: string | null;
   goal_id: string | null;
+  parent_id: string | null;
+  section_id: string | null;
   title: string;
   description: string | null;
   priority: TaskPriority;
+  position: number;
+  duration_minutes: number | null;
   is_completed: boolean;
   is_focus: boolean;
   due_date: string | null;
   completed_at: string | null;
+  labels: Label[];
   created_at: string;
   updated_at: string;
 }

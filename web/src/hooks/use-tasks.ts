@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import type { Task } from "@/types/api";
+import type { Task, TaskPriority } from "@/types/api";
 
 export function useTasks(params?: Record<string, string>) {
   return useQuery({
@@ -9,10 +9,28 @@ export function useTasks(params?: Record<string, string>) {
   });
 }
 
+export interface CreateTaskInput {
+  title: string;
+  priority?: TaskPriority;
+  description?: string;
+  area_id?: string;
+  goal_id?: string;
+  parent_id?: string;
+  section_id?: string;
+  due_date?: string;
+  duration_minutes?: number;
+  is_focus?: boolean;
+  label_ids?: string[];
+}
+
+export interface UpdateTaskInput extends CreateTaskInput {
+  id: string;
+}
+
 export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Task>) =>
+    mutationFn: (data: CreateTaskInput) =>
       api<Task>("/api/v1/tasks", { method: "POST", body: JSON.stringify(data) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
@@ -21,7 +39,7 @@ export function useCreateTask() {
 export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: Partial<Task> & { id: string }) =>
+    mutationFn: ({ id, ...data }: UpdateTaskInput) =>
       api<Task>(`/api/v1/tasks/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
@@ -47,6 +65,23 @@ export function useToggleFocus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api<Task>(`/api/v1/tasks/${id}/focus`, { method: "PATCH" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+}
+
+export function useReopenTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api<Task>(`/api/v1/tasks/${id}/reopen`, { method: "PATCH" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+}
+
+export function useReorderTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, position }: { id: string; position: number }) =>
+      api<Task>(`/api/v1/tasks/${id}/reorder`, { method: "PATCH", body: JSON.stringify({ position }) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 }
