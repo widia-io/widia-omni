@@ -37,7 +37,7 @@ export function WeeklyStats() {
       value: data?.completed_today ?? 0,
       suffix: `/${data?.today_tasks ?? 0}`,
       sub: "tarefas concluidas",
-      color: "#6a9bcc",
+      color: "var(--area-indigo)",
       bars: [60, 80, 45, 90, 70, 30, 15],
     },
     {
@@ -45,7 +45,7 @@ export function WeeklyStats() {
       value: data?.habits_today ?? 0,
       suffix: "",
       sub: "check-ins realizados",
-      color: "#788c5d",
+      color: "var(--area-green)",
       bars: [50, 65, 70, 85, 90, 40, 20],
     },
     {
@@ -53,7 +53,7 @@ export function WeeklyStats() {
       value: data?.current_streaks ?? 0,
       suffix: "",
       sub: "habitos consecutivos",
-      color: "#d97757",
+      color: "var(--accent)",
       bars: [40, 55, 60, 50, 75, 85, 20],
     },
   ];

@@ -20,15 +20,15 @@ export function LifeScoreRing() {
   return (
     <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-[14px] border border-border bg-bg-card p-7">
       {/* Radial glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,#d9775708,transparent_70%)]" />
+      <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 30%, oklch(from var(--accent) l c h / 0.03), transparent 70%)` }} />
 
       {/* SVG Ring */}
       <div className="relative mb-4 h-40 w-40">
         <svg className="h-40 w-40 -rotate-90" viewBox="0 0 140 140">
           <defs>
             <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#d97757" />
-              <stop offset="100%" stopColor="#c4a882" />
+              <stop offset="0%" stopColor="var(--accent)" />
+              <stop offset="100%" stopColor="var(--area-amber)" />
             </linearGradient>
           </defs>
           <circle cx="70" cy="70" r="65" fill="none" stroke="var(--color-border)" strokeWidth="8" />
