@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Widia Omni — Design System Spec (para implementação)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F4F0;
+    --surface: #FFFFFF;
+    --text: #1A1A2E;
+    --text2: #6B7280;
+    --accent: #E8580C;
+    --border: #E5E2DC;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  /* Layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+  section { padding: 4rem 0; }
+  .divider { border: none; height: 1px; background: var(--border); max-width: 1100px; margin: 0 auto; }
+
+  /* Hero */
+  .hero {
+    padding: 4rem 2rem 2.5rem;
+    text-align: center;
+    background: linear-gradient(180deg, #FDFCFA, #F6F4F0);
+  }
+  .hero-badge {
+    display: inline-flex; padding: 6px 16px;
+    background: rgba(232,88,12,0.08); border: 1px solid rgba(232,88,12,0.15);
+    border-radius: 100px; font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: #E8580C; margin-bottom: 1.25rem;
+  }
+  .hero h1 { font-family: 'Outfit'; font-size: 2.8rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+  .hero h1 span { color: #E8580C; }
+  .hero p { font-size: 1rem; color: var(--text2); max-width: 600px; margin: 0 auto 1.5rem; }
+  .hero-note {
+    display: inline-block; padding: 10px 20px; background: #FFF7ED; border: 1px solid #FDBA74;
+    border-radius: 12px; font-size: 0.82rem; color: #9A3412; max-width: 600px;
+  }
+
+  /* Section headers */
+  .s-label { font-family: 'Outfit'; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #E8580C; margin-bottom: 0.4rem; }
+  .s-title { font-family: 'Outfit'; font-size: 1.8rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+  .s-desc { font-size: 0.92rem; color: var(--text2); max-width: 600px; margin-bottom: 2rem; }
+
+  /* Cards */
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 2rem; margin-bottom: 1.5rem; }
+  .card-dark { background: #1C1C28; border-color: #2E2E3E; color: #E8E6E1; }
+  .card h3 { font-family: 'Outfit'; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; }
+  .card-dark h3 { color: #E8E6E1; }
+
+  /* Code blocks */
+  .code-block {
+    background: #1E1E2E; border-radius: 14px; padding: 1.5rem; overflow-x: auto; margin: 1rem 0;
+  }
+  .code-block pre {
+    font-family: 'Courier New', monospace; font-size: 0.78rem; line-height: 1.75; color: #CDD6F4;
+  }
+  .c { color: #6C7086; } .p { color: #89B4FA; } .v { color: #A6E3A1; } .s { color: #F38BA8; } .k { color: #CBA6F7; }
+
+  /* SVG showcase */
+  .svg-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end; margin: 1rem 0; }
+  .svg-item { text-align: center; }
+  .svg-item span { display: block; font-size: 0.65rem; color: var(--text2); margin-top: 6px; font-weight: 600; }
+
+  /* Two col */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* Token table */
+  .token-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 1rem 0; }
+  .token-table th { text-align: left; padding: 8px 12px; font-family: 'Outfit'; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text2); border-bottom: 2px solid var(--border); }
+  .token-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .token-table code { background: #F4F2EE; padding: 2px 8px; border-radius: 5px; font-size: 0.78rem; color: #E8580C; }
+  .color-dot { width: 20px; height: 20px; border-radius: 6px; display: inline-block; vertical-align: middle; margin-right: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+  /* Icon table */
+  .icon-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 1rem 0; }
+  .icon-table th { text-align: left; padding: 8px 12px; font-family: 'Outfit'; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text2); border-bottom: 2px solid var(--border); }
+  .icon-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .icon-table code { background: #F4F2EE; padding: 2px 8px; border-radius: 5px; font-size: 0.78rem; color: #E8580C; }
+
+  /* Notes */
+  .note { background: #FFF7ED; border-left: 3px solid #E8580C; padding: 1rem 1.25rem; border-radius: 0 10px 10px 0; margin: 1rem 0; font-size: 0.88rem; color: #9A3412; }
+  .note strong { color: #7C2D12; }
+
+  .note-blue { background: #EFF6FF; border-left-color: #6366F1; color: #3730A3; }
+  .note-blue strong { color: #1E1B4B; }
+</style>
+</head>
+<body>
+
+<!-- ████████ HERO ████████ -->
+<div class="hero">
+  <div class="hero-badge">📋 Design System Spec</div>
+  <h1>Widia <span>Omni</span></h1>
+  <p>Documento de referência completo para implementação do design system. Contém logo, tokens, ícones, tipografia e guidelines de componentes.</p>
+  <div class="hero-note">
+    <strong>Para Claude Code:</strong> Use este HTML como referência visual e de tokens. Todos os SVGs, variáveis CSS e mapeamentos estão aqui prontos para copiar.
+  </div>
+</div>
+
+<!-- ████████ 1. LOGO — ARC SCORE ████████ -->
+<div class="container">
+<section>
+  <div class="s-label">01 — Logo</div>
+  <div class="s-title">Arc Score</div>
+  <p class="s-desc">Logo oficial do Widia Omni. Arco de progresso segmentado com centro sólido — referência ao Life Score. Disponível em light e dark.</p>
+
+  <div class="two-col">
+    <!-- Light variant -->
+    <div class="card">
+      <h3>☀️ Light Mode</h3>
+      <p style="font-size:0.85rem; color:#6B7280; margin-bottom:1rem;">Fundo laranja (#E8580C), elementos brancos</p>
+      <div class="svg-grid">
+        <div class="svg-item">
+          <svg width="64" height="64" viewBox="0 0 42 42" fill="none">
+            <rect width="42" height="42" rx="10" fill="#E8580C"/>
+            <path d="M13 29A11.5 11.5 0 0 1 21 9.5" stroke="white" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round"/>
+            <path d="M21 9.5A11.5 11.5 0 0 1 32.5 21" stroke="white" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>
+            <path d="M32.5 21A11.5 11.5 0 0 1 29 29" stroke="white" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="21" cy="22" r="4" fill="white"/>
+          </svg>
+          <span>64px</span>
+        </div>
+        <div class="svg-item">
+          <svg width="40" height="40" viewBox="0 0 42 42" fill="none">
+            <rect width="42" height="42" rx="10" fill="#E8580C"/>
+            <path d="M13 29A11.5 11.5 0 0 1 21 9.5" stroke="white" stroke-opacity="0.35" stroke-width="3" stroke-linecap="round"/>
+            <path d="M21 9.5A11.5 11.5 0 0 1 32.5 21" stroke="white" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round"/>
+            <path d="M32.5 21A11.5 11.5 0 0 1 29 29" stroke="white" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="21" cy="22" r="4" fill="white"/>
+          </svg>
+          <span>40px</span>
+        </div>
+        <div class="svg-item">
+          <svg width="32" height="32" viewBox="0 0 42 42" fill="none">
+            <rect width="42" height="42" rx="10" fill="#E8580C"/>
+            <path d="M13 29A11.5 11.5 0 0 1 21 9.5" stroke="white" stroke-opacity="0.35" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M21 9.5A11.5 11.5 0 0 1 32.5 21" stroke="white" stroke-opacity="0.6" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M32.5 21A11.5 11.5 0 0 1 29 29" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="21" cy="22" r="4.5" fill="white"/>
+          </svg>
+          <span>32px sidebar</span>
+        </div>
+        <div class="svg-item">
+          <svg width="20" height="20" viewBox="0 0 42 42" fill="none">
+            <rect width="42" height="42" rx="10" fill="#E8580C"/>
+            <path d="M13 29A11.5 11.5 0 0 1 21 9.5" stroke="white" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+            <path d="M21 9.5A11.5 11.5 0 0 1 32.5 21" stroke="white" stroke-opacity="0.6" stroke-width="4" stroke-linecap="round"/>
+            <path d="M32.5 21A11.5 11.5 0 0 1 29 29" stroke="white" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="21" cy="22" r="5" fill="white"/>
+          </svg>
+          <span>20px favicon</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark variant -->
+    <div class="card card-dark">
+      <h3>🌙 Dark Mode</h3>
+      <p style="font-size:0.85rem; color:#8B8A85; margin-bottom:1rem;">Fundo laranja claro (#F0874A), elementos escuros (#0F0F17)</p>
+      <div class="svg-grid">
+        <div class="svg-item">
+          <svg width="64" height="64" viewBox="0 0 42 42" fill="none">
+            <rect width="42" height="42" rx="10" fill="#F0874A"/>
+            <path d="M13 29A11.5 11.5 0 0 1 21 9.5" stroke="#0F0F17" stroke-opacity="0.3" stroke-width="3" stroke-linecap="round"/>
+            <path d="M21 9.5A11.5 11.5 0 0 1 32.5 21" stroke="#0F0F17" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+            <path d="M32.5 21A11.5 11.5 0 0 1 29 29" stroke="#0F0F17" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="21" cy="22" r="4" fill="#0F0F17"/>
+          </svg>
+          <span style="color:#8B8A85;">64px</span>
+        </div>
+        <div class="svg-item">
+          <svg width="40" height="40" viewBox="0 0 42 42" fill="none">
+            <rect width="42" height="42" rx="10" fill="#F0874A"/>
+            <path d="M13 29A11.5 11.5 0 0 1 21 9.5" stroke="#0F0F17" stroke-opacity="0.3" stroke-width="3" stroke-linecap="round"/>
+            <path d="M21 9.5A11.5 11.5 0 0 1 32.5 21" stroke="#0F0F17" stroke-opacity="0.55" stroke-width="3" stroke-linecap="round"/>
+            <path d="M32.5 21A11.5 11.5 0 0 1 29 29" stroke="#0F0F17" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="21" cy="22" r="4" fill="#0F0F17"/>
+          </svg>
+          <span style="color:#8B8A85;">40px</span>
+        </div>
+        <div class="svg-item">
+          <svg width="32" height="32" viewBox="0 0 42 42" fill="none">
+            <rect width="42" height="42" rx="10" fill="#F0874A"/>
+            <path d="M13 29A11.5 11.5 0 0 1 21 9.5" stroke="#0F0F17" stroke-opacity="0.3" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M21 9.5A11.5 11.5 0 0 1 32.5 21" stroke="#0F0F17" stroke-opacity="0.55" stroke-width="3.5" stroke-linecap="round"/>
+            <path d="M32.5 21A11.5 11.5 0 0 1 29 29" stroke="#0F0F17" stroke-width="3.5" stroke-linecap="round"/>
+            <circle cx="21" cy="22" r="4.5" fill="#0F0F17"/>
+          </svg>
+          <span style="color:#8B8A85;">32px sidebar</span>
+        </div>
+        <div class="svg-item">
+          <svg width="20" height="20" viewBox="0 0 42 42" fill="none">
+            <rect width="42" height="42" rx="10" fill="#F0874A"/>
+            <path d="M13 29A11.5 11.5 0 0 1 21 9.5" stroke="#0F0F17" stroke-opacity="0.3" stroke-width="4" stroke-linecap="round"/>
+            <path d="M21 9.5A11.5 11.5 0 0 1 32.5 21" stroke="#0F0F17" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round"/>
+            <path d="M32.5 21A11.5 11.5 0 0 1 29 29" stroke="#0F0F17" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="21" cy="22" r="5" fill="#0F0F17"/>
+          </svg>
+          <span style="color:#8B8A85;">20px favicon</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG Code -->
+  <div class="card">
+    <h3>📋 SVG para copiar — Componente React</h3>
+    <div class="code-block">
+<pre><span class="c">// components/Logo.tsx</span>
+<span class="k">interface</span> LogoProps {
+  size?: number;
+  theme?: <span class="v">'light'</span> | <span class="v">'dark'</span>;
+  className?: string;
+}
+
+<span class="k">export function</span> <span class="s">Logo</span>({ size = <span class="v">32</span>, theme = <span class="v">'light'</span>, className }: LogoProps) {
+  <span class="k">const</span> bg = theme === <span class="v">'light'</span> ? <span class="v">'#E8580C'</span> : <span class="v">'#F0874A'</span>;
+  <span class="k">const</span> fg = theme === <span class="v">'light'</span> ? <span class="v">'#FFFFFF'</span> : <span class="v">'#0F0F17'</span>;
+
+  <span class="c">// Stroke width mais grosso em tamanhos menores</span>
+  <span class="k">const</span> sw = size &lt;= 20 ? <span class="v">4</span> : size &lt;= 32 ? <span class="v">3.5</span> : <span class="v">3</span>;
+  <span class="k">const</span> cr = size &lt;= 20 ? <span class="v">5</span> : size &lt;= 32 ? <span class="v">4.5</span> : <span class="v">4</span>;
+
+  <span class="k">return</span> (
+    &lt;<span class="s">svg</span>
+      width={size} height={size}
+      viewBox=<span class="v">"0 0 42 42"</span> fill=<span class="v">"none"</span>
+      className={className}
+    &gt;
+      &lt;<span class="s">rect</span> width=<span class="v">"42"</span> height=<span class="v">"42"</span> rx=<span class="v">"10"</span> fill={bg} /&gt;
+      &lt;<span class="s">path</span>
+        d=<span class="v">"M13 29A11.5 11.5 0 0 1 21 9.5"</span>
+        stroke={fg} strokeOpacity=<span class="v">{0.35}</span>
+        strokeWidth={sw} strokeLinecap=<span class="v">"round"</span>
+      /&gt;
+      &lt;<span class="s">path</span>
+        d=<span class="v">"M21 9.5A11.5 11.5 0 0 1 32.5 21"</span>
+        stroke={fg} strokeOpacity=<span class="v">{0.6}</span>
+        strokeWidth={sw} strokeLinecap=<span class="v">"round"</span>
+      /&gt;
+      &lt;<span class="s">path</span>
+        d=<span class="v">"M32.5 21A11.5 11.5 0 0 1 29 29"</span>
+        stroke={fg} strokeWidth={sw}
+        strokeLinecap=<span class="v">"round"</span>
+      /&gt;
+      &lt;<span class="s">circle</span> cx=<span class="v">"21"</span> cy=<span class="v">"22"</span> r={cr} fill={fg} /&gt;
+    &lt;/<span class="s">svg</span>&gt;
+  );
+}</pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ████████ 2. DESIGN TOKENS ████████ -->
+<div class="container">
+<section>
+  <div class="s-label">02 — Design Tokens</div>
+  <div class="s-title">Paleta Warm Sand — Light & Dark</div>
+  <p class="s-desc">Todos os tokens CSS necessários. Use CSS custom properties no :root e sobrescreva com .dark ou prefers-color-scheme.</p>
+
+  <div class="card">
+    <h3>CSS completo — copiar para globals.css</h3>
+    <div class="code-block">
+<pre><span class="c">/* ═══════════════════════════════════════
+   WIDIA OMNI — DESIGN TOKENS
+   Paleta: Warm Sand (Light & Dark)
+   ═══════════════════════════════════════ */</span>
+
+<span class="s">:root</span> {
+  <span class="c">/* ── Background Layers ── */</span>
+  <span class="p">--color-bg</span>: <span class="v">#FDFCFA</span>;
+  <span class="p">--color-surface</span>: <span class="v">#F6F4F0</span>;
+  <span class="p">--color-card</span>: <span class="v">#FFFFFF</span>;
+  <span class="p">--color-border</span>: <span class="v">#E5E2DC</span>;
+
+  <span class="c">/* ── Text ── */</span>
+  <span class="p">--color-text</span>: <span class="v">#1A1A2E</span>;
+  <span class="p">--color-text-secondary</span>: <span class="v">#6B7280</span>;
+  <span class="p">--color-text-muted</span>: <span class="v">#9CA3AF</span>;
+
+  <span class="c">/* ── Accent (Orange) ── */</span>
+  <span class="p">--color-accent</span>: <span class="v">#E8580C</span>;
+  <span class="p">--color-accent-hover</span>: <span class="v">#D14D08</span>;
+  <span class="p">--color-accent-light</span>: <span class="v">#FFF3ED</span>;
+  <span class="p">--color-accent-subtle</span>: <span class="v">rgba(232, 88, 12, 0.08)</span>;
+
+  <span class="c">/* ── Semantic ── */</span>
+  <span class="p">--color-success</span>: <span class="v">#16A34A</span>;
+  <span class="p">--color-info</span>: <span class="v">#6366F1</span>;
+  <span class="p">--color-warning</span>: <span class="v">#EAB308</span>;
+  <span class="p">--color-danger</span>: <span class="v">#DC2626</span>;
+
+  <span class="c">/* ── Life Areas ── */</span>
+  <span class="p">--area-saude</span>: <span class="v">#EF4444</span>;
+  <span class="p">--area-carreira</span>: <span class="v">#6366F1</span>;
+  <span class="p">--area-financas</span>: <span class="v">#16A34A</span>;
+  <span class="p">--area-relacionamentos</span>: <span class="v">#EC4899</span>;
+  <span class="p">--area-dev-pessoal</span>: <span class="v">#F59E0B</span>;
+  <span class="p">--area-lazer</span>: <span class="v">#06B6D4</span>;
+
+  <span class="c">/* ── Typography ── */</span>
+  <span class="p">--font-display</span>: <span class="v">'Outfit', sans-serif</span>;
+  <span class="p">--font-body</span>: <span class="v">'DM Sans', sans-serif</span>;
+  <span class="p">--font-mono</span>: <span class="v">'JetBrains Mono', monospace</span>;
+
+  <span class="c">/* ── Border Radius ── */</span>
+  <span class="p">--radius-sm</span>: <span class="v">8px</span>;
+  <span class="p">--radius-md</span>: <span class="v">12px</span>;
+  <span class="p">--radius-lg</span>: <span class="v">16px</span>;
+  <span class="p">--radius-xl</span>: <span class="v">24px</span>;
+
+  <span class="c">/* ── Shadows ── */</span>
+  <span class="p">--shadow-sm</span>: <span class="v">0 1px 3px rgba(0, 0, 0, 0.04)</span>;
+  <span class="p">--shadow-md</span>: <span class="v">0 4px 12px rgba(0, 0, 0, 0.06)</span>;
+  <span class="p">--shadow-lg</span>: <span class="v">0 12px 40px rgba(0, 0, 0, 0.08)</span>;
+
+  <span class="c">/* ── Area chip bg opacity ── */</span>
+  <span class="p">--area-chip-opacity</span>: <span class="v">0.06</span>;
+}
+
+<span class="c">/* ═══ DARK MODE ═══ */</span>
+<span class="s">.dark</span> {
+  <span class="p">--color-bg</span>: <span class="v">#0F0F17</span>;
+  <span class="p">--color-surface</span>: <span class="v">#1C1C28</span>;
+  <span class="p">--color-card</span>: <span class="v">#252534</span>;
+  <span class="p">--color-border</span>: <span class="v">#2E2E3E</span>;
+
+  <span class="p">--color-text</span>: <span class="v">#E8E6E1</span>;
+  <span class="p">--color-text-secondary</span>: <span class="v">#8B8A85</span>;
+  <span class="p">--color-text-muted</span>: <span class="v">#5C5B57</span>;
+
+  <span class="p">--color-accent</span>: <span class="v">#F0874A</span>;
+  <span class="p">--color-accent-hover</span>: <span class="v">#F49A63</span>;
+  <span class="p">--color-accent-light</span>: <span class="v">rgba(240, 135, 74, 0.15)</span>;
+  <span class="p">--color-accent-subtle</span>: <span class="v">rgba(240, 135, 74, 0.10)</span>;
+
+  <span class="p">--color-success</span>: <span class="v">#4ADE80</span>;
+  <span class="p">--color-info</span>: <span class="v">#818CF8</span>;
+  <span class="p">--color-warning</span>: <span class="v">#FBBF24</span>;
+  <span class="p">--color-danger</span>: <span class="v">#F87171</span>;
+
+  <span class="p">--area-saude</span>: <span class="v">#F87171</span>;
+  <span class="p">--area-carreira</span>: <span class="v">#818CF8</span>;
+  <span class="p">--area-financas</span>: <span class="v">#4ADE80</span>;
+  <span class="p">--area-relacionamentos</span>: <span class="v">#F472B6</span>;
+  <span class="p">--area-dev-pessoal</span>: <span class="v">#FBBF24</span>;
+  <span class="p">--area-lazer</span>: <span class="v">#22D3EE</span>;
+
+  <span class="p">--shadow-sm</span>: <span class="v">0 1px 3px rgba(0, 0, 0, 0.2)</span>;
+  <span class="p">--shadow-md</span>: <span class="v">0 4px 12px rgba(0, 0, 0, 0.3)</span>;
+  <span class="p">--shadow-lg</span>: <span class="v">0 12px 40px rgba(0, 0, 0, 0.4)</span>;
+
+  <span class="p">--area-chip-opacity</span>: <span class="v">0.10</span>;
+}
+
+<span class="c">/* Auto dark via OS preference (fallback) */</span>
+<span class="s">@media (prefers-color-scheme: dark)</span> {
+  <span class="s">:root:not(.light)</span> {
+    <span class="c">/* mesmos tokens do .dark acima */</span>
+  }
+}</pre>
+    </div>
+  </div>
+
+  <!-- Quick reference table -->
+  <div class="two-col">
+    <div class="card">
+      <h3>☀️ Light — Referência rápida</h3>
+      <table class="token-table">
+        <tr><th>Token</th><th>Cor</th><th>Hex</th></tr>
+        <tr><td>bg</td><td><span class="color-dot" style="background:#FDFCFA; border:1px solid #E5E2DC;"></span></td><td><code>#FDFCFA</code></td></tr>
+        <tr><td>surface</td><td><span class="color-dot" style="background:#F6F4F0;"></span></td><td><code>#F6F4F0</code></td></tr>
+        <tr><td>card</td><td><span class="color-dot" style="background:#FFFFFF; border:1px solid #E5E2DC;"></span></td><td><code>#FFFFFF</code></td></tr>
+        <tr><td>border</td><td><span class="color-dot" style="background:#E5E2DC;"></span></td><td><code>#E5E2DC</code></td></tr>
+        <tr><td>text</td><td><span class="color-dot" style="background:#1A1A2E;"></span></td><td><code>#1A1A2E</code></td></tr>
+        <tr><td>text-secondary</td><td><span class="color-dot" style="background:#6B7280;"></span></td><td><code>#6B7280</code></td></tr>
+        <tr><td>accent</td><td><span class="color-dot" style="background:#E8580C;"></span></td><td><code>#E8580C</code></td></tr>
+      </table>
+    </div>
+    <div class="card card-dark">
+      <h3>🌙 Dark — Referência rápida</h3>
+      <table class="token-table">
+        <tr><th style="color:#5C5B57;">Token</th><th style="color:#5C5B57;">Cor</th><th style="color:#5C5B57;">Hex</th></tr>
+        <tr><td>bg</td><td><span class="color-dot" style="background:#0F0F17;"></span></td><td><code>#0F0F17</code></td></tr>
+        <tr><td>surface</td><td><span class="color-dot" style="background:#1C1C28;"></span></td><td><code>#1C1C28</code></td></tr>
+        <tr><td>card</td><td><span class="color-dot" style="background:#252534;"></span></td><td><code>#252534</code></td></tr>
+        <tr><td>border</td><td><span class="color-dot" style="background:#2E2E3E;"></span></td><td><code>#2E2E3E</code></td></tr>
+        <tr><td>text</td><td><span class="color-dot" style="background:#E8E6E1;"></span></td><td><code>#E8E6E1</code></td></tr>
+        <tr><td>text-secondary</td><td><span class="color-dot" style="background:#8B8A85;"></span></td><td><code>#8B8A85</code></td></tr>
+        <tr><td>accent</td><td><span class="color-dot" style="background:#F0874A;"></span></td><td><code>#F0874A</code></td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ████████ 3. ÁREAS DA VIDA — CORES ████████ -->
+<div class="container">
+<section>
+  <div class="s-label">03 — Áreas da Vida</div>
+  <div class="s-title">Cores por Área</div>
+  <p class="s-desc">Cada área tem uma cor fixa. No dark mode, a luminosidade sobe (~Tailwind 400) mantendo o mesmo matiz.</p>
+
+  <div class="card">
+    <table class="token-table">
+      <tr><th>Área</th><th>Ícone Lucide</th><th>Light</th><th>Dark</th><th>Token CSS</th></tr>
+      <tr>
+        <td><strong>Saúde</strong></td>
+        <td><code>Heart</code></td>
+        <td><span class="color-dot" style="background:#EF4444;"></span>#EF4444</td>
+        <td><span class="color-dot" style="background:#F87171;"></span>#F87171</td>
+        <td><code>--area-saude</code></td>
+      </tr>
+      <tr>
+        <td><strong>Carreira</strong></td>
+        <td><code>Briefcase</code></td>
+        <td><span class="color-dot" style="background:#6366F1;"></span>#6366F1</td>
+        <td><span class="color-dot" style="background:#818CF8;"></span>#818CF8</td>
+        <td><code>--area-carreira</code></td>
+      </tr>
+      <tr>
+        <td><strong>Finanças</strong></td>
+        <td><code>DollarSign</code></td>
+        <td><span class="color-dot" style="background:#16A34A;"></span>#16A34A</td>
+        <td><span class="color-dot" style="background:#4ADE80;"></span>#4ADE80</td>
+        <td><code>--area-financas</code></td>
+      </tr>
+      <tr>
+        <td><strong>Relacionamentos</strong></td>
+        <td><code>Users</code></td>
+        <td><span class="color-dot" style="background:#EC4899;"></span>#EC4899</td>
+        <td><span class="color-dot" style="background:#F472B6;"></span>#F472B6</td>
+        <td><code>--area-relacionamentos</code></td>
+      </tr>
+      <tr>
+        <td><strong>Desenv. Pessoal</strong></td>
+        <td><code>BookOpen</code></td>
+        <td><span class="color-dot" style="background:#F59E0B;"></span>#F59E0B</td>
+        <td><span class="color-dot" style="background:#FBBF24;"></span>#FBBF24</td>
+        <td><code>--area-dev-pessoal</code></td>
+      </tr>
+      <tr>
+        <td><strong>Lazer</strong></td>
+        <td><code>Sun</code></td>
+        <td><span class="color-dot" style="background:#06B6D4;"></span>#06B6D4</td>
+        <td><span class="color-dot" style="background:#22D3EE;"></span>#22D3EE</td>
+        <td><code>--area-lazer</code></td>
+      </tr>
+    </table>
+
+    <div class="note" style="margin-top:1.5rem;">
+      <strong>Chip de área:</strong> Use <code>background: rgba(var(--area-X-rgb), var(--area-chip-opacity))</code> — 0.06 no light, 0.10 no dark. O chip nunca tem borda, só background sutil.
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ████████ 4. ÍCONES ████████ -->
+<div class="container">
+<section>
+  <div class="s-label">04 — Ícones</div>
+  <div class="s-title">Mapeamento Lucide Icons</div>
+  <p class="s-desc">Biblioteca: <code>lucide-react</code>. Stroke-width: 1.8. Instalar com <code>npm install lucide-react</code>.</p>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>Navegação (Sidebar)</h3>
+      <table class="icon-table">
+        <tr><th>Feature</th><th>Ícone</th><th>Import</th></tr>
+        <tr><td>Dashboard</td><td>LayoutGrid</td><td><code>LayoutGrid</code></td></tr>
+        <tr><td>Metas</td><td>Goal</td><td><code>Goal</code></td></tr>
+        <tr><td>Hábitos</td><td>CheckCircle</td><td><code>CheckCircle</code></td></tr>
+        <tr><td>Progresso</td><td>TrendingUp</td><td><code>TrendingUp</code></td></tr>
+        <tr><td>Agenda</td><td>Calendar</td><td><code>Calendar</code></td></tr>
+        <tr><td>Config</td><td>Settings</td><td><code>Settings</code></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Features & Widgets</h3>
+      <table class="icon-table">
+        <tr><th>Feature</th><th>Ícone</th><th>Import</th></tr>
+        <tr><td>Notificações</td><td>Bell</td><td><code>Bell</code></td></tr>
+        <tr><td>Foco do Dia</td><td>Lightbulb</td><td><code>Lightbulb</code></td></tr>
+        <tr><td>Streaks</td><td>Flame</td><td><code>Flame</code></td></tr>
+        <tr><td>Life Score</td><td>Globe</td><td><code>Globe</code></td></tr>
+        <tr><td>Check-in</td><td>MessageSquare</td><td><code>MessageSquare</code></td></tr>
+        <tr><td>Diário</td><td>Book</td><td><code>Book</code></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Regras de uso</h3>
+    <div class="code-block">
+<pre><span class="c">// Tamanhos padrão</span>
+<span class="k">const</span> ICON_SIZES = {
+  inline: <span class="v">16</span>,     <span class="c">// dentro de texto</span>
+  nav: <span class="v">20</span>,        <span class="c">// sidebar / nav items</span>
+  card: <span class="v">24</span>,       <span class="c">// cabeçalho de cards</span>
+  feature: <span class="v">28</span>,    <span class="c">// destaque em widgets</span>
+};
+
+<span class="c">// Exemplo de uso</span>
+<span class="k">import</span> { Heart, Briefcase, DollarSign } <span class="k">from</span> <span class="v">'lucide-react'</span>;
+
+&lt;<span class="s">Heart</span>
+  size={<span class="v">20</span>}
+  strokeWidth={<span class="v">1.8</span>}
+  className=<span class="v">"text-[var(--area-saude)]"</span>
+/&gt;</pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ████████ 5. TIPOGRAFIA ████████ -->
+<div class="container">
+<section>
+  <div class="s-label">05 — Tipografia</div>
+  <div class="s-title">Fontes & Escala</div>
+
+  <div class="card">
+    <h3>Fontes</h3>
+    <table class="token-table">
+      <tr><th>Uso</th><th>Fonte</th><th>Pesos</th><th>Token</th></tr>
+      <tr><td><strong>Display</strong> — títulos, headings, nome do usuário</td><td>Outfit</td><td>600, 700, 800</td><td><code>--font-display</code></td></tr>
+      <tr><td><strong>Body</strong> — texto corrido, labels, descrições</td><td>DM Sans</td><td>400, 500, 600</td><td><code>--font-body</code></td></tr>
+      <tr><td><strong>Mono</strong> — números, scores, porcentagens, código</td><td>JetBrains Mono</td><td>400, 600</td><td><code>--font-mono</code></td></tr>
+    </table>
+
+    <div class="note-blue note" style="margin-top:1.5rem;">
+      <strong>Google Fonts import:</strong><br>
+      <code>@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300..800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap');</code>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Escala Tipográfica</h3>
+    <div class="code-block">
+<pre><span class="c">/* Escala de texto recomendada */</span>
+<span class="p">--text-xs</span>: <span class="v">0.75rem</span>;    <span class="c">/* 12px — labels pequenos, badges */</span>
+<span class="p">--text-sm</span>: <span class="v">0.875rem</span>;   <span class="c">/* 14px — body small, secondary text */</span>
+<span class="p">--text-base</span>: <span class="v">1rem</span>;      <span class="c">/* 16px — body padrão */</span>
+<span class="p">--text-lg</span>: <span class="v">1.125rem</span>;   <span class="c">/* 18px — subtítulos */</span>
+<span class="p">--text-xl</span>: <span class="v">1.25rem</span>;    <span class="c">/* 20px — card titles */</span>
+<span class="p">--text-2xl</span>: <span class="v">1.5rem</span>;    <span class="c">/* 24px — section titles */</span>
+<span class="p">--text-3xl</span>: <span class="v">1.875rem</span>;  <span class="c">/* 30px — page titles */</span>
+<span class="p">--text-4xl</span>: <span class="v">2.25rem</span>;   <span class="c">/* 36px — hero / greeting */</span>
+
+<span class="c">/* Números e scores — usar font-mono */</span>
+<span class="p">--text-score</span>: <span class="v">2rem</span>;     <span class="c">/* Life Score display */</span>
+<span class="p">--text-stat</span>: <span class="v">1.5rem</span>;    <span class="c">/* Stat cards (3/5, 7, 12) */</span></pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ████████ 6. COMPONENTES ████████ -->
+<div class="container">
+<section>
+  <div class="s-label">06 — Componentes</div>
+  <div class="s-title">Guidelines de Componentes</div>
+
+  <div class="card">
+    <h3>Border Radius</h3>
+    <table class="token-table">
+      <tr><th>Tamanho</th><th>Valor</th><th>Uso</th></tr>
+      <tr><td>sm</td><td><code>8px</code></td><td>Badges, chips, inputs, tooltips</td></tr>
+      <tr><td>md</td><td><code>12px</code></td><td>Botões, cards menores, dropdowns</td></tr>
+      <tr><td>lg</td><td><code>16px</code></td><td>Cards padrão, modais</td></tr>
+      <tr><td>xl</td><td><code>24px</code></td><td>Cards grandes, containers principais</td></tr>
+      <tr><td>full</td><td><code>9999px</code></td><td>Avatares, pills, toggle</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Hierarquia de camadas</h3>
+    <div class="code-block">
+<pre><span class="c">/*
+  HIERARQUIA VISUAL (3 camadas):
+
+  ┌─────────────────────────────────┐
+  │  var(--color-bg)                │  ← Fundo da página
+  │  ┌───────────────────────────┐  │
+  │  │  var(--color-surface)     │  │  ← Áreas agrupadas, sidebar bg
+  │  │  ┌─────────────────────┐  │  │
+  │  │  │  var(--color-card)  │  │  │  ← Cards individuais
+  │  │  │  border: var(--border) │  │
+  │  │  └─────────────────────┘  │  │
+  │  └───────────────────────────┘  │
+  └─────────────────────────────────┘
+
+  REGRAS:
+  - Cards SEMPRE têm border: 1px solid var(--color-border)
+  - Light: sombras para elevação + bordas
+  - Dark: apenas bordas (sombras invisíveis)
+  - Nunca pular camadas (bg direto para card sem surface)
+*/</span></pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Componentes chave</h3>
+    <div class="code-block">
+<pre><span class="c">/* ── Stat Card (Foco Semanal, Hábitos, Streaks) ── */</span>
+<span class="s">.stat-card</span> {
+  background: <span class="v">var(--color-card)</span>;
+  border: <span class="v">1px solid var(--color-border)</span>;
+  border-radius: <span class="v">var(--radius-lg)</span>;
+  padding: <span class="v">1.25rem</span>;
+  box-shadow: <span class="v">var(--shadow-sm)</span>;
+}
+
+<span class="s">.stat-card__number</span> {
+  font-family: <span class="v">var(--font-display)</span>;
+  font-size: <span class="v">var(--text-stat)</span>;
+  font-weight: <span class="v">700</span>;
+  color: <span class="v">var(--color-accent)</span>;
+}
+
+<span class="s">.stat-card__label</span> {
+  font-size: <span class="v">var(--text-xs)</span>;
+  font-weight: <span class="v">500</span>;
+  text-transform: <span class="v">uppercase</span>;
+  letter-spacing: <span class="v">0.06em</span>;
+  color: <span class="v">var(--color-text-muted)</span>;
+}
+
+<span class="c">/* ── Area Chip ── */</span>
+<span class="s">.area-chip</span> {
+  display: <span class="v">flex</span>;
+  align-items: <span class="v">center</span>;
+  gap: <span class="v">8px</span>;
+  padding: <span class="v">10px 14px</span>;
+  border-radius: <span class="v">var(--radius-md)</span>;
+  font-size: <span class="v">var(--text-sm)</span>;
+  font-weight: <span class="v">600</span>;
+  color: <span class="v">var(--color-text)</span>;
+  <span class="c">/* bg set via inline style com a cor da área */</span>
+}
+
+<span class="c">/* ── Sidebar Nav Item ── */</span>
+<span class="s">.nav-item</span> {
+  width: <span class="v">40px</span>;
+  height: <span class="v">40px</span>;
+  border-radius: <span class="v">var(--radius-md)</span>;
+  display: <span class="v">flex</span>;
+  align-items: <span class="v">center</span>;
+  justify-content: <span class="v">center</span>;
+  color: <span class="v">var(--color-text-muted)</span>;
+  transition: <span class="v">all 0.2s ease</span>;
+}
+
+<span class="s">.nav-item:hover</span> {
+  background: <span class="v">var(--color-surface)</span>;
+  color: <span class="v">var(--color-text)</span>;
+}
+
+<span class="s">.nav-item.active</span> {
+  background: <span class="v">var(--color-accent-subtle)</span>;
+  color: <span class="v">var(--color-accent)</span>;
+}
+
+<span class="c">/* ── Greeting ── */</span>
+<span class="s">.greeting</span> {
+  font-family: <span class="v">var(--font-display)</span>;
+  font-size: <span class="v">var(--text-4xl)</span>;
+  font-weight: <span class="v">800</span>;
+  color: <span class="v">var(--color-text)</span>;
+}
+
+<span class="s">.greeting__name</span> {
+  color: <span class="v">var(--color-accent)</span>;
+}
+
+<span class="c">/* ── Life Score Ring ── */</span>
+<span class="s">.life-score</span> {
+  <span class="c">/* Usar SVG com arcos, similar ao logo Arc Score */</span>
+  <span class="c">/* Cada segmento = uma área da vida com sua cor */</span>
+  <span class="c">/* Centro mostra o score numérico em font-mono */</span>
+}
+
+<span class="c">/* ── Habit Streak Dot ── */</span>
+<span class="s">.streak-dot</span> {
+  width: <span class="v">8px</span>;
+  height: <span class="v">8px</span>;
+  border-radius: <span class="v">50%</span>;
+}
+<span class="s">.streak-dot--done</span> { background: <span class="v">var(--color-accent)</span>; }
+<span class="s">.streak-dot--missed</span> { background: <span class="v">var(--color-border)</span>; }
+<span class="s">.streak-dot--today</span> { background: <span class="v">var(--color-accent)</span>; box-shadow: <span class="v">0 0 0 3px var(--color-accent-subtle)</span>; }</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Theme Toggle — implementação</h3>
+    <div class="code-block">
+<pre><span class="c">// hooks/useTheme.ts</span>
+<span class="k">import</span> { useState, useEffect } <span class="k">from</span> <span class="v">'react'</span>;
+
+<span class="k">export function</span> <span class="s">useTheme</span>() {
+  <span class="k">const</span> [theme, setTheme] = useState&lt;<span class="v">'light'</span> | <span class="v">'dark'</span>&gt;(<span class="v">'light'</span>);
+
+  useEffect(() =&gt; {
+    <span class="c">// Checar localStorage primeiro, depois preferência do OS</span>
+    <span class="k">const</span> saved = localStorage.getItem(<span class="v">'widia-theme'</span>);
+    <span class="k">if</span> (saved) {
+      setTheme(saved <span class="k">as</span> <span class="v">'light'</span> | <span class="v">'dark'</span>);
+    } <span class="k">else if</span> (window.matchMedia(<span class="v">'(prefers-color-scheme: dark)'</span>).matches) {
+      setTheme(<span class="v">'dark'</span>);
+    }
+  }, []);
+
+  useEffect(() =&gt; {
+    document.documentElement.classList.toggle(<span class="v">'dark'</span>, theme === <span class="v">'dark'</span>);
+    localStorage.setItem(<span class="v">'widia-theme'</span>, theme);
+  }, [theme]);
+
+  <span class="k">const</span> toggle = () =&gt; setTheme(t =&gt; t === <span class="v">'light'</span> ? <span class="v">'dark'</span> : <span class="v">'light'</span>);
+
+  <span class="k">return</span> { theme, toggle };
+}</pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ████████ 7. RESUMO ████████ -->
+<div class="container">
+<section>
+  <div class="s-label">07 — Resumo</div>
+  <div class="s-title">Checklist de Implementação</div>
+
+  <div class="card">
+    <div class="code-block">
+<pre><span class="c">## O que implementar:</span>
+
+<span class="v">✅</span> <span class="p">Design Tokens</span>    → globals.css com :root e .dark
+<span class="v">✅</span> <span class="p">Logo Arc Score</span>    → Componente Logo.tsx (light/dark, tamanhos)
+<span class="v">✅</span> <span class="p">Fontes</span>            → Outfit (display) + DM Sans (body) + JetBrains Mono (números)
+<span class="v">✅</span> <span class="p">Ícones</span>            → lucide-react, stroke-width 1.8
+<span class="v">✅</span> <span class="p">Áreas da Vida</span>     → 6 cores semânticas com variantes light/dark
+<span class="v">✅</span> <span class="p">Camadas</span>           → bg → surface → card (sempre com border)
+<span class="v">✅</span> <span class="p">Theme Toggle</span>      → .dark no html + localStorage + prefers-color-scheme
+<span class="v">✅</span> <span class="p">Border Radius</span>     → 8 / 12 / 16 / 24px padronizado
+<span class="v">✅</span> <span class="p">Sombras</span>           → Light usa sombras, Dark usa bordas
+<span class="v">✅</span> <span class="p">Scores/números</span>    → font-mono (JetBrains Mono)
+
+<span class="c">## Nunca fazer:</span>
+
+<span class="s">❌</span> Hardcode de cores — sempre usar var(--)
+<span class="s">❌</span> Preto puro (#000) no dark mode
+<span class="s">❌</span> Sombras pesadas no dark mode
+<span class="s">❌</span> Misturar fontes além das 3 definidas
+<span class="s">❌</span> Ícones sem strokeWidth={1.8}
+<span class="s">❌</span> Cards sem border no dark mode
+<span class="s">❌</span> Pular camadas de hierarquia visual</pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<footer>
+  <strong>Widia Omni</strong> — Design System Spec v1.0 · Fevereiro 2026
+</footer>
+
+</body>
+</html>
