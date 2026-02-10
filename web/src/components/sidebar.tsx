@@ -7,9 +7,14 @@ import {
   Calendar,
   PenLine,
   Settings,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUIStore } from "@/stores/ui-store";
+import { Logo } from "@/components/logo";
 
 const navItems = [
   { icon: LayoutDashboard, to: "/dashboard", label: "Dashboard" },
@@ -20,13 +25,20 @@ const navItems = [
   { icon: PenLine, to: "/journal", label: "Journal" },
 ] as const;
 
+const themeIcons = { light: Sun, dark: Moon, system: Monitor } as const;
+const themeLabels = { light: "Claro", dark: "Escuro", system: "Sistema" } as const;
+
 export function Sidebar() {
+  const theme = useUIStore((s) => s.theme);
+  const cycleTheme = useUIStore((s) => s.cycleTheme);
+  const ThemeIcon = themeIcons[theme];
+
   return (
     <TooltipProvider delayDuration={0}>
       <nav className="fixed top-0 left-0 z-10 flex h-screen w-[72px] flex-col items-center gap-2 border-r border-border bg-bg-secondary py-5">
         {/* Logo */}
-        <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent-orange to-accent-sand font-mono text-sm font-bold text-bg-primary animate-[logoPulse_4s_ease-in-out_infinite]">
-          MC
+        <div className="mb-5">
+          <Logo size={40} />
         </div>
 
         {/* Nav items */}
@@ -58,6 +70,19 @@ export function Sidebar() {
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Theme toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={cycleTheme}
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-text-muted transition-all duration-200 hover:bg-bg-card hover:text-text-secondary"
+            >
+              <ThemeIcon className="h-5 w-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Tema: {themeLabels[theme]}</TooltipContent>
+        </Tooltip>
 
         {/* Settings */}
         <Tooltip>

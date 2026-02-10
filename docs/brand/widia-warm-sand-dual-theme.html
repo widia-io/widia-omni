@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Widia Omni — Warm Sand · Light & Dark</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F4F0;
+    --surface: #FFFFFF;
+    --text: #1A1A2E;
+    --text-secondary: #6B7280;
+    --accent: #E8580C;
+    --border: #E5E2DC;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 6rem 2rem 4rem;
+    text-align: center;
+    background: linear-gradient(180deg, #FDFCFA 0%, #F6F4F0 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -200px; right: -200px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(232,88,12,0.05) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: rgba(232, 88, 12, 0.08);
+    border: 1px solid rgba(232, 88, 12, 0.15);
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #E8580C;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s ease;
+  }
+
+  .hero h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+
+  .hero h1 span { color: #E8580C; }
+
+  .hero p {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    max-width: 550px;
+    margin: 0 auto;
+    animation: fadeUp 0.6s ease 0.2s both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Section */
+  section {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+  }
+
+  .section-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #E8580C;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-desc {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    max-width: 620px;
+    margin-bottom: 2.5rem;
+  }
+
+  .divider {
+    border: none;
+    height: 1px;
+    background: var(--border);
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  /* ========== DUAL THEME DISPLAY ========== */
+  .themes-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+
+  @media (max-width: 900px) {
+    .themes-row { grid-template-columns: 1fr; }
+  }
+
+  .theme-block {
+    border-radius: 24px;
+    padding: 2rem;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+  }
+
+  .theme-block:hover {
+    box-shadow: 0 16px 48px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+  }
+
+  .theme-block.light {
+    background: #FFFFFF;
+  }
+
+  .theme-block.dark {
+    background: #1C1C28;
+    border-color: rgba(255,255,255,0.06);
+  }
+
+  .theme-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .theme-label .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* Color Swatches */
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+    margin-bottom: 1.5rem;
+  }
+
+  .swatch {
+    border-radius: 12px;
+    padding: 12px 8px 8px;
+    text-align: center;
+    transition: transform 0.2s ease;
+    cursor: default;
+    border: 1px solid transparent;
+  }
+
+  .swatch:hover {
+    transform: scale(1.05);
+  }
+
+  .swatch-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .swatch-name {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .swatch-hex {
+    font-family: 'Outfit', monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+
+  /* Light swatch text */
+  .theme-block.light .swatch-name { color: #9CA3AF; }
+  .theme-block.light .swatch-hex { color: #1A1A2E; }
+  .theme-block.light .swatch { background: #F9F8F6; }
+
+  /* Dark swatch text */
+  .theme-block.dark .swatch-name { color: rgba(255,255,255,0.35); }
+  .theme-block.dark .swatch-hex { color: rgba(255,255,255,0.85); }
+  .theme-block.dark .swatch { background: rgba(255,255,255,0.04); }
+  .theme-block.dark .theme-label { color: rgba(255,255,255,0.4); }
+
+  /* ========== DASHBOARD PREVIEW ========== */
+  .dash-preview {
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-top: 0.5rem;
+  }
+
+  .dash-preview.light-preview {
+    background: #F6F4F0;
+    border: 1px solid #E5E2DC;
+    color: #1A1A2E;
+  }
+
+  .dash-preview.dark-preview {
+    background: #14141E;
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #E8E6E1;
+  }
+
+  .dash-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .dash-greeting {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .dash-date {
+    font-size: 0.65rem;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 6px;
+  }
+
+  .light-preview .dash-topbar { border-bottom: 1px solid #E5E2DC; }
+  .light-preview .dash-date { background: rgba(26,26,46,0.04); }
+  .dark-preview .dash-topbar { border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .dark-preview .dash-date { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5); }
+
+  .dash-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .dash-stat {
+    padding: 12px 8px;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .light-preview .dash-stat { background: #FFFFFF; border: 1px solid #E5E2DC; }
+  .dark-preview .dash-stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); }
+
+  .stat-num {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+
+  .stat-label {
+    font-size: 0.58rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.55;
+  }
+
+  .dash-areas {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .dash-area {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  .area-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Light area chips */
+  .light-preview .area-saude { background: rgba(239,68,68,0.06); color: #1A1A2E; }
+  .light-preview .area-carreira { background: rgba(99,102,241,0.06); color: #1A1A2E; }
+  .light-preview .area-financas { background: rgba(22,163,74,0.06); color: #1A1A2E; }
+
+  /* Dark area chips */
+  .dark-preview .area-saude { background: rgba(239,68,68,0.1); color: #E8E6E1; }
+  .dark-preview .area-carreira { background: rgba(99,102,241,0.1); color: #E8E6E1; }
+  .dark-preview .area-financas { background: rgba(22,163,74,0.1); color: #E8E6E1; }
+
+  /* ========== SIDEBAR PREVIEW ========== */
+  .sidebar-preview-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar-preview-row { grid-template-columns: 1fr; }
+  }
+
+  .sidebar-mock {
+    border-radius: 20px;
+    padding: 1.5rem;
+    display: flex;
+    gap: 12px;
+  }
+
+  .sidebar-mock.light-sb {
+    background: #FFFFFF;
+    border: 1px solid #E5E2DC;
+  }
+
+  .sidebar-mock.dark-sb {
+    background: #1C1C28;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .sb-nav {
+    width: 52px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding-top: 4px;
+  }
+
+  .sb-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .sb-icon:hover { transform: scale(1.08); }
+
+  .sb-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.8;
+  }
+
+  .light-sb .sb-icon { color: #9CA3AF; }
+  .light-sb .sb-icon.active { background: rgba(232,88,12,0.08); color: #E8580C; }
+  .light-sb .sb-icon:hover:not(.active) { background: #F6F4F0; color: #1A1A2E; }
+
+  .dark-sb .sb-icon { color: rgba(255,255,255,0.3); }
+  .dark-sb .sb-icon.active { background: rgba(232,88,12,0.15); color: #F0874A; }
+  .dark-sb .sb-icon:hover:not(.active) { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); }
+
+  .sb-content {
+    flex: 1;
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .light-sb .sb-content { background: #F6F4F0; }
+  .dark-sb .sb-content { background: #14141E; }
+
+  .sb-content-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .light-sb .sb-content-title { color: #1A1A2E; }
+  .dark-sb .sb-content-title { color: #E8E6E1; }
+
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+    cursor: default;
+    transition: all 0.2s;
+  }
+
+  .light-sb .sb-item { color: #6B7280; }
+  .light-sb .sb-item:hover { background: #FFFFFF; color: #1A1A2E; }
+  .dark-sb .sb-item { color: rgba(255,255,255,0.4); }
+  .dark-sb .sb-item:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.8); }
+
+  .sb-item .item-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ========== AREA COLORS GUIDE ========== */
+  .area-colors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+    margin-top: 1rem;
+  }
+
+  .area-color-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E2DC;
+    border-radius: 16px;
+    padding: 1.25rem;
+    text-align: center;
+    transition: all 0.3s;
+  }
+
+  .area-color-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+  }
+
+  .area-color-card svg {
+    margin-bottom: 10px;
+  }
+
+  .area-color-name {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+  }
+
+  .area-color-hex {
+    font-family: 'Outfit', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .area-color-variants {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .area-variant {
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.6rem;
+    font-weight: 600;
+  }
+
+  /* ========== CSS TOKENS ========== */
+  .tokens-dual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+
+  @media (max-width: 900px) {
+    .tokens-dual { grid-template-columns: 1fr; }
+  }
+
+  .token-block {
+    border-radius: 16px;
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .token-block.light-tok {
+    background: #1E1E2E;
+  }
+
+  .token-block.dark-tok {
+    background: #0C0C14;
+  }
+
+  .token-block pre {
+    font-family: 'Courier New', 'Fira Code', monospace;
+    font-size: 0.76rem;
+    line-height: 1.75;
+    color: #CDD6F4;
+  }
+
+  .token-block .tok-label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .token-block.light-tok .tok-label { color: #F9E2B7; }
+  .token-block.dark-tok .tok-label { color: #89B4FA; }
+
+  .c { color: #6C7086; }
+  .p { color: #89B4FA; }
+  .v { color: #A6E3A1; }
+  .s { color: #F38BA8; }
+
+  /* ========== IMPLEMENTATION TIPS ========== */
+  .tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .tip-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E2DC;
+    border-radius: 18px;
+    padding: 1.75rem;
+  }
+
+  .tip-card h4 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tip-card p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .tip-card code {
+    background: #F4F2EE;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 0.82em;
+    color: #E8580C;
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+  }
+  footer strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">☀️ 🌙 Warm Sand · Dual Theme</div>
+  <h1>Widia <span>Omni</span></h1>
+  <p>Paleta Warm Sand completa — modo claro e escuro com tokens prontos para implementação.</p>
+</div>
+
+<!-- ========== SEÇÃO 1: CORES LADO A LADO ========== -->
+<section>
+  <div class="section-label">01 — Paleta Completa</div>
+  <div class="section-title">Light & Dark Mode</div>
+  <p class="section-desc">O modo escuro usa a mesma família de tons quentes (sand/warm) para manter coerência com o light — sem ser o cinza azulado frio que cansa.</p>
+
+  <div class="themes-row">
+
+    <!-- LIGHT -->
+    <div class="theme-block light">
+      <div class="theme-label" style="color:#9CA3AF;">
+        <span class="dot" style="background:#E8580C;"></span> LIGHT MODE
+      </div>
+
+      <div class="swatches">
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#FDFCFA; border: 1px solid #E5E2DC;"></div>
+          <div class="swatch-name">Bg</div>
+          <div class="swatch-hex">#FDFCFA</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#F6F4F0;"></div>
+          <div class="swatch-name">Surface</div>
+          <div class="swatch-hex">#F6F4F0</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#FFFFFF; border: 1px solid #E5E2DC;"></div>
+          <div class="swatch-name">Card</div>
+          <div class="swatch-hex">#FFFFFF</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#E5E2DC;"></div>
+          <div class="swatch-name">Border</div>
+          <div class="swatch-hex">#E5E2DC</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#1A1A2E;"></div>
+          <div class="swatch-name">Text</div>
+          <div class="swatch-hex">#1A1A2E</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#6B7280;"></div>
+          <div class="swatch-name">Secondary</div>
+          <div class="swatch-hex">#6B7280</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#E8580C;"></div>
+          <div class="swatch-name">Accent</div>
+          <div class="swatch-hex">#E8580C</div>
+        </div>
+      </div>
+
+      <!-- Light Dashboard Preview -->
+      <div class="dash-preview light-preview">
+        <div class="dash-topbar">
+          <div class="dash-greeting">Boa tarde, <span style="color:#E8580C;">Bruno</span></div>
+          <div class="dash-date">10 FEV · TERÇA</div>
+        </div>
+        <div class="dash-stats">
+          <div class="dash-stat">
+            <div class="stat-num" style="color:#E8580C;">3<span style="color:#1A1A2E;font-size:0.8rem">/5</span></div>
+            <div class="stat-label">Foco Semanal</div>
+          </div>
+          <div class="dash-stat">
+            <div class="stat-num" style="color:#16A34A;">7</div>
+            <div class="stat-label">Hábitos Hoje</div>
+          </div>
+          <div class="dash-stat">
+            <div class="stat-num" style="color:#6366F1;">12</div>
+            <div class="stat-label">Streaks</div>
+          </div>
+        </div>
+        <div class="dash-areas">
+          <div class="dash-area area-saude"><div class="area-dot" style="background:#EF4444;"></div>Saúde</div>
+          <div class="dash-area area-carreira"><div class="area-dot" style="background:#6366F1;"></div>Carreira</div>
+          <div class="dash-area area-financas"><div class="area-dot" style="background:#16A34A;"></div>Finanças</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DARK -->
+    <div class="theme-block dark">
+      <div class="theme-label">
+        <span class="dot" style="background:#F0874A;"></span> DARK MODE
+      </div>
+
+      <div class="swatches">
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#0F0F17;"></div>
+          <div class="swatch-name">Bg</div>
+          <div class="swatch-hex">#0F0F17</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#1C1C28;"></div>
+          <div class="swatch-name">Surface</div>
+          <div class="swatch-hex">#1C1C28</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#252534;"></div>
+          <div class="swatch-name">Card</div>
+          <div class="swatch-hex">#252534</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#2E2E3E;"></div>
+          <div class="swatch-name">Border</div>
+          <div class="swatch-hex">#2E2E3E</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#E8E6E1;"></div>
+          <div class="swatch-name">Text</div>
+          <div class="swatch-hex">#E8E6E1</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#8B8A85;"></div>
+          <div class="swatch-name">Secondary</div>
+          <div class="swatch-hex">#8B8A85</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-circle" style="background:#F0874A;"></div>
+          <div class="swatch-name">Accent</div>
+          <div class="swatch-hex">#F0874A</div>
+        </div>
+      </div>
+
+      <!-- Dark Dashboard Preview -->
+      <div class="dash-preview dark-preview">
+        <div class="dash-topbar">
+          <div class="dash-greeting" style="color:#E8E6E1;">Boa tarde, <span style="color:#F0874A;">Bruno</span></div>
+          <div class="dash-date">10 FEV · TERÇA</div>
+        </div>
+        <div class="dash-stats">
+          <div class="dash-stat">
+            <div class="stat-num" style="color:#F0874A;">3<span style="color:#E8E6E1;font-size:0.8rem">/5</span></div>
+            <div class="stat-label">Foco Semanal</div>
+          </div>
+          <div class="dash-stat">
+            <div class="stat-num" style="color:#4ADE80;">7</div>
+            <div class="stat-label">Hábitos Hoje</div>
+          </div>
+          <div class="dash-stat">
+            <div class="stat-num" style="color:#818CF8;">12</div>
+            <div class="stat-label">Streaks</div>
+          </div>
+        </div>
+        <div class="dash-areas">
+          <div class="dash-area area-saude"><div class="area-dot" style="background:#F87171;"></div>Saúde</div>
+          <div class="dash-area area-carreira"><div class="area-dot" style="background:#818CF8;"></div>Carreira</div>
+          <div class="dash-area area-financas"><div class="area-dot" style="background:#4ADE80;"></div>Finanças</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR PREVIEW -->
+  <div class="sidebar-preview-row">
+    <div class="sidebar-mock light-sb">
+      <div class="sb-nav">
+        <div class="sb-icon active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+        </div>
+        <div class="sb-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13V2l8 4-8 4"/><path d="M20.55 10.23A9 9 0 1 1 8 4.94"/><path d="M8 10a5 5 0 1 0 8.9 2.02"/></svg>
+        </div>
+        <div class="sb-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        </div>
+        <div class="sb-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        </div>
+        <div class="sb-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+      </div>
+      <div class="sb-content">
+        <div class="sb-content-title">Áreas da Vida</div>
+        <div class="sb-item"><div class="item-dot" style="background:#EF4444;"></div>Saúde</div>
+        <div class="sb-item"><div class="item-dot" style="background:#6366F1;"></div>Carreira</div>
+        <div class="sb-item"><div class="item-dot" style="background:#16A34A;"></div>Finanças</div>
+        <div class="sb-item"><div class="item-dot" style="background:#EC4899;"></div>Relacionamentos</div>
+        <div class="sb-item"><div class="item-dot" style="background:#F59E0B;"></div>Desenv. Pessoal</div>
+        <div class="sb-item"><div class="item-dot" style="background:#06B6D4;"></div>Lazer</div>
+      </div>
+    </div>
+
+    <div class="sidebar-mock dark-sb">
+      <div class="sb-nav">
+        <div class="sb-icon active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+        </div>
+        <div class="sb-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13V2l8 4-8 4"/><path d="M20.55 10.23A9 9 0 1 1 8 4.94"/><path d="M8 10a5 5 0 1 0 8.9 2.02"/></svg>
+        </div>
+        <div class="sb-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        </div>
+        <div class="sb-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        </div>
+        <div class="sb-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+      </div>
+      <div class="sb-content">
+        <div class="sb-content-title">Áreas da Vida</div>
+        <div class="sb-item"><div class="item-dot" style="background:#F87171;"></div>Saúde</div>
+        <div class="sb-item"><div class="item-dot" style="background:#818CF8;"></div>Carreira</div>
+        <div class="sb-item"><div class="item-dot" style="background:#4ADE80;"></div>Finanças</div>
+        <div class="sb-item"><div class="item-dot" style="background:#F472B6;"></div>Relacionamentos</div>
+        <div class="sb-item"><div class="item-dot" style="background:#FBBF24;"></div>Desenv. Pessoal</div>
+        <div class="sb-item"><div class="item-dot" style="background:#22D3EE;"></div>Lazer</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ========== SEÇÃO 2: CORES SEMÂNTICAS ========== -->
+<section>
+  <div class="section-label">02 — Cores Semânticas por Área</div>
+  <div class="section-title">Light vs Dark — ajuste de brilho</div>
+  <p class="section-desc">No dark mode, as cores das áreas sobem ~2 stops de luminosidade para manter contraste e legibilidade sobre fundos escuros. O matiz permanece o mesmo.</p>
+
+  <div class="area-colors-grid">
+    <div class="area-color-card">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+      <div class="area-color-name">Saúde</div>
+      <div class="area-color-variants">
+        <div class="area-variant" style="background:#FEF2F2; color:#EF4444;">Light #EF4444</div>
+        <div class="area-variant" style="background:#450A0A; color:#F87171;">Dark #F87171</div>
+      </div>
+    </div>
+    <div class="area-color-card">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12h.01"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M22 13a18.15 18.15 0 0 1-20 0"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
+      <div class="area-color-name">Carreira</div>
+      <div class="area-color-variants">
+        <div class="area-variant" style="background:#EEF2FF; color:#6366F1;">Light #6366F1</div>
+        <div class="area-variant" style="background:#1E1B4B; color:#818CF8;">Dark #818CF8</div>
+      </div>
+    </div>
+    <div class="area-color-card">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      <div class="area-color-name">Finanças</div>
+      <div class="area-color-variants">
+        <div class="area-variant" style="background:#F0FDF4; color:#16A34A;">Light #16A34A</div>
+        <div class="area-variant" style="background:#052E16; color:#4ADE80;">Dark #4ADE80</div>
+      </div>
+    </div>
+    <div class="area-color-card">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EC4899" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <div class="area-color-name">Relacionamentos</div>
+      <div class="area-color-variants">
+        <div class="area-variant" style="background:#FDF2F8; color:#EC4899;">Light #EC4899</div>
+        <div class="area-variant" style="background:#500724; color:#F472B6;">Dark #F472B6</div>
+      </div>
+    </div>
+    <div class="area-color-card">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      <div class="area-color-name">Desenv. Pessoal</div>
+      <div class="area-color-variants">
+        <div class="area-variant" style="background:#FFFBEB; color:#F59E0B;">Light #F59E0B</div>
+        <div class="area-variant" style="background:#451A03; color:#FBBF24;">Dark #FBBF24</div>
+      </div>
+    </div>
+    <div class="area-color-card">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+      <div class="area-color-name">Lazer</div>
+      <div class="area-color-variants">
+        <div class="area-variant" style="background:#ECFEFF; color:#06B6D4;">Light #06B6D4</div>
+        <div class="area-variant" style="background:#083344; color:#22D3EE;">Dark #22D3EE</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ========== SEÇÃO 3: TOKENS CSS ========== -->
+<section>
+  <div class="section-label">03 — Implementação</div>
+  <div class="section-title">CSS Design Tokens</div>
+  <p class="section-desc">Use <code>prefers-color-scheme</code> ou uma classe <code>.dark</code> no body. Os tokens são drop-in — basta trocar as variáveis.</p>
+
+  <div class="tokens-dual">
+    <div class="token-block light-tok">
+      <span class="tok-label">☀️ Light Mode — :root</span>
+<pre><span class="s">:root</span> {
+  <span class="c">/* Background layers */</span>
+  <span class="p">--bg</span>: <span class="v">#FDFCFA</span>;
+  <span class="p">--surface</span>: <span class="v">#F6F4F0</span>;
+  <span class="p">--card</span>: <span class="v">#FFFFFF</span>;
+  <span class="p">--border</span>: <span class="v">#E5E2DC</span>;
+
+  <span class="c">/* Text */</span>
+  <span class="p">--text</span>: <span class="v">#1A1A2E</span>;
+  <span class="p">--text-secondary</span>: <span class="v">#6B7280</span>;
+  <span class="p">--text-muted</span>: <span class="v">#9CA3AF</span>;
+
+  <span class="c">/* Accent */</span>
+  <span class="p">--accent</span>: <span class="v">#E8580C</span>;
+  <span class="p">--accent-hover</span>: <span class="v">#D14D08</span>;
+  <span class="p">--accent-light</span>: <span class="v">#FFF3ED</span>;
+
+  <span class="c">/* Semantic */</span>
+  <span class="p">--success</span>: <span class="v">#16A34A</span>;
+  <span class="p">--info</span>: <span class="v">#6366F1</span>;
+  <span class="p">--warning</span>: <span class="v">#EAB308</span>;
+  <span class="p">--danger</span>: <span class="v">#DC2626</span>;
+
+  <span class="c">/* Areas */</span>
+  <span class="p">--area-saude</span>: <span class="v">#EF4444</span>;
+  <span class="p">--area-carreira</span>: <span class="v">#6366F1</span>;
+  <span class="p">--area-financas</span>: <span class="v">#16A34A</span>;
+  <span class="p">--area-relac</span>: <span class="v">#EC4899</span>;
+  <span class="p">--area-dev</span>: <span class="v">#F59E0B</span>;
+  <span class="p">--area-lazer</span>: <span class="v">#06B6D4</span>;
+
+  <span class="c">/* Shadows */</span>
+  <span class="p">--shadow-sm</span>: <span class="v">0 1px 3px rgba(0,0,0,.04)</span>;
+  <span class="p">--shadow-md</span>: <span class="v">0 4px 12px rgba(0,0,0,.06)</span>;
+  <span class="p">--shadow-lg</span>: <span class="v">0 12px 40px rgba(0,0,0,.08)</span>;
+}</pre>
+    </div>
+
+    <div class="token-block dark-tok">
+      <span class="tok-label">🌙 Dark Mode — .dark / prefers-color-scheme</span>
+<pre><span class="s">.dark</span>,
+<span class="s">@media (prefers-color-scheme: dark)</span> {
+  <span class="c">/* Background layers */</span>
+  <span class="p">--bg</span>: <span class="v">#0F0F17</span>;
+  <span class="p">--surface</span>: <span class="v">#1C1C28</span>;
+  <span class="p">--card</span>: <span class="v">#252534</span>;
+  <span class="p">--border</span>: <span class="v">#2E2E3E</span>;
+
+  <span class="c">/* Text */</span>
+  <span class="p">--text</span>: <span class="v">#E8E6E1</span>;
+  <span class="p">--text-secondary</span>: <span class="v">#8B8A85</span>;
+  <span class="p">--text-muted</span>: <span class="v">#5C5B57</span>;
+
+  <span class="c">/* Accent (lighter for contrast) */</span>
+  <span class="p">--accent</span>: <span class="v">#F0874A</span>;
+  <span class="p">--accent-hover</span>: <span class="v">#F49A63</span>;
+  <span class="p">--accent-light</span>: <span class="v">rgba(240,135,74,.12)</span>;
+
+  <span class="c">/* Semantic (bumped luminance) */</span>
+  <span class="p">--success</span>: <span class="v">#4ADE80</span>;
+  <span class="p">--info</span>: <span class="v">#818CF8</span>;
+  <span class="p">--warning</span>: <span class="v">#FBBF24</span>;
+  <span class="p">--danger</span>: <span class="v">#F87171</span>;
+
+  <span class="c">/* Areas (lighter variants) */</span>
+  <span class="p">--area-saude</span>: <span class="v">#F87171</span>;
+  <span class="p">--area-carreira</span>: <span class="v">#818CF8</span>;
+  <span class="p">--area-financas</span>: <span class="v">#4ADE80</span>;
+  <span class="p">--area-relac</span>: <span class="v">#F472B6</span>;
+  <span class="p">--area-dev</span>: <span class="v">#FBBF24</span>;
+  <span class="p">--area-lazer</span>: <span class="v">#22D3EE</span>;
+
+  <span class="c">/* Shadows (subtle glow) */</span>
+  <span class="p">--shadow-sm</span>: <span class="v">0 1px 3px rgba(0,0,0,.2)</span>;
+  <span class="p">--shadow-md</span>: <span class="v">0 4px 12px rgba(0,0,0,.3)</span>;
+  <span class="p">--shadow-lg</span>: <span class="v">0 12px 40px rgba(0,0,0,.4)</span>;
+}</pre>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ========== SEÇÃO 4: DICAS DE IMPLEMENTAÇÃO ========== -->
+<section>
+  <div class="section-label">04 — Dicas</div>
+  <div class="section-title">Implementação do Dual Theme</div>
+
+  <div class="tips-grid">
+    <div class="tip-card">
+      <h4>🎯 Princípio-chave</h4>
+      <p>No dark mode, o acento laranja <strong>sobe de luminosidade</strong> (#E8580C → #F0874A) para manter o mesmo contraste perceptual. O mesmo vale para todas as cores semânticas — suba ~2 stops na escala Tailwind (ex: red-500 → red-400).</p>
+    </div>
+    <div class="tip-card">
+      <h4>🏗️ Estrutura CSS</h4>
+      <p>Use <code>var(--bg)</code>, <code>var(--surface)</code>, <code>var(--card)</code> como 3 camadas. Nunca hardcode cores. No dark, a hierarquia se inverte: fundos ficam mais claros conforme sobem na camada. Mantenha bordas sempre com <code>var(--border)</code>.</p>
+    </div>
+    <div class="tip-card">
+      <h4>🔄 Toggle de tema</h4>
+      <p>Use <code>class="dark"</code> no <code>&lt;html&gt;</code> + <code>localStorage</code> para persistir. Respeite <code>prefers-color-scheme</code> como default. Em Next.js/React, use <code>next-themes</code> ou um context simples com useEffect.</p>
+    </div>
+    <div class="tip-card">
+      <h4>🌗 Backgrounds com textura</h4>
+      <p>No dark mode, evite preto puro (#000). O <code>#0F0F17</code> tem um toque de azul-roxo que combina com o warm do light. Isso mantém a personalidade "sand" sem ficar genérico como cinza puro.</p>
+    </div>
+    <div class="tip-card">
+      <h4>📐 Opacidade como aliada</h4>
+      <p>Para chip de área, use <code>background: rgba(var(--area-cor), 0.06)</code> no light e <code>0.10</code> no dark. Mesma regra para hover states. Isso funciona automaticamente com qualquer cor de área.</p>
+    </div>
+    <div class="tip-card">
+      <h4>🖼️ Sombras vs Bordas</h4>
+      <p>No light, sombras funcionam bem para elevar cards. No dark, sombras somem visualmente — use <strong>bordas sutis</strong> (<code>var(--border)</code>) como separador principal. Combine os dois para o efeito ideal.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <strong>Widia Omni</strong> — Warm Sand Dual Theme · Fevereiro 2026
+</footer>
+
+</body>
+</html>

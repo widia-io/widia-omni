@@ -8,12 +8,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
 
 const SUGGESTED_AREAS = [
-  { name: "Saude", icon: "heart", color: "#788c5d" },
-  { name: "Carreira", icon: "briefcase", color: "#d97757" },
-  { name: "Financas", icon: "dollar-sign", color: "#c4a882" },
-  { name: "Relacionamentos", icon: "users", color: "#6a9bcc" },
-  { name: "Desenvolvimento Pessoal", icon: "book", color: "#8a9e78" },
-  { name: "Lazer", icon: "sun", color: "#b86b6b" },
+  { name: "Saude", icon: "heart", color: "green", tw: { bg: "bg-accent-green/10", text: "text-accent-green" } },
+  { name: "Carreira", icon: "briefcase", color: "orange", tw: { bg: "bg-accent-orange/10", text: "text-accent-orange" } },
+  { name: "Financas", icon: "dollar-sign", color: "sand", tw: { bg: "bg-accent-sand/10", text: "text-accent-sand" } },
+  { name: "Relacionamentos", icon: "users", color: "blue", tw: { bg: "bg-accent-blue/10", text: "text-accent-blue" } },
+  { name: "Desenvolvimento Pessoal", icon: "book", color: "sage", tw: { bg: "bg-accent-sage/10", text: "text-accent-sage" } },
+  { name: "Lazer", icon: "sun", color: "rose", tw: { bg: "bg-accent-rose/10", text: "text-accent-rose" } },
 ];
 
 function StepProgress({ current, total }: { current: number; total: number }) {
@@ -87,7 +87,7 @@ export function Component() {
                   selectedAreas.has(i) ? "border-accent-orange bg-accent-orange/5" : "border-border bg-bg-card",
                 )}
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: area.color + "20", color: area.color }}>
+                <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg", area.tw.bg, area.tw.text)}>
                   <Target className="h-4 w-4" />
                 </div>
                 <span className="text-sm font-medium">{area.name}</span>
