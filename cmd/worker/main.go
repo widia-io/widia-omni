@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/widia-io/widia-omni/internal/config"
 	"github.com/widia-io/widia-omni/internal/email"
+	"github.com/widia-io/widia-omni/internal/llm"
 	"github.com/widia-io/widia-omni/internal/observability"
 	"github.com/widia-io/widia-omni/internal/service"
 	"github.com/widia-io/widia-omni/internal/worker"
@@ -68,6 +69,9 @@ func main() {
 	// Services
 	scoreSvc := service.NewScoreService(db, rdb)
 	notifSvc := service.NewNotificationService(db)
+	entSvc := service.NewEntitlementService(db, rdb)
+	llmClient := llm.NewClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
+	insightSvc := service.NewInsightService(db, rdb, llmClient)
 	emailSender := email.NewLogSender(logger)
 
 	// Task handlers
@@ -75,6 +79,7 @@ func main() {
 	streakH := worker.NewStreakUpdateHandler(db, notifSvc, logger)
 	counterH := worker.NewCounterReconcilerHandler(db, logger)
 	notifH := worker.NewSendNotificationHandler(emailSender, logger)
+	insightGenH := worker.NewInsightGenerateHandler(db, insightSvc, entSvc, notifSvc, logger)
 
 	// Asynq server
 	srv := asynq.NewServer(
@@ -91,6 +96,7 @@ func main() {
 	mux.HandleFunc(worker.TypeStreakUpdate, streakH.ProcessTask)
 	mux.HandleFunc(worker.TypeCounterReconcile, counterH.ProcessTask)
 	mux.HandleFunc(worker.TypeSendNotification, notifH.ProcessTask)
+	mux.HandleFunc(worker.TypeInsightGenerate, insightGenH.ProcessTask)
 
 	// Scheduler
 	scheduler := asynq.NewScheduler(
@@ -101,6 +107,7 @@ func main() {
 	scheduler.Register("0 2 * * 1", worker.NewTask(worker.TypeScoreSnapshot, nil))    // Monday 2am
 	scheduler.Register("0 1 * * *", worker.NewTask(worker.TypeStreakUpdate, nil))       // Daily 1am
 	scheduler.Register("0 * * * *", worker.NewTask(worker.TypeCounterReconcile, nil))  // Hourly
+	scheduler.Register("0 3 * * 1", worker.NewTask(worker.TypeInsightGenerate, nil))  // Monday 3am
 
 	// Start
 	go func() {

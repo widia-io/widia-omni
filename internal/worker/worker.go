@@ -11,6 +11,7 @@ const (
 	TypeStreakUpdate       = "streak:update"
 	TypeCounterReconcile  = "counter:reconcile"
 	TypeSendNotification  = "notification:send"
+	TypeInsightGenerate   = "insight:generate"
 )
 
 func NewTask(typeName string, payload []byte) *asynq.Task {
