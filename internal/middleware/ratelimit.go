@@ -28,7 +28,11 @@ func RateLimit(rdb *redis.Client, requestsPerMinute int) func(http.Handler) http
 				requestsPerMinute = ent.APIRateLimitPerMinute
 			}
 
-			key := fmt.Sprintf("rl:%s", wsID.String())
+			prefix := "rl"
+			if _, isAPI := GetAPIKeyID(r.Context()); isAPI {
+				prefix = "rl:api"
+			}
+			key := fmt.Sprintf("%s:%s", prefix, wsID.String())
 			window := time.Minute
 
 			count, err := rdb.Incr(r.Context(), key).Result()

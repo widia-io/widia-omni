@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/widia-io/widia-omni/internal/config"
 	"github.com/widia-io/widia-omni/internal/handler"
+	"github.com/widia-io/widia-omni/internal/llm"
 	"github.com/widia-io/widia-omni/internal/middleware"
 	"github.com/widia-io/widia-omni/internal/observability"
 	"github.com/widia-io/widia-omni/internal/service"
@@ -43,6 +44,9 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	_ = auditSvc // used by workers and future middleware
 	exportSvc := service.NewExportService(db)
 	financeSvc := service.NewFinanceService(db, counterSvc)
+	llmClient := llm.NewClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
+	insightSvc := service.NewInsightService(db, rdb, llmClient)
+	apiKeySvc := service.NewAPIKeyService(db, rdb)
 	adminSvc := service.NewAdminService(db, entSvc)
 
 	// Handlers
@@ -63,6 +67,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	notifH := handler.NewNotificationHandler(notifSvc)
 	exportH := handler.NewExportHandler(exportSvc)
 	financeH := handler.NewFinanceHandler(financeSvc)
+	insightH := handler.NewInsightHandler(insightSvc)
+	apiKeyH := handler.NewAPIKeyHandler(apiKeySvc)
 	adminH := handler.NewAdminHandler(adminSvc)
 
 	// Public routes
@@ -199,8 +205,44 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 			r.Delete("/budgets/{id}", financeH.DeleteBudget)
 		})
 
+		// Insights
+		r.Route("/insights", func(r chi.Router) {
+			r.Get("/", insightH.List)
+			r.Get("/latest", insightH.GetLatest)
+			r.Post("/generate", insightH.Generate)
+		})
+
+		// API Keys
+		r.Route("/api-keys", func(r chi.Router) {
+			r.Get("/", apiKeyH.List)
+			r.Post("/", apiKeyH.Create)
+			r.Delete("/{id}", apiKeyH.Revoke)
+		})
+
 		// Dashboard
 		r.Get("/dashboard", dashH.GetDashboard)
+	})
+
+	// Public API — API key auth, read-only, reuses existing handlers
+	r.Route("/public/v1", func(r chi.Router) {
+		r.Use(middleware.APIKeyAuth(apiKeySvc))
+		r.Use(middleware.RateLimit(rdb, 60))
+
+		r.Get("/areas", areaH.List)
+		r.Get("/goals", goalH.List)
+		r.Get("/goals/{id}", goalH.GetByID)
+		r.Get("/habits", habitH.List)
+		r.Get("/habits/entries", habitH.ListEntries)
+		r.Get("/habits/streaks", habitH.GetStreaks)
+		r.Get("/tasks", taskH.List)
+		r.Get("/scores/current", scoreH.GetCurrent)
+		r.Get("/scores/history", scoreH.GetHistory)
+		r.Get("/journal", journalH.List)
+		r.Get("/journal/{date}", journalH.Get)
+		r.Get("/finances/summary", financeH.GetSummary)
+		r.Get("/finances/transactions", financeH.ListTransactions)
+		r.Get("/insights", insightH.List)
+		r.Get("/insights/latest", insightH.GetLatest)
 	})
 
 	// Admin routes (service key auth)

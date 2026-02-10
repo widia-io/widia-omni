@@ -14,6 +14,7 @@ const (
 	workspaceIDKey  ctxKey = "workspace_id"
 	roleKey         ctxKey = "workspace_role"
 	entitlementsKey ctxKey = "entitlements"
+	apiKeyIDKey     ctxKey = "api_key_id"
 )
 
 func SetUserID(ctx context.Context, id uuid.UUID) context.Context {
@@ -50,4 +51,13 @@ func SetEntitlements(ctx context.Context, ent *domain.EntitlementLimits) context
 func GetEntitlements(ctx context.Context) (*domain.EntitlementLimits, bool) {
 	ent, ok := ctx.Value(entitlementsKey).(*domain.EntitlementLimits)
 	return ent, ok
+}
+
+func SetAPIKeyID(ctx context.Context, id uuid.UUID) context.Context {
+	return context.WithValue(ctx, apiKeyIDKey, id)
+}
+
+func GetAPIKeyID(ctx context.Context) (uuid.UUID, bool) {
+	id, ok := ctx.Value(apiKeyIDKey).(uuid.UUID)
+	return id, ok
 }
