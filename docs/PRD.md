@@ -1491,3 +1491,74 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - Revoke → 204, then revoked key → 401
 - Entitlement downgrade → existing keys immediately return 403
 - last_used_at updated in DB with debounce
+
+---
+
+## Task Power-ups Roadmap (Todoist Feature Parity)
+
+Delivery strategy: **vertical slices** — each backend phase is immediately followed by its frontend phase before moving to the next feature set.
+
+### Phase 1A — Backend: Core Power-ups ✅ DONE
+
+Labels, sub-tasks (parent_id), sections, position ordering, duration_minutes, reopen (un-complete).
+
+| Layer | Changes |
+|-------|---------|
+| Migration | `000024_task_powerups` — `labels`, `task_labels`, `sections` tables; ALTER tasks adding `parent_id`, `section_id`, `position`, `duration_minutes`; `due_date` DATE→TIMESTAMPTZ |
+| Domain | 2 new (`Label`, `Section`), 1 modified (`Task` +ParentID, SectionID, Position, DurationMinutes, Labels) |
+| Service | 2 new (`LabelService`, `SectionService`), 1 rewritten (`TaskService` — Reopen, Reorder, SetLabels, batch label loading, dynamic filters) |
+| Handler | 2 new (`LabelHandler`, `SectionHandler`), 1 rewritten (`TaskHandler` — Reopen, Reorder, new filter params) |
+| Router | `/api/v1/labels` CRUD, `/api/v1/sections` CRUD+reorder, `/api/v1/tasks/{id}/reopen`, `/api/v1/tasks/{id}/reorder`, `/public/v1/labels`, `/public/v1/sections` |
+
+### Phase 1B — Frontend: Core Power-ups ✅ DONE
+
+Todoist-inspired UI rewrite with all Phase 1A features surfaced.
+
+| Layer | Changes |
+|-------|---------|
+| Types | `Label`, `Section` interfaces; `Task` +parent_id, section_id, position, duration_minutes, labels |
+| Hooks | `use-labels.ts` (CRUD), `use-sections.ts` (CRUD+reorder), `use-tasks.ts` (+useReopenTask, useReorderTask, typed inputs) |
+| Components | `popover.tsx` (Radix), `label-picker.tsx` (multi-select popover), `label-manager-dialog.tsx` (CRUD dialog) |
+| Task page | Full rewrite — flat rows, priority-colored checkboxes, inline quick-add, hover actions, section grouping, sub-task nesting, label dots, duration/due-date display |
+| Filters | Status, area, section, label filter pills; "Limpar filtros" reset |
+| Smart shortcuts | `Q` key opens quick-add; `p1`–`p4` in title → priority; `hoje`/`amanha`/`dd/mm` → due date; live token preview pills |
+| Edit dialog | Full form: title, description, priority, due date, area, goal, section, duration, labels |
+| UX | autoComplete=off (1Password fix), click-outside-close, Escape to cancel, Enter to submit, rapid entry (stays open after create) |
+
+### Phase 2A — Backend: Smart Views & Filters
+
+- **Today/Upcoming/Overdue endpoints**: `/api/v1/tasks/today`, `/api/v1/tasks/upcoming`, `/api/v1/tasks/overdue` — server-side date-filtered queries
+- **Enhanced filter syntax**: multi-label filter (AND/OR), priority filter, focus-only filter, search by title substring
+- **Activity log**: `task_activity` table tracking status changes (created, completed, reopened, moved) with timestamps for analytics
+
+### Phase 2B — Frontend: Smart Views & Filters
+
+- **View tabs**: Today / Upcoming / Overdue quick-view tabs on task page
+- **Search bar**: Real-time title search with debounce
+- **Advanced filter panel**: Multi-label select, priority checkboxes, focus-only toggle
+- **Activity timeline**: Task activity feed (completed, reopened, moved) on task detail view
+
+### Phase 3A — Backend: Recurring & Engagement
+
+- **Recurring task engine**: `recurrence_rule` column (RRULE or simple JSON), worker that spawns next occurrence on completion
+- **Karma/points system**: points for completing tasks (+1 base, +2 focus, +3 with labels), daily/weekly streaks, leaderboard-ready counters
+- **Task streaks**: consecutive-day completion tracking, streak freeze tokens
+
+### Phase 3B — Frontend: Recurring & Engagement
+
+- **Recurrence picker**: Repeat daily/weekly/monthly/custom in task form
+- **Recurring indicator**: Icon on task row showing recurrence pattern
+- **Karma display**: Points counter in header/sidebar, daily streak badge
+- **Streak visualization**: Streak calendar or counter on dashboard
+
+### Phase 4A — Backend: Collaboration & NLP
+
+- **Task comments**: `task_comments` table, threaded replies, mentions
+- **NLP date parsing**: natural language due dates ("tomorrow", "next monday", "in 3 days") via server-side parser
+- **Reminders**: `task_reminders` table, scheduled notifications (push + in-app) via worker
+
+### Phase 4B — Frontend: Collaboration & NLP
+
+- **Comments panel**: Slide-out or expandable comment thread on task detail
+- **Natural language input**: Due date field accepts text like "tomorrow", "next friday", parsed server-side
+- **Reminder picker**: Set reminder time in task form, notification bell indicator
