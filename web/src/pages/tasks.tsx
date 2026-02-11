@@ -1252,6 +1252,7 @@ export function Component() {
         {(labels ?? []).length > 0 && (
           <>
             <span className="mx-0.5 h-4 w-px bg-border" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Etiquetas</span>
             {(labels ?? []).map((l) => (
               <FilterChip
                 key={l.id}
