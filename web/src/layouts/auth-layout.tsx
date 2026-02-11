@@ -7,7 +7,7 @@ export function AuthLayout() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Logo size={48} className="mx-auto mb-4" />
-          <h2 className="font-sans text-xl font-bold text-text-primary">Widia Omni</h2>
+          <h2 className="font-sans text-xl font-bold text-text-primary">MeuFoco</h2>
         </div>
         <Outlet />
       </div>

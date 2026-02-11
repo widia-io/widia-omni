@@ -231,10 +231,13 @@ function PriorityCheckbox({
         PRIORITY_COLORS[priority],
       )}
       onMouseEnter={(e) => {
-        const bg = priority === "critical" ? "rgba(244,63,94,0.15)"
-          : priority === "high" ? "rgba(249,115,22,0.15)"
-          : priority === "medium" ? "rgba(59,130,246,0.15)"
-          : "rgba(46,46,40,0.15)";
+        const bg = priority === "critical"
+          ? "color-mix(in srgb, var(--area-red) 16%, transparent)"
+          : priority === "high"
+            ? "color-mix(in srgb, var(--accent) 18%, transparent)"
+            : priority === "medium"
+              ? "color-mix(in srgb, var(--area-indigo) 16%, transparent)"
+              : "color-mix(in srgb, var(--border-hover) 45%, transparent)";
         e.currentTarget.style.backgroundColor = bg;
       }}
       onMouseLeave={(e) => {
