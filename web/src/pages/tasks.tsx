@@ -82,7 +82,7 @@ const AREA_CHIP_ACTIVE: Record<string, string> = {
 const EMPTY_STATES = [
   { title: "Tudo limpo!", desc: "Nada pendente. Que tal planejar algo importante?" },
   { title: "Foco total", desc: "Adicione suas prioridades do dia." },
-  { title: "Momento de planejar", desc: "O que voce quer conquistar hoje?" },
+  { title: "Momento de planejar", desc: "O que você quer conquistar hoje?" },
   { title: "Pronto para decolar?", desc: "Crie sua primeira tarefa e comece." },
 ];
 
@@ -93,10 +93,10 @@ function formatDuration(mins: number): string {
   return m ? `${h}h${m}` : `${h}h`;
 }
 
-function formatDueDate(date: string): { text: string; className: string } {
+function formatDueDate(date: string): { text: string; className: string; badge?: boolean } {
   const d = new Date(date);
-  if (isToday(d)) return { text: "Hoje", className: "text-accent-green" };
-  if (isTomorrow(d)) return { text: "Amanha", className: "text-accent-orange" };
+  if (isToday(d)) return { text: "Hoje", className: "bg-accent-orange/15 text-accent-orange border border-accent-orange/20 rounded-full px-2 py-0.5", badge: true };
+  if (isTomorrow(d)) return { text: "Amanhã", className: "text-text-secondary" };
   if (isPast(d)) return { text: format(d, "dd/MM"), className: "text-accent-rose" };
   return { text: format(d, "dd/MM"), className: "text-text-muted" };
 }
@@ -133,7 +133,7 @@ function parseSmartInput(text: string) {
     if (am) {
       const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(23, 59, 0, 0);
       dueDate = d.toISOString();
-      tokens.push({ type: "date", raw: am[0], label: "Amanha" });
+      tokens.push({ type: "date", raw: am[0], label: "Amanhã" });
       clean = clean.replace(am[0], "");
     } else {
       const dm = text.match(/\b(\d{1,2})\/(\d{1,2})\b/);
@@ -398,7 +398,7 @@ function InlineQuickAdd({
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Descricao"
+            placeholder="Descrição"
             autoComplete="off"
             className="mt-1 w-full border-0 bg-transparent text-xs text-text-secondary placeholder:text-text-muted/60 focus:outline-none"
           />
@@ -441,7 +441,7 @@ function InlineQuickAdd({
               type="button"
               onClick={() => { resetForm(); onExpandedCreate(); }}
               className="inline-flex items-center justify-center rounded-lg border border-border px-1.5 py-1 text-text-muted transition-colors hover:border-border-hover hover:text-text-secondary"
-              title="Mais opcoes"
+              title="Mais opções"
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
             </button>
@@ -618,11 +618,25 @@ function TaskRow({
       )}
 
       {/* Due date */}
-      {dueInfo && (
-        <span className={cn("flex items-center gap-1 whitespace-nowrap text-xs", dueInfo.className)}>
-          <CalendarDays className="h-3 w-3" />
-          {dueInfo.text}
-        </span>
+      {dueInfo ? (
+        dueInfo.badge ? (
+          <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-medium", dueInfo.className)}>
+            <CalendarDays className="h-3 w-3" />
+            {dueInfo.text}
+          </span>
+        ) : (
+          <span className={cn("flex items-center gap-1 whitespace-nowrap text-xs", dueInfo.className)}>
+            <CalendarDays className="h-3 w-3" />
+            {dueInfo.text}
+          </span>
+        )
+      ) : (
+        !task.is_completed && (
+          <span className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted/50">
+            <CalendarDays className="h-3 w-3" />
+            Sem prazo
+          </span>
+        )
       )}
 
       {/* Duration */}
@@ -732,7 +746,7 @@ function SectionCreateInline({ areaId }: { areaId: string }) {
         className="mt-2 flex items-center gap-1.5 py-1 text-xs text-text-muted transition-colors hover:text-accent-orange"
       >
         <FolderPlus className="h-3 w-3" />
-        <span>Adicionar secao</span>
+        <span>Adicionar seção</span>
       </button>
     );
   }
@@ -742,7 +756,7 @@ function SectionCreateInline({ areaId }: { areaId: string }) {
       <FolderPlus className="h-3.5 w-3.5 text-text-muted" />
       <input
         ref={inputRef}
-        placeholder="Nome da secao"
+        placeholder="Nome da seção"
         value={name}
         onChange={(e) => setName(e.target.value)}
         className="h-7 flex-1 border-0 border-b border-border bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:border-accent-orange focus:outline-none"
@@ -771,9 +785,10 @@ function SectionCreateInline({ areaId }: { areaId: string }) {
 // ─── Filter Chip ──────────────────────────────────────
 
 function FilterChip({
-  label, isActive, activeClass, onClick,
+  label, count, isActive, activeClass, onClick,
 }: {
   label: string;
+  count?: number;
   isActive: boolean;
   activeClass?: string;
   onClick: () => void;
@@ -782,13 +797,21 @@ function FilterChip({
     <button
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
         isActive
           ? activeClass ?? "bg-accent-orange/10 text-accent-orange border-accent-orange/20"
           : "bg-bg-card border-border text-text-muted hover:border-text-muted",
       )}
     >
       {label}
+      {count !== undefined && count > 0 && (
+        <span className={cn(
+          "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold",
+          isActive ? "bg-current/10" : "bg-border/80 text-text-muted",
+        )}>
+          {count}
+        </span>
+      )}
     </button>
   );
 }
@@ -847,12 +870,12 @@ function TaskEditDialog({
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label>Titulo</Label>
+          <Label>Título</Label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
         </div>
 
         <div className="space-y-2">
-          <Label>Descricao</Label>
+          <Label>Descrição</Label>
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Opcional" />
         </div>
 
@@ -863,9 +886,9 @@ function TaskEditDialog({
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="low">Baixa</SelectItem>
-                <SelectItem value="medium">Media</SelectItem>
+                <SelectItem value="medium">Média</SelectItem>
                 <SelectItem value="high">Alta</SelectItem>
-                <SelectItem value="critical">Critica</SelectItem>
+                <SelectItem value="critical">Crítica</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -877,7 +900,7 @@ function TaskEditDialog({
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label>Area</Label>
+            <Label>Área</Label>
             <Select value={areaId} onValueChange={(v) => { setAreaId(v); setGoalId(""); setSectionId(""); }}>
               <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
               <SelectContent>
@@ -903,7 +926,7 @@ function TaskEditDialog({
         <div className="grid grid-cols-2 gap-3">
           {!parentId && (
             <div className="space-y-2">
-              <Label>Secao</Label>
+              <Label>Seção</Label>
               <Select value={sectionId} onValueChange={setSectionId} disabled={!areaId}>
                 <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
                 <SelectContent>
@@ -915,7 +938,7 @@ function TaskEditDialog({
             </div>
           )}
           <div className="space-y-2">
-            <Label>Duracao</Label>
+            <Label>Duração</Label>
             <div className="flex items-center gap-2">
               <Input type="number" min="1" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-24" />
               <span className="text-xs text-text-muted">min</span>
@@ -1079,7 +1102,7 @@ export function Component() {
         .map((s) => ({ id: s.id, name: s.name, tasks: grouped.get(s.id)! }));
 
       if (unsectioned.length > 0) {
-        groups.push({ id: "__none__", name: "Sem secao", tasks: unsectioned });
+        groups.push({ id: "__none__", name: "Sem seção", tasks: unsectioned });
       }
     }
 
@@ -1087,6 +1110,10 @@ export function Component() {
   }, [tasks, sections, filter.section_id]);
 
   const hasFilters = Object.values(filter).some(Boolean);
+
+  const allTasks = tasks ?? [];
+  const pendingCount = allTasks.filter((t) => !t.is_completed).length;
+  const completedCount = allTasks.filter((t) => t.is_completed).length;
 
   // ─── Loading ──────────────────────────────────────
 
@@ -1152,39 +1179,44 @@ export function Component() {
       </div>
 
       {/* ─── Filter chips ────────────────────────── */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {/* Status chips */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-2">
+        {/* Status */}
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Status</span>
         <FilterChip
           label="Pendentes"
+          count={pendingCount}
           isActive={filter.is_completed === "false"}
           onClick={() => toggleFilter("is_completed", "false")}
         />
         <FilterChip
-          label="Concluidas"
+          label="Concluídas"
+          count={completedCount}
           isActive={filter.is_completed === "true"}
           onClick={() => toggleFilter("is_completed", "true")}
         />
 
-        {/* Separator */}
+        {/* Areas */}
         {(areas ?? []).length > 0 && (
-          <span className="text-border">|</span>
+          <>
+            <span className="mx-0.5 h-4 w-px bg-border" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Áreas</span>
+            {(areas ?? []).map((a) => (
+              <FilterChip
+                key={a.id}
+                label={a.name}
+                isActive={filter.area_id === a.id}
+                activeClass={AREA_CHIP_ACTIVE[a.color] ?? "bg-accent-orange/10 text-accent-orange border-accent-orange/20"}
+                onClick={() => toggleFilter("area_id", a.id)}
+              />
+            ))}
+          </>
         )}
 
-        {/* Area chips */}
-        {(areas ?? []).map((a) => (
-          <FilterChip
-            key={a.id}
-            label={a.name}
-            isActive={filter.area_id === a.id}
-            activeClass={AREA_CHIP_ACTIVE[a.color] ?? "bg-accent-orange/10 text-accent-orange border-accent-orange/20"}
-            onClick={() => toggleFilter("area_id", a.id)}
-          />
-        ))}
-
-        {/* Section chips (when area active) */}
+        {/* Sections (when area active) */}
         {filter.area_id && (sections ?? []).length > 0 && (
           <>
-            <span className="text-border">|</span>
+            <span className="mx-0.5 h-4 w-px bg-border" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Seções</span>
             {(sections ?? []).map((s) => (
               <FilterChip
                 key={s.id}
@@ -1196,10 +1228,10 @@ export function Component() {
           </>
         )}
 
-        {/* Label chips */}
+        {/* Labels */}
         {(labels ?? []).length > 0 && (
           <>
-            <span className="text-border">|</span>
+            <span className="mx-0.5 h-4 w-px bg-border" />
             {(labels ?? []).map((l) => (
               <FilterChip
                 key={l.id}

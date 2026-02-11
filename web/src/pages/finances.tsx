@@ -20,7 +20,7 @@ const typeColor: Record<string, "green" | "rose" | "blue" | "sand"> = {
   income: "green", expense: "rose", investment: "blue", transfer: "sand",
 };
 const typeLabel: Record<string, string> = {
-  income: "Receita", expense: "Despesa", investment: "Investimento", transfer: "Transferencia",
+  income: "Receita", expense: "Despesa", investment: "Investimento", transfer: "Transferência",
 };
 
 export function Component() {
@@ -51,13 +51,13 @@ export function Component() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Financas</h1>
+      <h1 className="text-2xl font-bold mb-6">Finanças</h1>
 
       <Tabs defaultValue="transactions">
         <TabsList>
-          <TabsTrigger value="transactions">Transacoes</TabsTrigger>
+          <TabsTrigger value="transactions">Transações</TabsTrigger>
           <TabsTrigger value="categories">Categorias</TabsTrigger>
-          <TabsTrigger value="budgets">Orcamentos</TabsTrigger>
+          <TabsTrigger value="budgets">Orçamentos</TabsTrigger>
           <TabsTrigger value="summary">Resumo</TabsTrigger>
         </TabsList>
 
@@ -66,12 +66,12 @@ export function Component() {
           <div className="mb-4 flex justify-end">
             <Dialog open={txOpen} onOpenChange={setTxOpen}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="h-4 w-4" /> Nova transacao</Button>
+                <Button size="sm"><Plus className="h-4 w-4" /> Nova transação</Button>
               </DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Nova transacao</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Nova transação</DialogTitle></DialogHeader>
                 <form onSubmit={(e) => { e.preventDefault(); createTx.mutate({ description: txTitle, amount: Number(txAmount), type: txType, date: format(new Date(), "yyyy-MM-dd") }, { onSuccess: () => setTxOpen(false) }); }} className="space-y-4">
-                  <div className="space-y-2"><Label>Descricao</Label><Input value={txTitle} onChange={(e) => setTxTitle(e.target.value)} required /></div>
+                  <div className="space-y-2"><Label>Descrição</Label><Input value={txTitle} onChange={(e) => setTxTitle(e.target.value)} required /></div>
                   <div className="space-y-2"><Label>Valor</Label><Input type="number" step="0.01" value={txAmount} onChange={(e) => setTxAmount(e.target.value)} required /></div>
                   <div className="space-y-2">
                     <Label>Tipo</Label>
@@ -81,7 +81,7 @@ export function Component() {
                         <SelectItem value="income">Receita</SelectItem>
                         <SelectItem value="expense">Despesa</SelectItem>
                         <SelectItem value="investment">Investimento</SelectItem>
-                        <SelectItem value="transfer">Transferencia</SelectItem>
+                        <SelectItem value="transfer">Transferência</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -94,7 +94,7 @@ export function Component() {
             {(transactions ?? []).map((tx) => (
               <div key={tx.id} className="flex items-center gap-3 rounded-[14px] border border-border bg-bg-card px-4 py-3">
                 <div className="flex-1">
-                  <div className="text-sm">{tx.description ?? "Sem descricao"}</div>
+                  <div className="text-sm">{tx.description ?? "Sem descrição"}</div>
                   <div className="text-xs text-text-muted">{tx.date.slice(0, 10)}</div>
                 </div>
                 <Badge variant={typeColor[tx.type]}>{typeLabel[tx.type]}</Badge>

@@ -41,11 +41,11 @@ function GoalFormDialog({ goal, onClose }: { goal?: Goal; onClose: () => void })
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label>Titulo</Label>
+        <Label>Título</Label>
         <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
       </div>
       <div className="space-y-2">
-        <Label>Periodo</Label>
+        <Label>Período</Label>
         <Select value={period} onValueChange={(v) => setPeriod(v as GoalPeriod)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -57,7 +57,7 @@ function GoalFormDialog({ goal, onClose }: { goal?: Goal; onClose: () => void })
         </Select>
       </div>
       <div className="space-y-2">
-        <Label>Area</Label>
+        <Label>Área</Label>
         <Select value={areaId ?? ""} onValueChange={setAreaId}>
           <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
           <SelectContent>
@@ -80,8 +80,8 @@ const statusBadge: Record<string, { v: "green" | "orange" | "rose"; label: strin
   on_track: { v: "green", label: "On Track" },
   at_risk: { v: "orange", label: "At Risk" },
   behind: { v: "rose", label: "Behind" },
-  completed: { v: "green", label: "Concluido" },
-  not_started: { v: "default" as "green", label: "Nao Iniciado" },
+  completed: { v: "green", label: "Concluído" },
+  not_started: { v: "default" as "green", label: "Não Iniciado" },
 };
 
 export function Component() {
@@ -99,7 +99,7 @@ export function Component() {
         <h1 className="text-2xl font-bold">Metas</h1>
         <div className="flex gap-2">
           <Select value={filter.period ?? ""} onValueChange={(v) => setFilter(p => ({ ...p, period: v }))}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Periodo" /></SelectTrigger>
+            <SelectTrigger className="w-36"><SelectValue placeholder="Período" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="weekly">Semanal</SelectItem>
               <SelectItem value="monthly">Mensal</SelectItem>

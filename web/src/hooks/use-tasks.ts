@@ -40,7 +40,7 @@ export function useCreateTask() {
     },
     onError: (err) => {
       const msg = err.message === "daily task limit reached"
-        ? "Limite diario de tarefas atingido. Faca upgrade para criar mais."
+        ? "Limite diário de tarefas atingido. Faça upgrade para criar mais."
         : "Erro ao criar tarefa";
       toast.error(msg);
     },
@@ -63,7 +63,7 @@ export function useDeleteTask() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tasks"] });
       qc.invalidateQueries({ queryKey: ["workspace", "usage"] });
-      toast.success("Tarefa excluida");
+      toast.success("Tarefa excluída");
     },
   });
 }

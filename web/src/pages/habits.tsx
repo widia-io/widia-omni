@@ -37,11 +37,11 @@ function HabitFormDialog({ habit, onClose }: { habit?: Habit; onClose: () => voi
         <Input value={name} onChange={(e) => setName(e.target.value)} required />
       </div>
       <div className="space-y-2">
-        <Label>Frequencia</Label>
+        <Label>Frequência</Label>
         <Select value={frequency} onValueChange={(v) => setFrequency(v as HabitFrequency)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="daily">Diario</SelectItem>
+            <SelectItem value="daily">Diário</SelectItem>
             <SelectItem value="weekly">Semanal</SelectItem>
             <SelectItem value="custom">Personalizado</SelectItem>
           </SelectContent>
@@ -60,7 +60,7 @@ function HabitFormDialog({ habit, onClose }: { habit?: Habit; onClose: () => voi
         </div>
       </div>
       <Button type="submit" className="w-full" disabled={create.isPending || update.isPending}>
-        {habit ? "Salvar" : "Criar habito"}
+        {habit ? "Salvar" : "Criar hábito"}
       </Button>
     </form>
   );
@@ -82,13 +82,13 @@ export function Component() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Habitos</h1>
+        <h1 className="text-2xl font-bold">Hábitos</h1>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditHabit(undefined); }}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4" /> Novo habito</Button>
+            <Button size="sm"><Plus className="h-4 w-4" /> Novo hábito</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>{editHabit ? "Editar habito" : "Novo habito"}</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editHabit ? "Editar hábito" : "Novo hábito"}</DialogTitle></DialogHeader>
             <HabitFormDialog habit={editHabit} onClose={() => setOpen(false)} />
           </DialogContent>
         </Dialog>

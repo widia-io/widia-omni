@@ -30,7 +30,7 @@ function ProfileTab() {
         <Input value={profile?.email ?? ""} disabled className="opacity-60" />
       </div>
       <div className="space-y-2">
-        <Label>Fuso horario</Label>
+        <Label>Fuso horário</Label>
         <Input value={timezone} onChange={(e) => setTz(e.target.value)} placeholder="America/Sao_Paulo" />
       </div>
       <Button onClick={() => update.mutate({ display_name: displayName, timezone })} disabled={update.isPending}>
@@ -62,11 +62,11 @@ function PreferencesTab() {
         </Select>
       </div>
       <div className="space-y-2">
-        <Label>Limite de foco diario</Label>
+        <Label>Limite de foco diário</Label>
         <Input type="number" value={focusLimit || String(prefs?.daily_focus_limit ?? 3)} onChange={(e) => setFocusLimit(e.target.value)} />
       </div>
       <div className="space-y-2">
-        <Label>Inicio da semana</Label>
+        <Label>Início da semana</Label>
         <Select value={String(prefs?.week_starts_on ?? 1)} onValueChange={(v) => update.mutate({ week_starts_on: Number(v) })}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -76,7 +76,7 @@ function PreferencesTab() {
         </Select>
       </div>
       <Button onClick={() => update.mutate({ currency: currency || prefs?.currency, daily_focus_limit: Number(focusLimit) || prefs?.daily_focus_limit })} disabled={update.isPending}>
-        Salvar preferencias
+        Salvar preferências
       </Button>
     </div>
   );
@@ -108,7 +108,7 @@ function WorkspaceTab() {
             {[
               { label: "Areas", used: usage.counters.areas_count, max: usage.limits.max_areas },
               { label: "Metas", used: usage.counters.goals_count, max: usage.limits.max_goals },
-              { label: "Habitos", used: usage.counters.habits_count, max: usage.limits.max_habits },
+              { label: "Hábitos", used: usage.counters.habits_count, max: usage.limits.max_habits },
             ].map((u) => (
               <div key={u.label}>
                 <div className="flex justify-between text-sm mb-1">
@@ -136,13 +136,13 @@ function AccountTab() {
         <h3 className="font-semibold mb-2">Exportar dados</h3>
         <p className="text-sm text-text-secondary mb-4">Receba um arquivo com todos os seus dados.</p>
         <Button variant="outline" onClick={() => exportData.mutate()} disabled={exportData.isPending}>
-          {exportData.isPending ? "Exportando..." : "Solicitar exportacao"}
+          {exportData.isPending ? "Exportando..." : "Solicitar exportação"}
         </Button>
-        {exportData.isSuccess && <p className="mt-2 text-sm text-accent-green">Exportacao solicitada! Voce recebera por email.</p>}
+        {exportData.isSuccess && <p className="mt-2 text-sm text-accent-green">Exportação solicitada! Você receberá por email.</p>}
       </div>
       <div className="rounded-[14px] border border-accent-rose/30 bg-accent-rose/5 p-6">
         <h3 className="font-semibold text-accent-rose mb-2">Zona de perigo</h3>
-        <p className="text-sm text-text-secondary mb-4">Excluir sua conta permanentemente. Esta acao nao pode ser desfeita.</p>
+        <p className="text-sm text-text-secondary mb-4">Excluir sua conta permanentemente. Esta ação não pode ser desfeita.</p>
         {!confirmDelete ? (
           <Button variant="destructive" onClick={() => setConfirmDelete(true)}>
             Excluir minha conta
@@ -150,7 +150,7 @@ function AccountTab() {
         ) : (
           <div className="flex items-center gap-3">
             <Button variant="destructive" onClick={() => deleteAccount.mutate()} disabled={deleteAccount.isPending}>
-              Confirmar exclusao
+              Confirmar exclusão
             </Button>
             <Button variant="ghost" onClick={() => setConfirmDelete(false)}>Cancelar</Button>
           </div>
@@ -163,11 +163,11 @@ function AccountTab() {
 export function Component() {
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Configuracoes</h1>
+      <h1 className="text-2xl font-bold mb-6">Configurações</h1>
       <Tabs defaultValue="profile">
         <TabsList>
           <TabsTrigger value="profile">Perfil</TabsTrigger>
-          <TabsTrigger value="preferences">Preferencias</TabsTrigger>
+          <TabsTrigger value="preferences">Preferências</TabsTrigger>
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
           <TabsTrigger value="account">Conta</TabsTrigger>
         </TabsList>
