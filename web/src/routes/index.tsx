@@ -10,6 +10,7 @@ export const router = createBrowserRouter([
     element: <PublicLayout />,
     children: [
       { index: true, lazy: () => import("@/pages/public/landing") },
+      { path: "invite/:token", lazy: () => import("@/pages/invite-accept") },
     ],
   },
   {

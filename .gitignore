@@ -39,6 +39,7 @@ coverage.html
 
 # Build
 dist/
+web/dev-dist/
 web/tsconfig.tsbuildinfo
 
 # Playwright

@@ -33,11 +33,15 @@ type EntitlementLimits struct {
 	MaxAreas                int  `json:"max_areas"`
 	MaxGoals                int  `json:"max_goals"`
 	MaxHabits               int  `json:"max_habits"`
+	MaxMembers              int  `json:"max_members"`
 	MaxTasksPerDay          int  `json:"max_tasks_per_day"`
 	MaxTransactionsPerMonth int  `json:"max_transactions_per_month"`
 	JournalEnabled          bool `json:"journal_enabled"`
 	FinanceEnabled          bool `json:"finance_enabled"`
 	ExportEnabled           bool `json:"export_enabled"`
+	FamilyEnabled           bool `json:"family_enabled"`
+	ReferralEnabled         bool `json:"referral_enabled"`
+	MobilePWAEnabled        bool `json:"mobile_pwa_enabled"`
 	ScoreHistoryWeeks       int  `json:"score_history_weeks"`
 	APIRateLimitPerMinute   int  `json:"api_rate_limit_per_minute"`
 	StorageMB               int  `json:"storage_mb"`
@@ -75,6 +79,10 @@ func (l *EntitlementLimits) CanCreateTask(todayCount int) bool {
 
 func (l *EntitlementLimits) CanCreateTransaction(monthCount int) bool {
 	return l.IsUnlimited(l.MaxTransactionsPerMonth) || monthCount < l.MaxTransactionsPerMonth
+}
+
+func (l *EntitlementLimits) CanAddMember(currentCount int) bool {
+	return l.IsUnlimited(l.MaxMembers) || currentCount < l.MaxMembers
 }
 
 func (l *EntitlementLimits) CanUseStorage(currentBytes, additionalBytes int64) bool {

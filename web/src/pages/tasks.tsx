@@ -1328,16 +1328,16 @@ export function Component() {
   const isEmpty = (tasks ?? []).length === 0;
 
   return (
-    <div>
+    <div className="pb-4">
       {/* ─── Header ──────────────────────────────── */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold text-text-primary">Tarefas</h1>
           <TaskUsageBadge />
         </div>
         <button
           onClick={() => setLabelMgrOpen(true)}
-          className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-text-muted hover:text-text-primary"
+          className="flex items-center gap-1.5 self-start rounded-full border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-text-muted hover:text-text-primary sm:self-auto"
         >
           <Tags className="h-3.5 w-3.5" />
           Etiquetas

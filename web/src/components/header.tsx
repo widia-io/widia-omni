@@ -6,7 +6,9 @@ import { getGreeting, formatDateShort } from "@/lib/format";
 import { useNotificationCount } from "@/hooks/use-notifications";
 import { useDashboard } from "@/hooks/use-dashboard";
 import { useSubscription } from "@/hooks/use-billing";
+import { useSwitchWorkspace, useWorkspaces } from "@/hooks/use-workspaces";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NotificationPanel } from "@/components/notification-panel";
 import type { PlanTier } from "@/types/api";
 
@@ -27,6 +29,8 @@ export function Header() {
   const { data: unreadCount } = useNotificationCount();
   const { data: dash } = useDashboard();
   const { data: subscription } = useSubscription();
+  const { data: workspaces } = useWorkspaces();
+  const switchWorkspace = useSwitchWorkspace();
   const [showNotifs, setShowNotifs] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +42,8 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const defaultWorkspace = workspaces?.find((w) => w.is_default) ?? workspaces?.[0];
+
   const initials = (user?.display_name ?? "U")
     .split(" ")
     .map((w) => w[0])
@@ -46,7 +52,7 @@ export function Header() {
     .toUpperCase();
 
   return (
-    <header className="mb-8 flex items-start justify-between animate-in">
+    <header className="animate-in mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-start md:justify-between">
       <div>
         <h1 className="text-[28px] font-bold tracking-tight">
           {getGreeting()},{" "}
@@ -60,7 +66,25 @@ export function Header() {
             : "Gerencie suas metas e hábitos"}
         </p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3">
+        {workspaces && workspaces.length > 0 && (
+          <Select
+            value={defaultWorkspace?.id}
+            onValueChange={(workspaceID) => switchWorkspace.mutate(workspaceID)}
+            disabled={switchWorkspace.isPending}
+          >
+            <SelectTrigger className="h-10 w-[170px] max-w-[65vw] bg-bg-card text-xs">
+              <SelectValue placeholder="Workspace" />
+            </SelectTrigger>
+            <SelectContent>
+              {workspaces.map((ws) => (
+                <SelectItem key={ws.id} value={ws.id}>
+                  {ws.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {subscription && (
           <Link to="/billing" title="Gerenciar plano">
             <Badge variant={tierBadge[subscription.tier]} className="rounded-full px-2.5 py-1 text-[11px]">

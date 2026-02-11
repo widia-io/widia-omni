@@ -24,6 +24,7 @@ func (h *CounterReconcilerHandler) ProcessTask(ctx context.Context, _ *asynq.Tas
 			areas_count = (SELECT COUNT(*) FROM life_areas WHERE workspace_id = wc.workspace_id AND deleted_at IS NULL),
 			goals_count = (SELECT COUNT(*) FROM goals WHERE workspace_id = wc.workspace_id AND deleted_at IS NULL),
 			habits_count = (SELECT COUNT(*) FROM habits WHERE workspace_id = wc.workspace_id AND deleted_at IS NULL),
+			members_count = (SELECT COUNT(*) FROM workspace_members WHERE workspace_id = wc.workspace_id),
 			updated_at = now()
 	`)
 	if err != nil {

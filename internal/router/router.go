@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/go-chi/chi/v5"
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
@@ -16,6 +17,21 @@ import (
 
 func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis.Client) *chi.Mux {
 	r := chi.NewRouter()
+	appURL := "http://localhost:5173"
+	if len(cfg.AllowedOrigins) > 0 {
+		appURL = cfg.AllowedOrigins[0]
+	}
+
+	var queueClient *asynq.Client
+	if opt, err := redis.ParseURL(cfg.RedisURL); err == nil {
+		queueClient = asynq.NewClient(asynq.RedisClientOpt{
+			Addr:     opt.Addr,
+			Password: opt.Password,
+			DB:       opt.DB,
+		})
+	} else {
+		logger.Warn().Err(err).Msg("failed to parse redis url for asynq client")
+	}
 
 	// Global middleware
 	r.Use(middleware.RequestID)
@@ -26,15 +42,16 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	// Services
 	authSvc := service.NewAuthService(cfg.SupabaseURL, cfg.SupabaseServiceKey)
 	userSvc := service.NewUserService(db)
-	wsSvc := service.NewWorkspaceService(db)
+	wsSvc := service.NewWorkspaceService(db, rdb, queueClient, appURL, logger)
 	counterSvc := service.NewCounterService(db)
 	entSvc := service.NewEntitlementService(db, rdb)
+	referralSvc := service.NewReferralService(db, appURL)
 	areaSvc := service.NewAreaService(db, counterSvc)
 	goalSvc := service.NewGoalService(db, counterSvc)
 	habitSvc := service.NewHabitService(db, counterSvc)
 	taskSvc := service.NewTaskService(db, counterSvc)
-	billingSvc := service.NewBillingService(db, entSvc, cfg.StripeSecretKey, cfg.StripeWebhookSecret,
-		cfg.AllowedOrigins[0]+"/billing/success", cfg.AllowedOrigins[0]+"/billing/cancel")
+	billingSvc := service.NewBillingService(db, entSvc, referralSvc, cfg.StripeSecretKey, cfg.StripeWebhookSecret,
+		appURL+"/billing/success", appURL+"/billing/cancel")
 	onboardingSvc := service.NewOnboardingService(db)
 	dashSvc := service.NewDashboardService(db, rdb)
 	journalSvc := service.NewJournalService(db)
@@ -73,6 +90,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	labelH := handler.NewLabelHandler(labelSvc)
 	sectionH := handler.NewSectionHandler(sectionSvc)
 	apiKeyH := handler.NewAPIKeyHandler(apiKeySvc)
+	referralH := handler.NewReferralHandler(referralSvc)
 	adminH := handler.NewAdminHandler(adminSvc)
 
 	// Public routes
@@ -109,8 +127,16 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 		r.Post("/me/export", exportH.Export)
 
 		// Workspace
+		r.Get("/workspaces", wsH.ListWorkspaces)
 		r.Get("/workspace", wsH.GetWorkspace)
 		r.Put("/workspace", wsH.UpdateWorkspace)
+		r.Post("/workspace/switch", wsH.SwitchWorkspace)
+		r.Get("/workspace/members", wsH.ListMembers)
+		r.Delete("/workspace/members/{userID}", wsH.RemoveMember)
+		r.Post("/workspace/invites", wsH.CreateInvite)
+		r.Get("/workspace/invites", wsH.ListInvites)
+		r.Post("/workspace/invites/accept", wsH.AcceptInvite)
+		r.Delete("/workspace/invites/{id}", wsH.RevokeInvite)
 		r.Get("/workspace/usage", wsH.GetUsage)
 
 		// Areas
@@ -240,6 +266,14 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 			r.Get("/", apiKeyH.List)
 			r.Post("/", apiKeyH.Create)
 			r.Delete("/{id}", apiKeyH.Revoke)
+		})
+
+		// Referrals
+		r.Route("/referrals", func(r chi.Router) {
+			r.Get("/me", referralH.GetMe)
+			r.Post("/regenerate", referralH.Regenerate)
+			r.Get("/attributions", referralH.ListAttributions)
+			r.Get("/credits", referralH.ListCredits)
 		})
 
 		// Dashboard

@@ -13,7 +13,7 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string;
   password: string;
-  data?: { display_name?: string };
+  data?: { display_name?: string; referral_code?: string };
 }
 
 // ─── User ────────────────────────────────────────────
@@ -46,6 +46,8 @@ export interface UserPreferences {
 }
 
 // ─── Workspace ───────────────────────────────────────
+export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
+
 export interface Workspace {
   id: string;
   name: string;
@@ -60,10 +62,47 @@ export interface WorkspaceUsage {
   limits: EntitlementLimits;
 }
 
+export interface WorkspaceListItem {
+  id: string;
+  name: string;
+  slug: string;
+  role: WorkspaceRole;
+  is_default: boolean;
+  member_count: number;
+}
+
+export interface WorkspaceMemberSummary {
+  user_id: string;
+  display_name: string;
+  email: string;
+  role: WorkspaceRole;
+  joined_at: string;
+}
+
+export interface WorkspaceInvite {
+  id: string;
+  workspace_id: string;
+  email: string;
+  role: WorkspaceRole;
+  invited_by: string;
+  expires_at: string;
+  accepted_at: string | null;
+  accepted_by: string | null;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  created_at: string;
+}
+
+export interface WorkspaceInviteWithURL {
+  invite_url: string;
+  invite: WorkspaceInvite;
+}
+
 export interface WorkspaceCounters {
   areas_count: number;
   goals_count: number;
   habits_count: number;
+  members_count: number;
   tasks_created_today: number;
   transactions_month_count: number;
   storage_bytes_used: number;
@@ -73,11 +112,15 @@ export interface EntitlementLimits {
   max_areas: number;
   max_goals: number;
   max_habits: number;
+  max_members: number;
   max_tasks_per_day: number;
   max_transactions_per_month: number;
   journal_enabled: boolean;
   finance_enabled: boolean;
   export_enabled: boolean;
+  family_enabled: boolean;
+  referral_enabled: boolean;
+  mobile_pwa_enabled: boolean;
   score_history_weeks: number;
   api_rate_limit_per_minute: number;
   storage_mb: number;
@@ -291,6 +334,56 @@ export interface Subscription {
   trial_end: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// ─── Referrals ───────────────────────────────────────
+export type ReferralAttributionStatus = "pending" | "converted" | "expired";
+export type ReferralCreditStatus = "available" | "consumed" | "expired";
+
+export interface ReferralStats {
+  pending: number;
+  converted: number;
+  expired: number;
+}
+
+export interface ReferralMe {
+  code: string;
+  share_url: string;
+  stats: ReferralStats;
+  credit_days: number;
+  has_available: boolean;
+}
+
+export interface ReferralCode {
+  workspace_id: string;
+  code: string;
+  created_by: string;
+  created_at: string;
+  regenerated_at: string | null;
+}
+
+export interface ReferralAttribution {
+  id: string;
+  referral_code: string;
+  referrer_workspace_id: string;
+  referred_workspace_id: string;
+  referred_user_id: string | null;
+  expires_at: string;
+  status: ReferralAttributionStatus;
+  converted_at: string | null;
+  created_at: string;
+}
+
+export interface ReferralCredit {
+  id: string;
+  attribution_id: string;
+  workspace_id: string;
+  credit_type: string;
+  days: number;
+  status: ReferralCreditStatus;
+  expires_at: string | null;
+  consumed_at: string | null;
+  created_at: string;
 }
 
 // ─── Finance ─────────────────────────────────────────

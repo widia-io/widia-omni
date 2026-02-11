@@ -20,9 +20,9 @@ func NewAdminService(db *pgxpool.Pool, entSvc *EntitlementService) *AdminService
 }
 
 type AdminMetrics struct {
-	TotalUsers      int              `json:"total_users"`
-	TotalWorkspaces int              `json:"total_workspaces"`
-	ActiveSubs      map[string]int   `json:"active_subscriptions"`
+	TotalUsers      int            `json:"total_users"`
+	TotalWorkspaces int            `json:"total_workspaces"`
+	ActiveSubs      map[string]int `json:"active_subscriptions"`
 }
 
 func (s *AdminService) GetMetrics(ctx context.Context) (*AdminMetrics, error) {
@@ -79,10 +79,10 @@ func (s *AdminService) ListUsers(ctx context.Context, limit, offset int) ([]Admi
 	}
 
 	rows, err := s.db.Query(ctx, `
-		SELECT up.user_id, up.email, up.display_name, wm.workspace_id,
+		SELECT up.id, up.email, up.display_name, wm.workspace_id,
 			   COALESCE(sub.tier, 'free'), COALESCE(sub.status, 'none'), up.created_at
 		FROM user_profiles up
-		JOIN workspace_members wm ON wm.user_id = up.user_id AND wm.role = 'owner'
+		JOIN workspace_members wm ON wm.user_id = up.id AND wm.role = 'owner'
 		LEFT JOIN subscriptions sub ON sub.workspace_id = wm.workspace_id
 		ORDER BY up.created_at DESC
 		LIMIT $1 OFFSET $2
@@ -106,19 +106,19 @@ func (s *AdminService) ListUsers(ctx context.Context, limit, offset int) ([]Admi
 
 type AdminUserDetail struct {
 	AdminUser
-	Counters    *domain.WorkspaceCounter  `json:"counters"`
-	Entitlement *domain.Entitlement       `json:"entitlement,omitempty"`
+	Counters    *domain.WorkspaceCounter `json:"counters"`
+	Entitlement *domain.Entitlement      `json:"entitlement,omitempty"`
 }
 
 func (s *AdminService) GetUser(ctx context.Context, userID uuid.UUID) (*AdminUserDetail, error) {
 	var u AdminUserDetail
 	err := s.db.QueryRow(ctx, `
-		SELECT up.user_id, up.email, up.display_name, wm.workspace_id,
+		SELECT up.id, up.email, up.display_name, wm.workspace_id,
 			   COALESCE(sub.tier, 'free'), COALESCE(sub.status, 'none'), up.created_at
 		FROM user_profiles up
-		JOIN workspace_members wm ON wm.user_id = up.user_id AND wm.role = 'owner'
+		JOIN workspace_members wm ON wm.user_id = up.id AND wm.role = 'owner'
 		LEFT JOIN subscriptions sub ON sub.workspace_id = wm.workspace_id
-		WHERE up.user_id = $1
+		WHERE up.id = $1
 	`, userID).Scan(&u.UserID, &u.Email, &u.DisplayName, &u.WorkspaceID,
 		&u.Tier, &u.Status, &u.CreatedAt)
 	if err != nil {
@@ -127,12 +127,12 @@ func (s *AdminService) GetUser(ctx context.Context, userID uuid.UUID) (*AdminUse
 
 	var c domain.WorkspaceCounter
 	err = s.db.QueryRow(ctx, `
-		SELECT workspace_id, areas_count, goals_count, habits_count,
+		SELECT workspace_id, areas_count, goals_count, habits_count, members_count,
 			   tasks_created_today, tasks_today_date, transactions_month_count,
 			   transactions_month, storage_bytes_used, updated_at
 		FROM workspace_counters WHERE workspace_id = $1
 	`, u.WorkspaceID).Scan(
-		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount,
+		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount, &c.MembersCount,
 		&c.TasksCreatedToday, &c.TasksTodayDate, &c.TransactionsMonthCount,
 		&c.TransactionsMonth, &c.StorageBytesUsed, &c.UpdatedAt,
 	)
@@ -149,8 +149,8 @@ func (s *AdminService) GetUser(ctx context.Context, userID uuid.UUID) (*AdminUse
 }
 
 type AdminWorkspaceUsage struct {
-	WorkspaceID uuid.UUID                `json:"workspace_id"`
-	Counters    *domain.WorkspaceCounter `json:"counters"`
+	WorkspaceID uuid.UUID                 `json:"workspace_id"`
+	Counters    *domain.WorkspaceCounter  `json:"counters"`
 	Limits      *domain.EntitlementLimits `json:"limits,omitempty"`
 }
 
@@ -159,12 +159,12 @@ func (s *AdminService) GetWorkspaceUsage(ctx context.Context, wsID uuid.UUID) (*
 
 	var c domain.WorkspaceCounter
 	err := s.db.QueryRow(ctx, `
-		SELECT workspace_id, areas_count, goals_count, habits_count,
+		SELECT workspace_id, areas_count, goals_count, habits_count, members_count,
 			   tasks_created_today, tasks_today_date, transactions_month_count,
 			   transactions_month, storage_bytes_used, updated_at
 		FROM workspace_counters WHERE workspace_id = $1
 	`, wsID).Scan(
-		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount,
+		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount, &c.MembersCount,
 		&c.TasksCreatedToday, &c.TasksTodayDate, &c.TransactionsMonthCount,
 		&c.TransactionsMonth, &c.StorageBytesUsed, &c.UpdatedAt,
 	)
