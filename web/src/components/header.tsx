@@ -39,7 +39,7 @@ export function Header() {
         </h1>
         <p className="mt-1 font-serif text-sm text-text-secondary">
           {dash
-            ? `${dash.today_tasks - dash.completed_today} tarefas pendentes · ${dash.habits_today} hábitos hoje`
+            ? `${dash.today_tasks} tarefas pendentes · ${dash.habits_today} hábitos hoje`
             : "Gerencie suas metas e hábitos"}
         </p>
       </div>
