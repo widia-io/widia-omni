@@ -51,7 +51,7 @@ export function HabitsHeatmap() {
     <Card>
       <CardHeader>
         <span className="h-1.5 w-1.5 rounded-full bg-accent-green animate-pulse" />
-        <CardTitle>Habitos · Ultimas 4 Semanas</CardTitle>
+        <CardTitle>Hábitos · Últimas 4 Semanas</CardTitle>
       </CardHeader>
       <CardContent>
         {/* Day headers */}

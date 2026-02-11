@@ -27,7 +27,7 @@ export function NotificationPanel() {
   return (
     <div className="w-80 rounded-[14px] border border-border bg-bg-card shadow-lg">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <span className="text-sm font-semibold">Notificacoes</span>
+        <span className="text-sm font-semibold">Notificações</span>
         {items.some((n) => !n.is_read) && (
           <button onClick={() => markAll.mutate()} className="text-xs text-accent-orange hover:underline">
             Marcar todas como lidas
@@ -36,7 +36,7 @@ export function NotificationPanel() {
       </div>
       <div className="max-h-80 overflow-y-auto">
         {items.length === 0 && (
-          <div className="p-6 text-center text-sm text-text-muted">Nenhuma notificacao</div>
+          <div className="p-6 text-center text-sm text-text-muted">Nenhuma notificação</div>
         )}
         {items.map((n) => (
           <button

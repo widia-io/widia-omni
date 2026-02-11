@@ -46,6 +46,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	financeSvc := service.NewFinanceService(db, counterSvc)
 	llmClient := llm.NewClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
 	insightSvc := service.NewInsightService(db, rdb, llmClient)
+	labelSvc := service.NewLabelService(db)
+	sectionSvc := service.NewSectionService(db)
 	apiKeySvc := service.NewAPIKeyService(db, rdb)
 	adminSvc := service.NewAdminService(db, entSvc)
 
@@ -68,6 +70,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	exportH := handler.NewExportHandler(exportSvc)
 	financeH := handler.NewFinanceHandler(financeSvc)
 	insightH := handler.NewInsightHandler(insightSvc)
+	labelH := handler.NewLabelHandler(labelSvc)
+	sectionH := handler.NewSectionHandler(sectionSvc)
 	apiKeyH := handler.NewAPIKeyHandler(apiKeySvc)
 	adminH := handler.NewAdminHandler(adminSvc)
 
@@ -140,6 +144,23 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 			r.Get("/streaks", habitH.GetStreaks)
 		})
 
+		// Labels
+		r.Route("/labels", func(r chi.Router) {
+			r.Get("/", labelH.List)
+			r.Post("/", labelH.Create)
+			r.Put("/{id}", labelH.Update)
+			r.Delete("/{id}", labelH.Delete)
+		})
+
+		// Sections
+		r.Route("/sections", func(r chi.Router) {
+			r.Get("/", sectionH.List)
+			r.Post("/", sectionH.Create)
+			r.Put("/{id}", sectionH.Update)
+			r.Delete("/{id}", sectionH.Delete)
+			r.Patch("/{id}/reorder", sectionH.Reorder)
+		})
+
 		// Tasks
 		r.Route("/tasks", func(r chi.Router) {
 			r.Get("/", taskH.List)
@@ -147,7 +168,9 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 			r.Put("/{id}", taskH.Update)
 			r.Delete("/{id}", taskH.Delete)
 			r.Patch("/{id}/complete", taskH.Complete)
+			r.Patch("/{id}/reopen", taskH.Reopen)
 			r.Patch("/{id}/focus", taskH.ToggleFocus)
+			r.Patch("/{id}/reorder", taskH.Reorder)
 		})
 
 		// Billing
@@ -234,6 +257,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 		r.Get("/habits", habitH.List)
 		r.Get("/habits/entries", habitH.ListEntries)
 		r.Get("/habits/streaks", habitH.GetStreaks)
+		r.Get("/labels", labelH.List)
+		r.Get("/sections", sectionH.List)
 		r.Get("/tasks", taskH.List)
 		r.Get("/scores/current", scoreH.GetCurrent)
 		r.Get("/scores/history", scoreH.GetHistory)

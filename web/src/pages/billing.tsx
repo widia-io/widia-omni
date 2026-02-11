@@ -13,7 +13,7 @@ const statusLabel: Record<SubscriptionStatus, string> = {
   past_due: "Pagamento pendente",
   canceled: "Cancelado",
   paused: "Pausado",
-  unpaid: "Nao pago",
+  unpaid: "Não pago",
 };
 
 const statusColor: Record<string, "green" | "orange" | "rose" | "default"> = {
@@ -30,7 +30,7 @@ export function Component() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Plano e Cobranca</h1>
+      <h1 className="text-2xl font-bold mb-6">Plano e Cobrança</h1>
 
       {sub && (
         <div className="mb-8 rounded-[14px] border border-border bg-bg-card p-6">
@@ -43,7 +43,7 @@ export function Component() {
           </div>
           {sub.current_period_end && (
             <p className="text-sm text-text-secondary mb-4">
-              Proximo vencimento: {new Date(sub.current_period_end).toLocaleDateString("pt-BR")}
+              Próximo vencimento: {new Date(sub.current_period_end).toLocaleDateString("pt-BR")}
             </p>
           )}
           <Button variant="outline" size="sm" onClick={() => portal.mutate()} disabled={portal.isPending}>
@@ -64,14 +64,14 @@ export function Component() {
               <h3 className="text-lg font-bold">{plan.name}</h3>
               <div className="mt-2 flex items-baseline gap-1">
                 <span className="text-2xl font-bold">{formatCurrency(plan.price_monthly)}</span>
-                <span className="text-sm text-text-muted">/mes</span>
+                <span className="text-sm text-text-muted">/mês</span>
               </div>
               <ul className="mt-4 flex-1 space-y-2 text-sm text-text-secondary">
-                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent-green" />{plan.limits.max_areas < 0 || plan.limits.max_areas >= 999 ? "Areas ilimitadas" : `${plan.limits.max_areas} areas`}</li>
+                <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent-green" />{plan.limits.max_areas < 0 || plan.limits.max_areas >= 999 ? "Áreas ilimitadas" : `${plan.limits.max_areas} áreas`}</li>
                 <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent-green" />{plan.limits.max_goals < 0 || plan.limits.max_goals >= 999 ? "Metas ilimitadas" : `${plan.limits.max_goals} metas`}</li>
-                {plan.limits.finance_enabled && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent-green" />Modulo financeiro</li>}
+                {plan.limits.finance_enabled && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent-green" />Módulo financeiro</li>}
                 {plan.limits.ai_insights && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent-green" />AI Insights</li>}
-                {plan.limits.export_enabled && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent-green" />Exportacao de dados</li>}
+                {plan.limits.export_enabled && <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent-green" />Exportação de dados</li>}
               </ul>
               {isCurrent ? (
                 <Button variant="outline" className="mt-4 w-full" disabled>Plano atual</Button>

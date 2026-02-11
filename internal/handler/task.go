@@ -37,9 +37,31 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 			f.GoalID = &id
 		}
 	}
+	if v := r.URL.Query().Get("section_id"); v != "" {
+		id, err := uuid.Parse(v)
+		if err == nil {
+			f.SectionID = &id
+		}
+	}
+	if v := r.URL.Query().Get("parent_id"); v != "" {
+		id, err := uuid.Parse(v)
+		if err == nil {
+			f.ParentID = &id
+		}
+	}
+	if v := r.URL.Query().Get("label_id"); v != "" {
+		id, err := uuid.Parse(v)
+		if err == nil {
+			f.LabelID = &id
+		}
+	}
 	if v := r.URL.Query().Get("is_completed"); v != "" {
 		b := v == "true"
 		f.IsCompleted = &b
+	}
+	if v := r.URL.Query().Get("has_parent"); v != "" {
+		b := v == "true"
+		f.HasParent = &b
 	}
 	if v := r.URL.Query().Get("due_from"); v != "" {
 		f.DueFrom = &v
@@ -154,6 +176,27 @@ func (h *TaskHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, task)
 }
 
+func (h *TaskHandler) Reopen(w http.ResponseWriter, r *http.Request) {
+	wsID, ok := middleware.GetWorkspaceID(r.Context())
+	if !ok {
+		writeError(w, http.StatusForbidden, "workspace not found")
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid task id")
+		return
+	}
+
+	task, err := h.taskSvc.Reopen(r.Context(), wsID, id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reopen task")
+		return
+	}
+	writeJSON(w, http.StatusOK, task)
+}
+
 func (h *TaskHandler) ToggleFocus(w http.ResponseWriter, r *http.Request) {
 	wsID, ok := middleware.GetWorkspaceID(r.Context())
 	if !ok {
@@ -173,4 +216,32 @@ func (h *TaskHandler) ToggleFocus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, task)
+}
+
+func (h *TaskHandler) Reorder(w http.ResponseWriter, r *http.Request) {
+	wsID, ok := middleware.GetWorkspaceID(r.Context())
+	if !ok {
+		writeError(w, http.StatusForbidden, "workspace not found")
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid task id")
+		return
+	}
+
+	var req struct {
+		Position int `json:"position"`
+	}
+	if err := parseBody(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.taskSvc.Reorder(r.Context(), wsID, id, req.Position); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reorder task")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "reordered"})
 }

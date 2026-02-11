@@ -16,18 +16,23 @@ const (
 )
 
 type Task struct {
-	ID          uuid.UUID    `json:"id"`
-	WorkspaceID uuid.UUID    `json:"workspace_id"`
-	AreaID      *uuid.UUID   `json:"area_id,omitempty"`
-	GoalID      *uuid.UUID   `json:"goal_id,omitempty"`
-	Title       string       `json:"title"`
-	Description *string      `json:"description,omitempty"`
-	Priority    TaskPriority `json:"priority"`
-	IsCompleted bool         `json:"is_completed"`
-	IsFocus     bool         `json:"is_focus"`
-	DueDate     *time.Time   `json:"due_date,omitempty"`
-	CompletedAt *time.Time   `json:"completed_at,omitempty"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
-	DeletedAt   *time.Time   `json:"deleted_at,omitempty"`
+	ID              uuid.UUID    `json:"id"`
+	WorkspaceID     uuid.UUID    `json:"workspace_id"`
+	AreaID          *uuid.UUID   `json:"area_id,omitempty"`
+	GoalID          *uuid.UUID   `json:"goal_id,omitempty"`
+	ParentID        *uuid.UUID   `json:"parent_id,omitempty"`
+	SectionID       *uuid.UUID   `json:"section_id,omitempty"`
+	Title           string       `json:"title"`
+	Description     *string      `json:"description,omitempty"`
+	Priority        TaskPriority `json:"priority"`
+	Position        int          `json:"position"`
+	IsCompleted     bool         `json:"is_completed"`
+	IsFocus         bool         `json:"is_focus"`
+	DueDate         *time.Time   `json:"due_date,omitempty"`
+	DurationMinutes *int         `json:"duration_minutes,omitempty"`
+	CompletedAt     *time.Time   `json:"completed_at,omitempty"`
+	CreatedAt       time.Time    `json:"created_at"`
+	UpdatedAt       time.Time    `json:"updated_at"`
+	DeletedAt       *time.Time   `json:"deleted_at,omitempty"`
+	Labels          []Label      `json:"labels,omitempty"`
 }

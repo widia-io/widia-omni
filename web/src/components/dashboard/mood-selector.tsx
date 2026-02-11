@@ -36,7 +36,7 @@ export function MoodSelector() {
   return (
     <div className="mt-4 rounded-[10px] border border-border bg-bg-secondary p-3.5">
       <div className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-text-muted">
-        Como voce esta hoje?
+        Como você está hoje?
       </div>
       <div className="flex gap-2">
         {moods.map(({ emoji, value }) => (

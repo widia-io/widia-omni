@@ -95,8 +95,10 @@ func (s *ExportService) Export(ctx context.Context, wsID, userID uuid.UUID) (*Ex
 
 	// Tasks
 	rows, err = s.db.Query(ctx, `
-		SELECT id, workspace_id, area_id, goal_id, title, description, priority, is_completed, is_focus,
-			   due_date, completed_at, created_at, updated_at
+		SELECT id, workspace_id, area_id, goal_id, parent_id, section_id,
+			   title, description, priority, position,
+			   is_completed, is_focus, due_date, duration_minutes,
+			   completed_at, created_at, updated_at
 		FROM tasks WHERE workspace_id = $1 AND deleted_at IS NULL ORDER BY created_at
 	`, wsID)
 	if err != nil {
@@ -105,9 +107,10 @@ func (s *ExportService) Export(ctx context.Context, wsID, userID uuid.UUID) (*Ex
 	defer rows.Close()
 	for rows.Next() {
 		var t domain.Task
-		if err := rows.Scan(&t.ID, &t.WorkspaceID, &t.AreaID, &t.GoalID, &t.Title, &t.Description,
-			&t.Priority, &t.IsCompleted, &t.IsFocus, &t.DueDate, &t.CompletedAt,
-			&t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.WorkspaceID, &t.AreaID, &t.GoalID, &t.ParentID, &t.SectionID,
+			&t.Title, &t.Description, &t.Priority, &t.Position,
+			&t.IsCompleted, &t.IsFocus, &t.DueDate, &t.DurationMinutes,
+			&t.CompletedAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
 		data.Tasks = append(data.Tasks, t)

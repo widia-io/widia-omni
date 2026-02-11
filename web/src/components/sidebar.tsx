@@ -19,8 +19,8 @@ import { Logo } from "@/components/logo";
 const navItems = [
   { icon: LayoutDashboard, to: "/dashboard", label: "Dashboard" },
   { icon: Target, to: "/goals", label: "Metas" },
-  { icon: Activity, to: "/habits", label: "Habitos" },
-  { icon: DollarSign, to: "/finances", label: "Financas" },
+  { icon: Activity, to: "/habits", label: "Hábitos" },
+  { icon: DollarSign, to: "/finances", label: "Finanças" },
   { icon: Calendar, to: "/tasks", label: "Tarefas" },
   { icon: PenLine, to: "/journal", label: "Journal" },
 ] as const;
@@ -50,16 +50,16 @@ export function Sidebar() {
                 className={({ isActive }) =>
                   cn(
                     "relative flex h-11 w-11 items-center justify-center rounded-xl text-text-muted transition-all duration-200 hover:bg-bg-card hover:text-text-secondary",
-                    isActive && "bg-accent-orange-soft text-accent-orange",
+                    isActive && "bg-accent-orange/15 text-accent-orange shadow-[0_0_12px_rgba(249,115,22,0.12)]",
                   )
                 }
               >
                 {({ isActive }) => (
                   <>
                     {isActive && (
-                      <span className="absolute -left-[14px] h-5 w-[3px] rounded-r-[3px] bg-accent-orange" />
+                      <span className="absolute -left-[14px] h-6 w-[3px] rounded-r-[3px] bg-accent-orange" />
                     )}
-                    <Icon className="h-5 w-5" />
+                    <Icon className={cn("h-5 w-5", isActive && "scale-110")} />
                   </>
                 )}
               </NavLink>
@@ -92,21 +92,21 @@ export function Sidebar() {
               className={({ isActive }) =>
                 cn(
                   "relative flex h-11 w-11 items-center justify-center rounded-xl text-text-muted transition-all duration-200 hover:bg-bg-card hover:text-text-secondary",
-                  isActive && "bg-accent-orange-soft text-accent-orange",
+                  isActive && "bg-accent-orange/15 text-accent-orange shadow-[0_0_12px_rgba(249,115,22,0.12)]",
                 )
               }
             >
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <span className="absolute -left-[14px] h-5 w-[3px] rounded-r-[3px] bg-accent-orange" />
+                    <span className="absolute -left-[14px] h-6 w-[3px] rounded-r-[3px] bg-accent-orange" />
                   )}
-                  <Settings className="h-5 w-5" />
+                  <Settings className={cn("h-5 w-5", isActive && "scale-110")} />
                 </>
               )}
             </NavLink>
           </TooltipTrigger>
-          <TooltipContent side="right">Configuracoes</TooltipContent>
+          <TooltipContent side="right">Configurações</TooltipContent>
         </Tooltip>
       </nav>
     </TooltipProvider>

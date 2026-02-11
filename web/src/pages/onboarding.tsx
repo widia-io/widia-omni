@@ -8,9 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
 
 const SUGGESTED_AREAS = [
-  { name: "Saude", icon: "heart", color: "green", tw: { bg: "bg-accent-green/10", text: "text-accent-green" } },
+  { name: "Saúde", icon: "heart", color: "green", tw: { bg: "bg-accent-green/10", text: "text-accent-green" } },
   { name: "Carreira", icon: "briefcase", color: "orange", tw: { bg: "bg-accent-orange/10", text: "text-accent-orange" } },
-  { name: "Financas", icon: "dollar-sign", color: "sand", tw: { bg: "bg-accent-sand/10", text: "text-accent-sand" } },
+  { name: "Finanças", icon: "dollar-sign", color: "sand", tw: { bg: "bg-accent-sand/10", text: "text-accent-sand" } },
   { name: "Relacionamentos", icon: "users", color: "blue", tw: { bg: "bg-accent-blue/10", text: "text-accent-blue" } },
   { name: "Desenvolvimento Pessoal", icon: "book", color: "sage", tw: { bg: "bg-accent-sage/10", text: "text-accent-sage" } },
   { name: "Lazer", icon: "sun", color: "rose", tw: { bg: "bg-accent-rose/10", text: "text-accent-rose" } },
@@ -75,8 +75,8 @@ export function Component() {
 
       {currentStep === 0 && (
         <div>
-          <h2 className="mb-1 text-2xl font-bold">Escolha suas areas de vida</h2>
-          <p className="mb-6 font-serif text-sm text-text-secondary">Selecione as areas que quer acompanhar.</p>
+          <h2 className="mb-1 text-2xl font-bold">Escolha suas áreas de vida</h2>
+          <p className="mb-6 font-serif text-sm text-text-secondary">Selecione as áreas que quer acompanhar.</p>
           <div className="grid grid-cols-2 gap-3">
             {SUGGESTED_AREAS.map((area, i) => (
               <button
@@ -103,7 +103,7 @@ export function Component() {
       {currentStep === 1 && (
         <div>
           <h2 className="mb-1 text-2xl font-bold">Defina suas primeiras metas</h2>
-          <p className="mb-6 font-serif text-sm text-text-secondary">Adicione pelo menos uma meta para comecar.</p>
+          <p className="mb-6 font-serif text-sm text-text-secondary">Adicione pelo menos uma meta para começar.</p>
           <div className="mb-4 flex gap-2">
             <Input value={goalTitle} onChange={(e) => setGoalTitle(e.target.value)} placeholder="Ex: Ler 12 livros" />
             <Button size="sm" onClick={() => { if (goalTitle.trim()) { setGoals((p) => [...p, goalTitle.trim()]); setGoalTitle(""); } }}>
@@ -126,8 +126,8 @@ export function Component() {
 
       {currentStep === 2 && (
         <div>
-          <h2 className="mb-1 text-2xl font-bold">Crie seus habitos</h2>
-          <p className="mb-6 font-serif text-sm text-text-secondary">Quais habitos quer cultivar no dia a dia?</p>
+          <h2 className="mb-1 text-2xl font-bold">Crie seus hábitos</h2>
+          <p className="mb-6 font-serif text-sm text-text-secondary">Quais hábitos quer cultivar no dia a dia?</p>
           <div className="mb-4 flex gap-2">
             <Input value={habitName} onChange={(e) => setHabitName(e.target.value)} placeholder="Ex: Meditar 10 min" />
             <Button size="sm" onClick={() => { if (habitName.trim()) { setHabits((p) => [...p, habitName.trim()]); setHabitName(""); } }}>
@@ -152,7 +152,7 @@ export function Component() {
         <div className="text-center py-12">
           <CheckCircle2 className="mx-auto mb-4 h-16 w-16 text-accent-green" />
           <h2 className="mb-2 text-2xl font-bold">Tudo pronto!</h2>
-          <p className="mb-8 font-serif text-text-secondary">Sua conta esta configurada. Vamos ao seu dashboard.</p>
+          <p className="mb-8 font-serif text-text-secondary">Sua conta está configurada. Vamos ao seu dashboard.</p>
           <Button size="lg" onClick={handleComplete} disabled={complete.isPending}>
             Ir para o Dashboard
           </Button>

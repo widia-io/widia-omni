@@ -3,11 +3,13 @@ import { Bell } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { getGreeting, formatDateShort } from "@/lib/format";
 import { useNotificationCount } from "@/hooks/use-notifications";
+import { useDashboard } from "@/hooks/use-dashboard";
 import { NotificationPanel } from "@/components/notification-panel";
 
 export function Header() {
   const user = useAuthStore((s) => s.user);
   const { data: unreadCount } = useNotificationCount();
+  const { data: dash } = useDashboard();
   const [showNotifs, setShowNotifs] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -32,11 +34,13 @@ export function Header() {
         <h1 className="text-[28px] font-bold tracking-tight">
           {getGreeting()},{" "}
           <span className="bg-gradient-to-r from-accent-orange to-accent-sand bg-clip-text text-transparent">
-            {user?.display_name?.split(" ")[0] ?? "Usuario"}
+            {user?.display_name?.split(" ")[0] ?? "Usuário"}
           </span>
         </h1>
         <p className="mt-1 font-serif text-sm text-text-secondary">
-          Gerencie suas metas e habitos
+          {dash
+            ? `${dash.today_tasks} tarefas pendentes · ${dash.habits_today} hábitos hoje`
+            : "Gerencie suas metas e hábitos"}
         </p>
       </div>
       <div className="flex items-center gap-3">

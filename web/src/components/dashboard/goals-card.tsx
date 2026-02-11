@@ -15,8 +15,8 @@ const statusLabel: Record<string, string> = {
   on_track: "On Track",
   at_risk: "At Risk",
   behind: "Behind",
-  not_started: "Nao Iniciado",
-  completed: "Concluido",
+  not_started: "Não Iniciado",
+  completed: "Concluído",
 };
 
 export function GoalsCard() {

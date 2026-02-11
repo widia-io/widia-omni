@@ -19,7 +19,7 @@ export function LandingNav() {
             <Link to="/login">Entrar</Link>
           </Button>
           <Button size="sm" asChild>
-            <Link to="/register">Comecar gratis</Link>
+            <Link to="/register">Começar grátis</Link>
           </Button>
         </div>
       </div>
