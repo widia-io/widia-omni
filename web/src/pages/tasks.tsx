@@ -1164,9 +1164,8 @@ export function Component() {
 
   const hasFilters = Object.values(filter).some(Boolean);
 
-  const allTasks = tasks ?? [];
-  const pendingCount = allTasks.filter((t) => !t.is_completed).length;
-  const completedCount = allTasks.filter((t) => t.is_completed).length;
+  const pendingCount = topLevel.filter((t) => !t.is_completed).length;
+  const completedCount = topLevel.filter((t) => t.is_completed).length;
 
   // ─── Loading ──────────────────────────────────────
 
