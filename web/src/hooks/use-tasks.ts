@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api-client";
 import type { Task, TaskPriority } from "@/types/api";
 
@@ -32,7 +33,17 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: (data: CreateTaskInput) =>
       api<Task>("/api/v1/tasks", { method: "POST", body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["workspace", "usage"] });
+      toast.success("Tarefa criada");
+    },
+    onError: (err) => {
+      const msg = err.message === "daily task limit reached"
+        ? "Limite diario de tarefas atingido. Faca upgrade para criar mais."
+        : "Erro ao criar tarefa";
+      toast.error(msg);
+    },
   });
 }
 
@@ -49,7 +60,11 @@ export function useDeleteTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api(`/api/v1/tasks/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      qc.invalidateQueries({ queryKey: ["workspace", "usage"] });
+      toast.success("Tarefa excluida");
+    },
   });
 }
 
@@ -57,7 +72,10 @@ export function useCompleteTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api<Task>(`/api/v1/tasks/${id}/complete`, { method: "PATCH" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Feito!");
+    },
   });
 }
 

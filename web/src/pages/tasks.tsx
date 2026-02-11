@@ -1,7 +1,8 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   Plus, Star, ChevronDown, ChevronRight, ListTree, Clock,
   RotateCcw, Tags, FolderPlus, Check, MoreHorizontal, CalendarDays,
+  Flag, Folder,
 } from "lucide-react";
 import { format, isToday, isPast, isTomorrow } from "date-fns";
 import {
@@ -26,6 +27,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { useWorkspaceUsage } from "@/hooks/use-settings";
 import { cn } from "@/lib/cn";
 import type { Task, TaskPriority } from "@/types/api";
 
@@ -38,11 +40,25 @@ const PRIORITY_COLORS: Record<TaskPriority, string> = {
   low: "border-border",
 };
 
-const PRIORITY_BG: Record<TaskPriority, string> = {
-  critical: "bg-accent-rose/15",
-  high: "bg-accent-orange/15",
-  medium: "bg-accent-blue/15",
-  low: "bg-border/15",
+const PRIORITY_PILL_ACTIVE: Record<TaskPriority, string> = {
+  critical: "bg-accent-rose/12 text-accent-rose border-accent-rose/25",
+  high: "bg-accent-orange/12 text-accent-orange border-accent-orange/25",
+  medium: "bg-accent-blue/12 text-accent-blue border-accent-blue/25",
+  low: "bg-bg-secondary text-text-secondary border-border",
+};
+
+const PRIORITY_DOT: Record<TaskPriority, string> = {
+  critical: "bg-accent-rose",
+  high: "bg-accent-orange",
+  medium: "bg-accent-blue",
+  low: "bg-text-muted",
+};
+
+const PRIORITY_TOOLTIP: Record<TaskPriority, string> = {
+  critical: "Urgente",
+  high: "Importante",
+  medium: "Normal",
+  low: "Baixa",
 };
 
 const LABEL_DOT_COLOR: Record<string, string> = {
@@ -53,6 +69,22 @@ const LABEL_DOT_COLOR: Record<string, string> = {
   sand: "bg-accent-sand",
   sage: "bg-accent-sage",
 };
+
+const AREA_CHIP_ACTIVE: Record<string, string> = {
+  green: "bg-accent-green/10 text-accent-green border-accent-green/20",
+  orange: "bg-accent-orange/10 text-accent-orange border-accent-orange/20",
+  blue: "bg-accent-blue/10 text-accent-blue border-accent-blue/20",
+  rose: "bg-accent-rose/10 text-accent-rose border-accent-rose/20",
+  sand: "bg-accent-sand/10 text-accent-sand border-accent-sand/20",
+  sage: "bg-accent-sage/10 text-accent-sage border-accent-sage/20",
+};
+
+const EMPTY_STATES = [
+  { title: "Tudo limpo!", desc: "Nada pendente. Que tal planejar algo importante?" },
+  { title: "Foco total", desc: "Adicione suas prioridades do dia." },
+  { title: "Momento de planejar", desc: "O que voce quer conquistar hoje?" },
+  { title: "Pronto para decolar?", desc: "Crie sua primeira tarefa e comece." },
+];
 
 function formatDuration(mins: number): string {
   if (mins < 60) return `${mins}min`;
@@ -120,6 +152,56 @@ function parseSmartInput(text: string) {
   return { cleanTitle: clean.replace(/\s+/g, " ").trim(), priority, dueDate, tokens };
 }
 
+// ─── Task Usage Badge ─────────────────────────────────
+
+function TaskUsageBadge() {
+  const { data: usage } = useWorkspaceUsage();
+
+  if (!usage) return null;
+
+  const used = usage.counters.tasks_created_today;
+  const max = usage.limits.max_tasks_per_day;
+  const isUnlimited = max === -1;
+  const ratio = isUnlimited ? 0 : max > 0 ? used / max : 0;
+  const isFull = !isUnlimited && ratio >= 1;
+  const isWarning = !isUnlimited && ratio >= 0.8 && !isFull;
+
+  const accentColor = isFull
+    ? "text-accent-rose"
+    : isWarning
+      ? "text-accent-orange"
+      : "text-text-muted";
+
+  const barColor = isFull
+    ? "bg-accent-rose"
+    : isWarning
+      ? "bg-accent-orange"
+      : "bg-accent-green";
+
+  return (
+    <div className="flex items-center gap-2.5 rounded-full border border-border/60 px-3 py-1">
+      <div className="flex items-baseline gap-1">
+        <span className={cn("font-mono text-xs font-semibold tabular-nums", accentColor)}>
+          {used}
+        </span>
+        <span className="text-[10px] text-text-muted">/</span>
+        <span className="font-mono text-[10px] text-text-muted">
+          {isUnlimited ? "∞" : max}
+        </span>
+        <span className="text-[10px] text-text-muted">hoje</span>
+      </div>
+      {!isUnlimited && (
+        <div className="h-1 w-14 overflow-hidden rounded-full bg-border/50">
+          <div
+            className={cn("h-full rounded-full transition-all duration-700 ease-out", barColor)}
+            style={{ width: `${Math.min(ratio * 100, 100)}%` }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Priority Checkbox ────────────────────────────────
 
 function PriorityCheckbox({
@@ -134,6 +216,7 @@ function PriorityCheckbox({
     return (
       <button
         onClick={onReopen}
+        title={PRIORITY_TOOLTIP[priority]}
         className="group/check flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 border-accent-green bg-accent-green transition-all duration-150"
       >
         <Check className="h-2.5 w-2.5 text-bg-primary" strokeWidth={3} />
@@ -144,14 +227,11 @@ function PriorityCheckbox({
   return (
     <button
       onClick={onComplete}
+      title={PRIORITY_TOOLTIP[priority]}
       className={cn(
         "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150",
         PRIORITY_COLORS[priority],
-        `hover:${PRIORITY_BG[priority]}`,
       )}
-      style={{
-        // Inline hover bg since dynamic Tailwind classes are unreliable
-      }}
       onMouseEnter={(e) => {
         const bg = priority === "critical" ? "rgba(244,63,94,0.15)"
           : priority === "high" ? "rgba(249,115,22,0.15)"
@@ -170,34 +250,61 @@ function PriorityCheckbox({
 
 // ─── Inline Quick Add ─────────────────────────────────
 
+function ActionPill({
+  icon: Icon, label, isActive, onClick,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  isActive?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-all duration-150",
+        isActive
+          ? "border-accent-orange/25 bg-accent-orange/8 text-accent-orange"
+          : "border-border text-text-muted hover:border-border-hover hover:text-text-secondary",
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+}
+
 function InlineQuickAdd({
-  sectionId, parentId, onExpandedCreate, trigger,
+  sectionId, parentId, onExpandedCreate, trigger, onCreated,
 }: {
   sectionId?: string;
   parentId?: string;
   onExpandedCreate?: () => void;
   trigger?: number;
+  onCreated?: (id: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [showPriority, setShowPriority] = useState(false);
+  const [dueDate, setDueDate] = useState("");
+  const [showDueDate, setShowDueDate] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dueDateRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const createTask = useCreateTask();
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
+    if (isOpen && inputRef.current) inputRef.current.focus();
   }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
     function handleClickOutside(e: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-        setTitle("");
-        setPriority("medium");
+        resetForm();
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -210,29 +317,40 @@ function InlineQuickAdd({
 
   const parsed = parseSmartInput(title);
 
+  function resetForm() {
+    setIsOpen(false);
+    setTitle("");
+    setDescription("");
+    setPriority("medium");
+    setShowPriority(false);
+    setDueDate("");
+    setShowDueDate(false);
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
+    const finalDue = parsed.dueDate ?? (dueDate ? new Date(dueDate).toISOString() : undefined);
     const payload: CreateTaskInput = {
       title: parsed.cleanTitle || title.trim(),
       priority: parsed.priority ?? priority,
-      ...(parsed.dueDate && { due_date: parsed.dueDate }),
+      ...(finalDue && { due_date: finalDue }),
+      ...(description.trim() && { description: description.trim() }),
       ...(sectionId && { section_id: sectionId }),
       ...(parentId && { parent_id: parentId }),
     };
     createTask.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: (data) => {
         setTitle("");
+        setDescription("");
         setPriority("medium");
+        setShowPriority(false);
+        setDueDate("");
+        setShowDueDate(false);
         inputRef.current?.focus();
+        if (data?.id && onCreated) onCreated(data.id);
       },
     });
-  }
-
-  function handleCancel() {
-    setIsOpen(false);
-    setTitle("");
-    setPriority("medium");
   }
 
   if (!isOpen) {
@@ -245,7 +363,7 @@ function InlineQuickAdd({
         )}
       >
         <Plus className="h-4 w-4" />
-        <span>Adicionar tarefa</span>
+        <span>{parentId ? "Adicionar sub-tarefa..." : "Adicionar tarefa..."}</span>
       </button>
     );
   }
@@ -255,23 +373,131 @@ function InlineQuickAdd({
     critical: "P1", high: "P2", medium: "P3", low: "P4",
   };
 
+  const hasText = title.trim().length > 0;
+  const hasDueDate = !!dueDate || !!parsed.dueDate;
+  const hasCustomPriority = priority !== "medium" || !!parsed.priority;
+
   return (
     <div ref={wrapperRef} className={cn("my-1", parentId && "pl-8")}>
-      <form onSubmit={handleSubmit} className="rounded-[14px] border border-border bg-bg-card p-3">
-        <input
-          ref={inputRef}
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Nome da tarefa"
-          autoComplete="off"
-          className="mb-2 w-full border-0 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") handleCancel();
-          }}
-        />
-        {parsed.tokens.length > 0 && (
-          <div className="mb-2 flex items-center gap-1.5">
+      <form onSubmit={handleSubmit} className="overflow-hidden rounded-[14px] border border-border bg-bg-card">
+        {/* ── Input area ── */}
+        <div className="px-3.5 pt-3 pb-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={parentId ? "Adicionar sub-tarefa..." : "O que precisa ser feito hoje?"}
+            autoComplete="off"
+            className="w-full border-0 bg-transparent text-sm font-medium text-text-primary placeholder:text-text-muted focus:outline-none"
+            onKeyDown={(e) => {
+              if (e.key === "Escape") resetForm();
+            }}
+          />
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Descricao"
+            autoComplete="off"
+            className="mt-1 w-full border-0 bg-transparent text-xs text-text-secondary placeholder:text-text-muted/60 focus:outline-none"
+          />
+        </div>
+
+        {/* ── Action pills ── */}
+        <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">
+          <ActionPill
+            icon={CalendarDays}
+            label={dueDate ? formatDueDate(new Date(dueDate).toISOString()).text : "Prazo"}
+            isActive={hasDueDate}
+            onClick={() => {
+              setShowDueDate(!showDueDate);
+              setShowPriority(false);
+            }}
+          />
+          <ActionPill
+            icon={Flag}
+            label={hasCustomPriority ? PRIORITY_TOOLTIP[parsed.priority ?? priority] : "Prioridade"}
+            isActive={hasCustomPriority}
+            onClick={() => {
+              setShowPriority(!showPriority);
+              setShowDueDate(false);
+            }}
+          />
+          {!parentId && (
+            <ActionPill
+              icon={Folder}
+              label="Area"
+              onClick={() => { resetForm(); onExpandedCreate?.(); }}
+            />
+          )}
+          <ActionPill
+            icon={Tags}
+            label="Etiquetas"
+            onClick={() => { resetForm(); onExpandedCreate?.(); }}
+          />
+          {onExpandedCreate && (
+            <button
+              type="button"
+              onClick={() => { resetForm(); onExpandedCreate(); }}
+              className="inline-flex items-center justify-center rounded-lg border border-border px-1.5 py-1 text-text-muted transition-colors hover:border-border-hover hover:text-text-secondary"
+              title="Mais opcoes"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* ── Inline priority picker ── */}
+        {showPriority && (
+          <div className="flex items-center gap-1.5 border-t border-border/50 bg-bg-secondary/30 px-3.5 py-2">
+            {priorities.map((p) => (
+              <button
+                key={p}
+                type="button"
+                title={PRIORITY_TOOLTIP[p]}
+                onClick={() => { setPriority(p); setShowPriority(false); }}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-all duration-150",
+                  priority === p
+                    ? PRIORITY_PILL_ACTIVE[p]
+                    : "border-transparent text-text-muted hover:bg-bg-secondary/60",
+                )}
+              >
+                <span className={cn("h-1.5 w-1.5 rounded-full", PRIORITY_DOT[p])} />
+                {priorityLabels[p]}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Inline due date picker ── */}
+        {showDueDate && (
+          <div className="flex items-center gap-2 border-t border-border/50 bg-bg-secondary/30 px-3.5 py-2">
+            <CalendarDays className="h-3.5 w-3.5 text-text-muted" />
+            <input
+              ref={dueDateRef}
+              type="datetime-local"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              autoFocus
+              className="h-6 border-0 bg-transparent text-xs text-text-primary focus:outline-none"
+            />
+            {dueDate && (
+              <button
+                type="button"
+                onClick={() => { setDueDate(""); setShowDueDate(false); }}
+                className="text-[10px] text-text-muted hover:text-text-primary"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Bottom bar ── */}
+        <div className="flex items-center justify-between border-t border-border/50 bg-bg-secondary/20 px-3.5 py-2">
+          <div className="flex items-center gap-1.5">
             {parsed.tokens.map((t) => (
               <span
                 key={t.raw}
@@ -284,46 +510,21 @@ function InlineQuickAdd({
               </span>
             ))}
           </div>
-        )}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            {priorities.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPriority(p)}
-                className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full border-2 text-[10px] font-semibold transition-all duration-150",
-                  PRIORITY_COLORS[p],
-                  priority === p ? cn(PRIORITY_BG[p], "text-text-primary") : "text-text-muted",
-                )}
-              >
-                {priorityLabels[p]}
-              </button>
-            ))}
-            {onExpandedCreate && (
-              <button
-                type="button"
-                onClick={() => { handleCancel(); onExpandedCreate(); }}
-                className="ml-1 flex h-6 w-6 items-center justify-center rounded-full text-text-muted transition-colors hover:text-text-primary"
-                title="Mais opcoes"
-              >
-                <MoreHorizontal className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleCancel}
-              className="px-2 py-1 text-xs text-text-muted transition-colors hover:text-text-primary"
+              onClick={resetForm}
+              className="rounded-lg px-2.5 py-1 text-xs text-text-muted transition-colors hover:bg-bg-secondary hover:text-text-primary"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={!title.trim() || createTask.isPending}
-              className="rounded-lg bg-accent-orange px-3 py-1 text-xs font-medium text-bg-primary transition-opacity hover:opacity-90 disabled:opacity-50"
+              disabled={!hasText || createTask.isPending}
+              className={cn(
+                "rounded-lg bg-accent-orange px-3.5 py-1 text-xs font-semibold text-bg-primary transition-all hover:opacity-90 disabled:cursor-default",
+                hasText ? "opacity-100" : "opacity-30",
+              )}
             >
               Criar
             </button>
@@ -337,7 +538,7 @@ function InlineQuickAdd({
 // ─── Task Row ─────────────────────────────────────────
 
 function TaskRow({
-  task, childCount, isSubtask, isExpanded, onToggleExpand, onEdit, onAddSubtask,
+  task, childCount, isSubtask, isExpanded, onToggleExpand, onEdit, onAddSubtask, isRecent,
 }: {
   task: Task;
   childCount: number;
@@ -346,6 +547,7 @@ function TaskRow({
   onToggleExpand?: () => void;
   onEdit: () => void;
   onAddSubtask?: () => void;
+  isRecent?: boolean;
 }) {
   const deleteTask = useDeleteTask();
   const completeTask = useCompleteTask();
@@ -372,6 +574,7 @@ function TaskRow({
       className={cn(
         "group/row flex items-center gap-2.5 border-b border-border/40 px-2 py-2.5 transition-colors hover:rounded-lg hover:bg-bg-card/60",
         isSubtask && "pl-8",
+        isRecent && "animate-[slideIn_0.35s_ease] rounded-lg border border-accent-orange/10 bg-accent-orange/5",
       )}
     >
       {/* Priority checkbox */}
@@ -565,6 +768,31 @@ function SectionCreateInline({ areaId }: { areaId: string }) {
   );
 }
 
+// ─── Filter Chip ──────────────────────────────────────
+
+function FilterChip({
+  label, isActive, activeClass, onClick,
+}: {
+  label: string;
+  isActive: boolean;
+  activeClass?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        isActive
+          ? activeClass ?? "bg-accent-orange/10 text-accent-orange border-accent-orange/20"
+          : "bg-bg-card border-border text-text-muted hover:border-text-muted",
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
 // ─── Edit Dialog ──────────────────────────────────────
 
 function TaskEditDialog({
@@ -727,6 +955,23 @@ export function Component() {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set());
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [quickAddTrigger, setQuickAddTrigger] = useState(0);
+  const [recentIds, setRecentIds] = useState<Set<string>>(new Set());
+
+  const emptyState = useMemo(
+    () => EMPTY_STATES[Math.floor(Math.random() * EMPTY_STATES.length)]!,
+    [],
+  );
+
+  const handleCreated = useCallback((id: string) => {
+    setRecentIds((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      setRecentIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 1500);
+  }, []);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -773,6 +1018,25 @@ export function Component() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
+    });
+  }
+
+  function toggleFilter(key: string, value: string) {
+    setFilter((prev) => {
+      if (prev[key] === value) {
+        const { [key]: _, ...rest } = prev;
+        // Clear dependent filters
+        if (key === "area_id") {
+          const { section_id: _s, ...cleaned } = rest;
+          return cleaned;
+        }
+        return rest;
+      }
+      if (key === "area_id") {
+        const { section_id: _, ...rest } = prev;
+        return { ...rest, [key]: value };
+      }
+      return { ...prev, [key]: value };
     });
   }
 
@@ -855,6 +1119,7 @@ export function Component() {
           onToggleExpand={() => toggleExpanded(task.id)}
           onEdit={() => openEdit(task)}
           onAddSubtask={() => openCreate(task.id)}
+          isRecent={recentIds.has(task.id)}
         />
         {expanded && children.length > 0 && (
           <div>
@@ -873,82 +1138,85 @@ export function Component() {
     <div>
       {/* ─── Header ──────────────────────────────── */}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-text-primary">Tarefas</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLabelMgrOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-text-muted hover:text-text-primary"
-          >
-            <Tags className="h-3.5 w-3.5" />
-            Etiquetas
-          </button>
-          <button
-            onClick={() => openCreate()}
-            className="flex items-center gap-1.5 rounded-full bg-accent-orange px-3 py-1.5 text-xs font-medium text-bg-primary transition-opacity hover:opacity-90"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Nova tarefa
-          </button>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold text-text-primary">Tarefas</h1>
+          <TaskUsageBadge />
         </div>
+        <button
+          onClick={() => setLabelMgrOpen(true)}
+          className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-text-muted hover:text-text-primary"
+        >
+          <Tags className="h-3.5 w-3.5" />
+          Etiquetas
+        </button>
       </div>
 
-      {/* ─── Filter bar ──────────────────────────── */}
+      {/* ─── Filter chips ────────────────────────── */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Select value={filter.is_completed ?? ""} onValueChange={(v) => setFilter((p) => ({ ...p, is_completed: v }))}>
-          <SelectTrigger className="h-8 w-28 rounded-full text-xs">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="false">Pendentes</SelectItem>
-            <SelectItem value="true">Concluidas</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Status chips */}
+        <FilterChip
+          label="Pendentes"
+          isActive={filter.is_completed === "false"}
+          onClick={() => toggleFilter("is_completed", "false")}
+        />
+        <FilterChip
+          label="Concluidas"
+          isActive={filter.is_completed === "true"}
+          onClick={() => toggleFilter("is_completed", "true")}
+        />
 
-        <Select
-          value={filter.area_id ?? ""}
-          onValueChange={(v) => setFilter((p) => {
-            const { section_id: _, ...rest } = p;
-            return { ...rest, area_id: v };
-          })}
-        >
-          <SelectTrigger className="h-8 w-28 rounded-full text-xs">
-            <SelectValue placeholder="Area" />
-          </SelectTrigger>
-          <SelectContent>
-            {(areas ?? []).map((a) => (
-              <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {filter.area_id && (
-          <Select value={filter.section_id ?? ""} onValueChange={(v) => setFilter((p) => ({ ...p, section_id: v }))}>
-            <SelectTrigger className="h-8 w-28 rounded-full text-xs">
-              <SelectValue placeholder="Secao" />
-            </SelectTrigger>
-            <SelectContent>
-              {(sections ?? []).map((s) => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Separator */}
+        {(areas ?? []).length > 0 && (
+          <span className="text-border">|</span>
         )}
 
-        <Select value={filter.label_id ?? ""} onValueChange={(v) => setFilter((p) => ({ ...p, label_id: v }))}>
-          <SelectTrigger className="h-8 w-28 rounded-full text-xs">
-            <SelectValue placeholder="Etiqueta" />
-          </SelectTrigger>
-          <SelectContent>
-            {(labels ?? []).map((l) => (
-              <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Area chips */}
+        {(areas ?? []).map((a) => (
+          <FilterChip
+            key={a.id}
+            label={a.name}
+            isActive={filter.area_id === a.id}
+            activeClass={AREA_CHIP_ACTIVE[a.color] ?? "bg-accent-orange/10 text-accent-orange border-accent-orange/20"}
+            onClick={() => toggleFilter("area_id", a.id)}
+          />
+        ))}
 
+        {/* Section chips (when area active) */}
+        {filter.area_id && (sections ?? []).length > 0 && (
+          <>
+            <span className="text-border">|</span>
+            {(sections ?? []).map((s) => (
+              <FilterChip
+                key={s.id}
+                label={s.name}
+                isActive={filter.section_id === s.id}
+                onClick={() => toggleFilter("section_id", s.id)}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Label chips */}
+        {(labels ?? []).length > 0 && (
+          <>
+            <span className="text-border">|</span>
+            {(labels ?? []).map((l) => (
+              <FilterChip
+                key={l.id}
+                label={l.name}
+                isActive={filter.label_id === l.id}
+                activeClass={AREA_CHIP_ACTIVE[l.color] ?? undefined}
+                onClick={() => toggleFilter("label_id", l.id)}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Clear filters */}
         {hasFilters && (
           <button
             onClick={() => setFilter({})}
-            className="px-2 text-xs text-text-muted transition-colors hover:text-text-primary"
+            className="ml-1 text-xs text-text-muted underline transition-colors hover:text-text-primary"
           >
             Limpar filtros
           </button>
@@ -960,8 +1228,14 @@ export function Component() {
         <div className="flex flex-col items-center gap-3 py-16 text-text-muted">
           <ListTree className="h-10 w-10" />
           <div className="text-center">
-            <p className="text-sm font-medium">Nenhuma tarefa</p>
-            <p className="mt-1 text-xs">Crie sua primeira tarefa para comecar</p>
+            <p className="text-sm font-medium text-text-primary">{emptyState.title}</p>
+            <p className="mt-1 text-xs">{emptyState.desc}</p>
+            <button
+              onClick={() => setQuickAddTrigger((n) => n + 1)}
+              className="mt-3 text-xs font-medium text-accent-orange transition-opacity hover:opacity-80"
+            >
+              + Adicionar tarefa
+            </button>
           </div>
         </div>
       ) : (
@@ -991,6 +1265,7 @@ export function Component() {
                       <InlineQuickAdd
                         sectionId={group.id !== "__none__" ? group.id : undefined}
                         onExpandedCreate={() => openCreate()}
+                        onCreated={handleCreated}
                         trigger={idx === 0 ? quickAddTrigger : undefined}
                       />
                     </div>
@@ -1001,15 +1276,14 @@ export function Component() {
           ) : (
             <div>
               {topLevel.map((task) => renderTaskWithChildren(task))}
-              <InlineQuickAdd onExpandedCreate={() => openCreate()} trigger={quickAddTrigger} />
+              <InlineQuickAdd
+                onExpandedCreate={() => openCreate()}
+                onCreated={handleCreated}
+                trigger={quickAddTrigger}
+              />
             </div>
           )}
         </div>
-      )}
-
-      {/* Inline quick-add for empty state too */}
-      {isEmpty && (
-        <InlineQuickAdd onExpandedCreate={() => openCreate()} trigger={quickAddTrigger} />
       )}
 
       {/* Section create */}
