@@ -1,18 +1,11 @@
-import { useUIStore } from "@/stores/ui-store";
-
 interface LogoProps {
   size?: number;
   className?: string;
 }
 
 export function Logo({ size = 32, className }: LogoProps) {
-  const theme = useUIStore((s) => s.theme);
-  const isDark =
-    theme === "dark" ||
-    (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-  const bg = isDark ? "#F0874A" : "#E8580C";
-  const fg = isDark ? "#0F0F17" : "#FFFFFF";
+  const bg = "var(--accent)";
+  const fg = "var(--bg)";
   const sw = size <= 20 ? 4 : size <= 32 ? 3.5 : 3;
   const cr = size <= 20 ? 5 : size <= 32 ? 4.5 : 4;
 

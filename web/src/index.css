@@ -1,63 +1,63 @@
 @import "tailwindcss";
 
-/* Light palette (default) */
+/* Light palette (default): MeuFoco */
 :root {
-  --bg: #FDFCFA;
-  --surface: #F6F4F0;
+  --bg: #F5FAF8;
+  --surface: #ECF5F2;
   --card: #FFFFFF;
-  --card-hover: #F9F8F6;
+  --card-hover: #F6FBF9;
   --elevated: #FFFFFF;
-  --border: #E5E2DC;
-  --border-hover: #D5D2CC;
-  --text: #1A1A2E;
-  --text-secondary: #6B7280;
-  --text-muted: #9CA3AF;
-  --accent: #E8580C;
-  --accent-hover: #D14D08;
-  --accent-light: #FFF3ED;
-  --area-red: #EF4444;
-  --area-indigo: #6366F1;
-  --area-green: #16A34A;
-  --area-pink: #EC4899;
-  --area-amber: #F59E0B;
-  --area-cyan: #06B6D4;
-  --success: #16A34A;
-  --info: #6366F1;
-  --warning: #EAB308;
-  --danger: #DC2626;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.04);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.06);
-  --shadow-lg: 0 12px 40px rgba(0,0,0,.08);
+  --border: #D4E4DE;
+  --border-hover: #BDD2CA;
+  --text: #11211D;
+  --text-secondary: #3E5A53;
+  --text-muted: #708981;
+  --accent: #0F8A78;
+  --accent-hover: #0C7566;
+  --accent-light: #E0F6F1;
+  --area-red: #DE5A5A;
+  --area-indigo: #3F72E8;
+  --area-green: #2D9B6D;
+  --area-pink: #CC5DAA;
+  --area-amber: #C78F2A;
+  --area-cyan: #0F9CAA;
+  --success: #2D9B6D;
+  --info: #3F72E8;
+  --warning: #C78F2A;
+  --danger: #C94444;
+  --shadow-sm: 0 1px 3px rgba(8,20,17,.05);
+  --shadow-md: 0 5px 16px rgba(8,20,17,.08);
+  --shadow-lg: 0 16px 42px rgba(8,20,17,.1);
 }
 
 /* Dark palette */
 .dark {
-  --bg: #0F0F17;
-  --surface: #1C1C28;
-  --card: #252534;
-  --card-hover: #2D2D3E;
-  --elevated: #2A2A3A;
-  --border: #2E2E3E;
-  --border-hover: #3D3D4E;
-  --text: #E8E6E1;
-  --text-secondary: #8B8A85;
-  --text-muted: #5C5B57;
-  --accent: #F0874A;
-  --accent-hover: #F49A63;
-  --accent-light: rgba(240,135,74,.12);
-  --area-red: #F87171;
-  --area-indigo: #818CF8;
-  --area-green: #4ADE80;
-  --area-pink: #F472B6;
-  --area-amber: #FBBF24;
-  --area-cyan: #22D3EE;
-  --success: #4ADE80;
-  --info: #818CF8;
-  --warning: #FBBF24;
-  --danger: #F87171;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.2);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.3);
-  --shadow-lg: 0 12px 40px rgba(0,0,0,.4);
+  --bg: #081512;
+  --surface: #10221E;
+  --card: #142B25;
+  --card-hover: #1A342D;
+  --elevated: #1D3C33;
+  --border: #255247;
+  --border-hover: #327160;
+  --text: #E8F7F3;
+  --text-secondary: #A4CABE;
+  --text-muted: #6F978B;
+  --accent: #33C0A5;
+  --accent-hover: #4FCFB6;
+  --accent-light: rgba(51,192,165,.18);
+  --area-red: #FF867F;
+  --area-indigo: #7CA0FF;
+  --area-green: #58D7A1;
+  --area-pink: #F590D8;
+  --area-amber: #F2C363;
+  --area-cyan: #59DCE8;
+  --success: #58D7A1;
+  --info: #7CA0FF;
+  --warning: #F2C363;
+  --danger: #FF867F;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.25);
+  --shadow-md: 0 6px 18px rgba(0,0,0,.35);
+  --shadow-lg: 0 14px 42px rgba(0,0,0,.45);
 }
 
 @theme {
@@ -95,7 +95,7 @@
   --color-accent-sage-soft: oklch(from var(--area-cyan) l c h / 0.1);
   --color-accent-pink: var(--area-pink);
   --color-accent-pink-soft: oklch(from var(--area-pink) l c h / 0.1);
-  --color-light-cream: #E8E6E1;
+  --color-light-cream: #E5F2EE;
 
   /* Radius */
   --radius-lg: 14px;
@@ -103,8 +103,8 @@
   --radius-sm: 6px;
 
   /* Fonts */
-  --font-sans: "Outfit", Arial, sans-serif;
-  --font-serif: "DM Sans", Arial, sans-serif;
+  --font-sans: "Sora", "Manrope", Arial, sans-serif;
+  --font-serif: "Manrope", Arial, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
 
@@ -124,33 +124,38 @@ body {
   overflow-x: hidden;
 }
 
-/* Light mode: clean, no overlays */
 body::before,
 body::after {
-  content: none;
-}
-
-/* Dark mode: subtle radial gradients + dot grid */
-.dark body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(240,135,74,.025), transparent),
-    radial-gradient(circle at 80% 80%, rgba(129,140,248,.015), transparent),
-    radial-gradient(circle at 20% 60%, rgba(74,222,128,.015), transparent);
   pointer-events: none;
   z-index: 0;
+}
+
+body::before {
+  background-image:
+    radial-gradient(ellipse 75% 55% at 5% -25%, oklch(from var(--accent) l c h / 0.08), transparent 65%),
+    radial-gradient(ellipse 60% 45% at 100% 5%, oklch(from var(--area-indigo) l c h / 0.06), transparent 62%),
+    radial-gradient(circle at 40% 85%, oklch(from var(--area-cyan) l c h / 0.04), transparent 60%);
+}
+
+body::after {
+  background-image: radial-gradient(circle, oklch(from var(--border) l c h / 0.2) 1px, transparent 1px);
+  background-size: 30px 30px;
+  opacity: 0.35;
+}
+
+.dark body::before {
+  background-image:
+    radial-gradient(ellipse 85% 55% at 50% -20%, oklch(from var(--accent) l c h / 0.09), transparent 70%),
+    radial-gradient(circle at 80% 80%, oklch(from var(--area-indigo) l c h / 0.06), transparent 65%),
+    radial-gradient(circle at 20% 62%, oklch(from var(--area-green) l c h / 0.06), transparent 63%);
 }
 
 .dark body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(139,138,133,.04) 1px, transparent 1px);
   background-size: 32px 32px;
-  pointer-events: none;
-  z-index: 0;
+  opacity: 0.5;
 }
 
 #root {
