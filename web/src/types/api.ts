@@ -318,6 +318,8 @@ export interface Plan {
   name: string;
   price_monthly: number;
   price_yearly: number;
+  stripe_price_monthly?: string | null;
+  stripe_price_yearly?: string | null;
   limits: EntitlementLimits;
   is_active: boolean;
 }
