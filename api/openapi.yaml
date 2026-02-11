@@ -28,6 +28,7 @@ tags:
   - name: Finances
   - name: Dashboard
   - name: Export
+  - name: Referrals
   - name: Admin
   - name: Webhooks
 
@@ -207,6 +208,89 @@ components:
           type: string
           format: date-time
 
+    WorkspaceListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member, viewer]
+        is_default:
+          type: boolean
+        member_count:
+          type: integer
+
+    WorkspaceMemberSummary:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member, viewer]
+        joined_at:
+          type: string
+          format: date-time
+
+    WorkspaceInvite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member, viewer]
+        invited_by:
+          type: string
+          format: uuid
+        expires_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        accepted_by:
+          type: string
+          format: uuid
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          nullable: true
+        revoked_by:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    WorkspaceInviteWithURL:
+      type: object
+      properties:
+        invite_url:
+          type: string
+        invite:
+          $ref: '#/components/schemas/WorkspaceInvite'
+
     WorkspaceUsage:
       type: object
       properties:
@@ -223,6 +307,8 @@ components:
         goals_count:
           type: integer
         habits_count:
+          type: integer
+        members_count:
           type: integer
         tasks_created_today:
           type: integer
@@ -241,6 +327,8 @@ components:
           type: integer
         max_habits:
           type: integer
+        max_members:
+          type: integer
         max_tasks_per_day:
           type: integer
         max_transactions_per_month:
@@ -250,6 +338,12 @@ components:
         finance_enabled:
           type: boolean
         export_enabled:
+          type: boolean
+        family_enabled:
+          type: boolean
+        referral_enabled:
+          type: boolean
+        mobile_pwa_enabled:
           type: boolean
         score_history_weeks:
           type: integer
@@ -261,6 +355,112 @@ components:
           type: boolean
         api_access:
           type: boolean
+
+    ReferralStats:
+      type: object
+      properties:
+        pending:
+          type: integer
+        converted:
+          type: integer
+        expired:
+          type: integer
+
+    ReferralMe:
+      type: object
+      properties:
+        code:
+          type: string
+        share_url:
+          type: string
+        stats:
+          $ref: '#/components/schemas/ReferralStats'
+        credit_days:
+          type: integer
+        has_available:
+          type: boolean
+
+    ReferralCode:
+      type: object
+      properties:
+        workspace_id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        created_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        regenerated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    ReferralAttribution:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        referral_code:
+          type: string
+        referrer_workspace_id:
+          type: string
+          format: uuid
+        referred_workspace_id:
+          type: string
+          format: uuid
+        referred_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, converted, expired]
+        converted_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ReferralCredit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        attribution_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        credit_type:
+          type: string
+        days:
+          type: integer
+        status:
+          type: string
+          enum: [available, consumed, expired]
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        consumed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
 
     LifeArea:
       type: object
@@ -969,6 +1169,8 @@ paths:
                   properties:
                     display_name:
                       type: string
+                    referral_code:
+                      type: string
               required: [email, password]
       responses:
         '201':
@@ -1256,6 +1458,188 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/workspaces:
+    get:
+      tags: [Workspace]
+      summary: List all workspaces for the authenticated user
+      responses:
+        '200':
+          description: Workspaces list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspaceListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workspace/switch:
+    post:
+      tags: [Workspace]
+      summary: Switch default workspace for authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workspace_id]
+              properties:
+                workspace_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Workspace switched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspace/members:
+    get:
+      tags: [Workspace]
+      summary: List members of current workspace
+      responses:
+        '200':
+          description: Members list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspaceMemberSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/workspace/members/{userID}:
+    delete:
+      tags: [Workspace]
+      summary: Remove member from current workspace
+      parameters:
+        - name: userID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Member removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspace/invites:
+    get:
+      tags: [Workspace]
+      summary: List workspace invites
+      parameters:
+        - $ref: '#/components/parameters/limitQuery'
+        - $ref: '#/components/parameters/offsetQuery'
+      responses:
+        '200':
+          description: Invites list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspaceInvite'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Workspace]
+      summary: Create invite link for workspace member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  enum: [member]
+      responses:
+        '201':
+          description: Invite created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInviteWithURL'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workspace/invites/{id}:
+    delete:
+      tags: [Workspace]
+      summary: Revoke workspace invite
+      parameters:
+        - $ref: '#/components/parameters/idPath'
+      responses:
+        '204':
+          description: Invite revoked
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspace/invites/accept:
+    post:
+      tags: [Workspace]
+      summary: Accept workspace invite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Invite accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  workspace_id:
+                    type: string
+                    format: uuid
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/workspace/usage:
     get:
       tags: [Workspace]
@@ -1271,6 +1655,80 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '429':
           $ref: '#/components/responses/RateLimited'
+
+  /api/v1/referrals/me:
+    get:
+      tags: [Referrals]
+      summary: Get referral info for current workspace
+      responses:
+        '200':
+          description: Referral summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralMe'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/referrals/regenerate:
+    post:
+      tags: [Referrals]
+      summary: Regenerate workspace referral code (owner/admin)
+      responses:
+        '200':
+          description: New referral code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralCode'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/referrals/attributions:
+    get:
+      tags: [Referrals]
+      summary: List referral attributions
+      parameters:
+        - $ref: '#/components/parameters/limitQuery'
+        - $ref: '#/components/parameters/offsetQuery'
+      responses:
+        '200':
+          description: Attribution list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReferralAttribution'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/referrals/credits:
+    get:
+      tags: [Referrals]
+      summary: List referral credits
+      parameters:
+        - $ref: '#/components/parameters/limitQuery'
+        - $ref: '#/components/parameters/offsetQuery'
+      responses:
+        '200':
+          description: Credits list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReferralCredit'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   # --- Areas ---
   /api/v1/areas:

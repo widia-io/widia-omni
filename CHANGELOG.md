@@ -9,3 +9,7 @@
 - **Smart keyboard shortcuts**: `Q` opens quick-add; type `p1`–`p4` to set priority; type `hoje`/`amanha`/`dd/mm` to set due date; live token preview pills
 - **AI weekly insights** (M7): LLM-powered weekly review with habit/goal analysis
 - **Public API** (M8): API key authentication for external integrations
+- **M9 Growth (phaseado)**:
+  - Family workspace management (multi-workspace listing/switch, members list/remove, invite create/list/revoke/accept)
+  - Referral system (workspace referral codes, attributions, 30-day credit ledger, conversion processing on paid activation)
+  - Mobile PWA foundations (vite-plugin-pwa, manifest, service worker registration, mobile app-shell/navigation updates)

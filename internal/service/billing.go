@@ -18,16 +18,18 @@ import (
 type BillingService struct {
 	db             *pgxpool.Pool
 	entitlementSvc *EntitlementService
+	referralSvc    *ReferralService
 	webhookSecret  string
 	successURL     string
 	cancelURL      string
 }
 
-func NewBillingService(db *pgxpool.Pool, entSvc *EntitlementService, stripeKey, webhookSecret, successURL, cancelURL string) *BillingService {
+func NewBillingService(db *pgxpool.Pool, entSvc *EntitlementService, referralSvc *ReferralService, stripeKey, webhookSecret, successURL, cancelURL string) *BillingService {
 	stripe.Key = stripeKey
 	return &BillingService{
 		db:             db,
 		entitlementSvc: entSvc,
+		referralSvc:    referralSvc,
 		webhookSecret:  webhookSecret,
 		successURL:     successURL,
 		cancelURL:      cancelURL,
@@ -214,7 +216,15 @@ func (s *BillingService) handleSubscriptionUpdated(ctx context.Context, event st
 	if status == "active" {
 		var tier domain.PlanTier
 		_ = s.db.QueryRow(ctx, `SELECT tier FROM subscriptions WHERE stripe_subscription_id = $1`, subID).Scan(&tier)
-		return s.entitlementSvc.DeriveFromSubscription(ctx, wsID, tier)
+		if err := s.entitlementSvc.DeriveFromSubscription(ctx, wsID, tier); err != nil {
+			return err
+		}
+		if s.referralSvc != nil && (tier == domain.TierPro || tier == domain.TierPremium) {
+			if err := s.referralSvc.ProcessConversion(ctx, wsID); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 	return nil
 }

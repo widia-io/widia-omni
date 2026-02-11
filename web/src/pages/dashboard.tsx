@@ -12,13 +12,13 @@ export function Component() {
       <WeeklyStats />
 
       {/* Top section: Life Score + Areas */}
-      <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-[300px_1fr]">
+      <div className="mb-4 grid grid-cols-1 gap-4 md:mb-5 md:gap-5 lg:grid-cols-[300px_1fr]">
         <LifeScoreRing />
         <AreasGrid />
       </div>
 
       {/* Bottom grid: Goals | Habits | Today */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1fr_340px] md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-[1fr_1fr_340px]">
         <GoalsCard />
         <HabitsHeatmap />
         <TodayFocus />

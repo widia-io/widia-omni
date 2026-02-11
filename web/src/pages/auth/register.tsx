@@ -1,19 +1,21 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRegister } from "@/hooks/use-register";
 
 export function Component() {
+  const [searchParams] = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const register = useRegister();
+  const referralCode = searchParams.get("ref") ?? undefined;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    register.mutate({ email, password, data: { display_name: name } });
+    register.mutate({ email, password, data: { display_name: name, referral_code: referralCode } });
   }
 
   return (

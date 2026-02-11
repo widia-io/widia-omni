@@ -1305,9 +1305,9 @@ go.opentelemetry.io/otel              # Tracing (optional)
 - [x] Separate rate limit bucket `rl:api:{wsID}`
 
 ### Milestone 9 — Growth
-- [ ] Family plan (workspace members)
-- [ ] Mobile app
-- [ ] Referral system
+- [x] Family plan (workspace members)
+- [x] Mobile app (PWA)
+- [x] Referral system
 
 ---
 
