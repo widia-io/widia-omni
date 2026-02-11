@@ -1,0 +1,112 @@
+name: meufoco
+
+services:
+  web:
+    image: ghcr.io/widia-io/meufoco-web:${IMAGE_TAG:-main}
+    container_name: meufoco-web
+    restart: unless-stopped
+    networks:
+      - proxy
+      - meufoco
+    labels:
+      - "com.widia.project=meufoco"
+      - "com.widia.service=web"
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.meufoco-web.rule=Host(`meufoco.app`) || Host(`www.meufoco.app`)"
+      - "traefik.http.routers.meufoco-web.entrypoints=websecure"
+      - "traefik.http.routers.meufoco-web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.meufoco-web.middlewares=meufoco-www"
+      - "traefik.http.middlewares.meufoco-www.redirectregex.regex=^https://www[.]meufoco[.]app/(.*)"
+      - "traefik.http.middlewares.meufoco-www.redirectregex.replacement=https://meufoco.app/$${1}"
+      - "traefik.http.middlewares.meufoco-www.redirectregex.permanent=true"
+      - "traefik.http.services.meufoco-web.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 256m
+    cpus: "0.50"
+
+  api:
+    image: ghcr.io/widia-io/meufoco-app:${IMAGE_TAG:-main}
+    container_name: meufoco-api
+    restart: unless-stopped
+    env_file: .env.production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - proxy
+      - meufoco
+      - supabase_meufoco_default
+    labels:
+      - "com.widia.project=meufoco"
+      - "com.widia.service=api"
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.meufoco-api.rule=Host(`api.meufoco.app`)"
+      - "traefik.http.routers.meufoco-api.entrypoints=websecure"
+      - "traefik.http.routers.meufoco-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.meufoco-api.loadbalancer.server.port=8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./runtime/logs/api:/app/logs
+    mem_limit: 768m
+    cpus: "1.50"
+
+  worker:
+    image: ghcr.io/widia-io/meufoco-app:${IMAGE_TAG:-main}
+    container_name: meufoco-worker
+    restart: unless-stopped
+    entrypoint: ["/usr/local/bin/worker"]
+    env_file: .env.production
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - meufoco
+      - supabase_meufoco_default
+    labels:
+      - "com.widia.project=meufoco"
+      - "com.widia.service=worker"
+    volumes:
+      - ./runtime/logs/worker:/app/logs
+    mem_limit: 512m
+    cpus: "1.00"
+
+  redis:
+    image: redis:7-alpine
+    container_name: meufoco-redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 192mb --maxmemory-policy allkeys-lru
+    networks:
+      - meufoco
+    volumes:
+      - meufoco_redis_data:/data
+    labels:
+      - "com.widia.project=meufoco"
+      - "com.widia.service=redis"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 256m
+    cpus: "0.50"
+
+volumes:
+  meufoco_redis_data:
+
+networks:
+  proxy:
+    external: true
+  supabase_meufoco_default:
+    external: true
+  meufoco:
+    name: meufoco_internal
