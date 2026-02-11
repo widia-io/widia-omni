@@ -61,13 +61,13 @@ const PRIORITY_TOOLTIP: Record<TaskPriority, string> = {
   low: "Baixa",
 };
 
-const LABEL_DOT_COLOR: Record<string, string> = {
-  orange: "bg-accent-orange",
-  blue: "bg-accent-blue",
-  green: "bg-accent-green",
-  rose: "bg-accent-rose",
-  sand: "bg-accent-sand",
-  sage: "bg-accent-sage",
+const LABEL_TEXT_COLOR: Record<string, string> = {
+  orange: "text-accent-orange",
+  blue: "text-accent-blue",
+  green: "text-accent-green",
+  rose: "text-accent-rose",
+  sand: "text-accent-sand",
+  sage: "text-accent-sage",
 };
 
 const AREA_CHIP_ACTIVE: Record<string, string> = {
@@ -569,98 +569,118 @@ function TaskRow({
 
   const dueInfo = task.due_date ? formatDueDate(task.due_date) : null;
 
+  const hasLabels = (task.labels ?? []).length > 0;
+  const hasMeta = dueInfo || hasLabels || (task.duration_minutes && !task.is_completed);
+
   return (
     <div
       className={cn(
-        "group/row flex items-center gap-2.5 border-b border-border/40 px-2 py-2.5 transition-colors hover:rounded-lg hover:bg-bg-card/60",
+        "group/row flex items-start gap-2.5 border-b border-border/40 px-2 py-2.5 transition-colors hover:rounded-lg hover:bg-bg-card/60",
         isSubtask && "pl-8",
         isRecent && "animate-[slideIn_0.35s_ease] rounded-lg border border-accent-orange/10 bg-accent-orange/5",
       )}
     >
       {/* Priority checkbox */}
-      <PriorityCheckbox
-        priority={task.priority}
-        isCompleted={task.is_completed}
-        onComplete={() => completeTask.mutate(task.id)}
-        onReopen={() => reopenTask.mutate(task.id)}
-      />
+      <div className="pt-0.5">
+        <PriorityCheckbox
+          priority={task.priority}
+          isCompleted={task.is_completed}
+          onComplete={() => completeTask.mutate(task.id)}
+          onReopen={() => reopenTask.mutate(task.id)}
+        />
+      </div>
 
-      {/* Title + inline indicators */}
-      <div className="flex min-w-0 flex-1 cursor-pointer items-center gap-2" onClick={onEdit}>
-        <span className={cn("truncate text-sm text-text-primary", task.is_completed && "text-text-muted line-through")}>
-          {task.title}
-        </span>
+      {/* Content column */}
+      <div className="min-w-0 flex-1 cursor-pointer" onClick={onEdit}>
+        {/* Title row */}
+        <div className="flex items-center gap-2">
+          <span className={cn("truncate text-sm text-text-primary", task.is_completed && "text-text-muted line-through")}>
+            {task.title}
+          </span>
+        </div>
 
-        {/* Label dots */}
-        {(task.labels ?? []).length > 0 && (
-          <span className="flex items-center gap-0.5">
-            {(task.labels ?? []).slice(0, 4).map((l) => (
+        {/* Description */}
+        {task.description && (
+          <p className="mt-0.5 truncate text-xs text-text-muted">{task.description}</p>
+        )}
+
+        {/* Meta row: date + duration + labels */}
+        {hasMeta && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            {/* Due date */}
+            {dueInfo && (
+              dueInfo.badge ? (
+                <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-medium", dueInfo.className)}>
+                  <CalendarDays className="h-3 w-3" />
+                  {dueInfo.text}
+                </span>
+              ) : (
+                <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[11px]", dueInfo.className)}>
+                  <CalendarDays className="h-3 w-3" />
+                  {dueInfo.text}
+                </span>
+              )
+            )}
+
+            {/* Duration */}
+            {task.duration_minutes && (
+              <span className="inline-flex items-center gap-1 whitespace-nowrap font-mono text-[11px] text-text-muted">
+                <Clock className="h-3 w-3" />
+                {formatDuration(task.duration_minutes)}
+              </span>
+            )}
+
+            {/* Label pills */}
+            {hasLabels && (task.labels ?? []).map((l) => (
               <span
                 key={l.id}
-                className={cn("h-1.5 w-1.5 rounded-full", LABEL_DOT_COLOR[l.color] ?? "bg-text-muted")}
-                title={l.name}
-              />
+                className={cn("inline-flex items-center gap-1 text-[11px] font-medium", LABEL_TEXT_COLOR[l.color] ?? "text-text-muted")}
+              >
+                <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M2 8.5V3.5C2 2.67 2.67 2 3.5 2H8.5L14 8L8.5 14L2 8.5Z" strokeLinejoin="round" />
+                  <circle cx="5.5" cy="5.5" r="1" fill="currentColor" stroke="none" />
+                </svg>
+                {l.name}
+              </span>
             ))}
-          </span>
+          </div>
         )}
       </div>
 
-      {/* Sub-task expand toggle */}
-      {childCount > 0 && (
-        <button
-          onClick={onToggleExpand}
-          className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
-        >
-          <ListTree className="h-3.5 w-3.5" />
-          <span className="font-mono">{childCount}</span>
-          {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-        </button>
-      )}
+      {/* Right side: subtask toggle + actions */}
+      <div className="flex items-center gap-1 pt-0.5">
+        {/* Sub-task expand toggle */}
+        {childCount > 0 && (
+          <button
+            onClick={onToggleExpand}
+            className="flex items-center gap-1 text-xs text-text-muted transition-colors hover:text-text-primary"
+          >
+            <ListTree className="h-3.5 w-3.5" />
+            <span className="font-mono">{childCount}</span>
+            {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+          </button>
+        )}
 
-      {/* Due date */}
-      {dueInfo ? (
-        dueInfo.badge ? (
-          <span className={cn("inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-medium", dueInfo.className)}>
-            <CalendarDays className="h-3 w-3" />
-            {dueInfo.text}
-          </span>
-        ) : (
-          <span className={cn("flex items-center gap-1 whitespace-nowrap text-xs", dueInfo.className)}>
-            <CalendarDays className="h-3 w-3" />
-            {dueInfo.text}
-          </span>
-        )
-      ) : (
-        !task.is_completed && (
+        {/* No-date hint (only when no meta row) */}
+        {!dueInfo && !task.is_completed && !hasMeta && (
           <span className="flex items-center gap-1 whitespace-nowrap text-xs text-text-muted/50">
             <CalendarDays className="h-3 w-3" />
             Sem prazo
           </span>
-        )
-      )}
+        )}
 
-      {/* Duration */}
-      {task.duration_minutes && (
-        <span className="flex items-center gap-1 whitespace-nowrap font-mono text-xs text-text-muted">
-          <Clock className="h-3 w-3" />
-          {formatDuration(task.duration_minutes)}
-        </span>
-      )}
+        {/* Reopen hint (completed tasks) */}
+        {task.is_completed && (
+          <button
+            onClick={() => reopenTask.mutate(task.id)}
+            className="flex items-center gap-1 text-xs text-text-muted opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-accent-orange"
+          >
+            <RotateCcw className="h-3 w-3" />
+            <span>Reabrir</span>
+          </button>
+        )}
 
-      {/* Reopen hint (completed tasks) */}
-      {task.is_completed && (
-        <button
-          onClick={() => reopenTask.mutate(task.id)}
-          className="flex items-center gap-1 text-xs text-text-muted opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-accent-orange"
-        >
-          <RotateCcw className="h-3 w-3" />
-          <span>Reabrir</span>
-        </button>
-      )}
-
-      {/* Hover-revealed actions */}
-      <div className="flex items-center gap-0.5">
-        {/* Focus star — always visible when active, hover-only when inactive */}
+        {/* Focus star */}
         <button
           onClick={() => toggleFocus.mutate(task.id)}
           className={cn(
@@ -673,7 +693,7 @@ function TaskRow({
           <Star className="h-4 w-4" fill={task.is_focus ? "currentColor" : "none"} />
         </button>
 
-        {/* Schedule placeholder */}
+        {/* Schedule */}
         {!task.is_completed && (
           <button
             onClick={onEdit}
