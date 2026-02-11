@@ -1,0 +1,99 @@
+name: Rollback Meufoco Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to rollback (example: 9b53f9d...)"
+        required: true
+        type: string
+
+concurrency:
+  group: meufoco-prod-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  rollback_prod:
+    name: Rollback to Selected Tag
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Validate production config
+        run: |
+          test -n "${{ secrets.MEUFOCO_PROD_HOST }}"
+          test -n "${{ secrets.MEUFOCO_PROD_PORT }}"
+          test -n "${{ secrets.MEUFOCO_PROD_USER }}"
+          test -n "${{ secrets.MEUFOCO_PROD_SSH_KEY }}"
+          test -n "${{ secrets.MEUFOCO_PROD_KNOWN_HOSTS }}"
+          test -n "${{ vars.MEUFOCO_STACK_DIR }}"
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.MEUFOCO_PROD_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.MEUFOCO_PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Rollback
+        run: |
+          HOST="${{ secrets.MEUFOCO_PROD_HOST }}"
+          PORT="${{ secrets.MEUFOCO_PROD_PORT }}"
+          USER="${{ secrets.MEUFOCO_PROD_USER }}"
+
+          ssh -p "$PORT" -i ~/.ssh/id_ed25519 "$USER@$HOST" "bash -s" <<'EOF'
+          set -Eeuo pipefail
+
+          STACK_DIR="${{ vars.MEUFOCO_STACK_DIR }}"
+          IMAGE_TAG="${{ inputs.image_tag }}"
+          GHCR_USERNAME="${{ github.actor }}"
+          GHCR_TOKEN="${{ github.token }}"
+
+          cd "$STACK_DIR"
+          printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" > .image-tag.env
+
+          compose() {
+            docker compose --env-file .env.production --env-file .image-tag.env -f docker-compose.prod.yml "$@"
+          }
+
+          wait_for_health() {
+            container="$1"
+            for _ in $(seq 1 45); do
+              status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container" 2>/dev/null || true)"
+              if [ "$status" = "healthy" ]; then
+                return 0
+              fi
+              sleep 2
+            done
+            echo "container $container is not healthy"
+            return 1
+          }
+
+          wait_for_http() {
+            url="$1"
+            for _ in $(seq 1 20); do
+              if curl -fsS --max-time 10 "$url" >/dev/null; then
+                return 0
+              fi
+              sleep 3
+            done
+            echo "http check failed for $url"
+            return 1
+          }
+
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+          compose pull web api worker
+          compose up -d web api worker
+          wait_for_health meufoco-api
+          wait_for_health meufoco-web
+          wait_for_http "https://api.meufoco.app/health"
+          wait_for_http "https://meufoco.app"
+          printf '%s\n' "$IMAGE_TAG" > .last_successful_tag
+          echo "rollback succeeded: $IMAGE_TAG"
+          EOF

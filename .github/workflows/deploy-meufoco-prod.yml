@@ -1,0 +1,254 @@
+name: Deploy Meufoco Production
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: meufoco-prod-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  APP_IMAGE: ghcr.io/widia-io/meufoco-app
+  WEB_IMAGE: ghcr.io/widia-io/meufoco-web
+
+jobs:
+  test_and_build:
+    name: Test and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Go tests
+        run: go test ./... -v -race -count=1
+
+      - name: Go build
+        run: go build ./cmd/api ./cmd/worker
+
+      - name: Web lint and build
+        run: |
+          cd web
+          npm ci
+          npm run lint
+          npm run build
+
+  publish_images:
+    name: Publish Images
+    runs-on: ubuntu-latest
+    needs:
+      - test_and_build
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate production vars
+        run: |
+          test -n "${{ vars.MEUFOCO_API_URL }}"
+          test -n "${{ vars.MEUFOCO_SUPABASE_URL }}"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push app image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ env.APP_IMAGE }}:${{ github.sha }}
+            ${{ env.APP_IMAGE }}:main
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/web.Dockerfile
+          push: true
+          tags: |
+            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+            ${{ env.WEB_IMAGE }}:main
+          build-args: |
+            VITE_API_URL=${{ vars.MEUFOCO_API_URL }}
+            VITE_SUPABASE_URL=${{ vars.MEUFOCO_SUPABASE_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy_prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs:
+      - publish_images
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate production config
+        run: |
+          test -n "${{ secrets.MEUFOCO_PROD_HOST }}"
+          test -n "${{ secrets.MEUFOCO_PROD_PORT }}"
+          test -n "${{ secrets.MEUFOCO_PROD_USER }}"
+          test -n "${{ secrets.MEUFOCO_PROD_SSH_KEY }}"
+          test -n "${{ secrets.MEUFOCO_PROD_KNOWN_HOSTS }}"
+          test -n "${{ vars.MEUFOCO_STACK_DIR }}"
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.MEUFOCO_PROD_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.MEUFOCO_PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Sync deploy manifests and migrations
+        run: |
+          HOST="${{ secrets.MEUFOCO_PROD_HOST }}"
+          PORT="${{ secrets.MEUFOCO_PROD_PORT }}"
+          USER="${{ secrets.MEUFOCO_PROD_USER }}"
+          STACK_DIR="${{ vars.MEUFOCO_STACK_DIR }}"
+
+          tar czf /tmp/meufoco-deploy-bundle.tgz docker-compose.prod.yml deploy sql/migrations
+          scp -P "$PORT" -i ~/.ssh/id_ed25519 /tmp/meufoco-deploy-bundle.tgz "$USER@$HOST:/tmp/meufoco-deploy-bundle.tgz"
+          ssh -p "$PORT" -i ~/.ssh/id_ed25519 "$USER@$HOST" "mkdir -p '$STACK_DIR' && tar xzf /tmp/meufoco-deploy-bundle.tgz -C '$STACK_DIR' && rm -f /tmp/meufoco-deploy-bundle.tgz"
+          rm -f /tmp/meufoco-deploy-bundle.tgz
+
+      - name: Deploy and auto-rollback on failure
+        run: |
+          HOST="${{ secrets.MEUFOCO_PROD_HOST }}"
+          PORT="${{ secrets.MEUFOCO_PROD_PORT }}"
+          USER="${{ secrets.MEUFOCO_PROD_USER }}"
+
+          ssh -p "$PORT" -i ~/.ssh/id_ed25519 "$USER@$HOST" "bash -s" <<'EOF'
+          set -Eeuo pipefail
+
+          STACK_DIR="${{ vars.MEUFOCO_STACK_DIR }}"
+          IMAGE_TAG="${{ github.sha }}"
+          GHCR_USERNAME="${{ github.actor }}"
+          GHCR_TOKEN="${{ github.token }}"
+
+          cd "$STACK_DIR"
+
+          compose() {
+            docker compose --env-file .env.production --env-file .image-tag.env -f docker-compose.prod.yml "$@"
+          }
+
+          wait_for_health() {
+            container="$1"
+            for _ in $(seq 1 45); do
+              status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container" 2>/dev/null || true)"
+              if [ "$status" = "healthy" ]; then
+                return 0
+              fi
+              sleep 2
+            done
+            echo "container $container is not healthy"
+            return 1
+          }
+
+          wait_for_http() {
+            url="$1"
+            for _ in $(seq 1 20); do
+              if curl -fsS --max-time 10 "$url" >/dev/null; then
+                return 0
+              fi
+              sleep 3
+            done
+            echo "http check failed for $url"
+            return 1
+          }
+
+          run_migrations() {
+            database_url="$(grep -E '^DATABASE_URL=' .env.production | cut -d= -f2- || true)"
+            if [ -z "$database_url" ]; then
+              echo "DATABASE_URL not found in .env.production"
+              return 1
+            fi
+
+            set +e
+            output="$(docker run --rm \
+              --network supabase_meufoco_default \
+              -v "$STACK_DIR/sql/migrations:/migrations:ro" \
+              migrate/migrate:v4.18.3 \
+              -path=/migrations \
+              -database "$database_url" \
+              up 2>&1)"
+            rc=$?
+            set -e
+
+            echo "$output"
+            if [ "$rc" -ne 0 ] && ! echo "$output" | grep -qi "no change"; then
+              return "$rc"
+            fi
+          }
+
+          rollback() {
+            if [ ! -s .last_successful_tag ]; then
+              echo "rollback skipped: .last_successful_tag not found"
+              return 1
+            fi
+
+            rollback_tag="$(cat .last_successful_tag)"
+            printf 'IMAGE_TAG=%s\n' "$rollback_tag" > .image-tag.env
+            compose pull web api worker
+            compose up -d web api worker
+            wait_for_health meufoco-api
+            wait_for_health meufoco-web
+            wait_for_http "https://api.meufoco.app/health"
+            wait_for_http "https://meufoco.app"
+            echo "rollback applied: $rollback_tag"
+          }
+
+          deploy() {
+            printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" > .image-tag.env
+            printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            compose pull web api worker
+            run_migrations
+            compose up -d web api worker redis
+            wait_for_health meufoco-api
+            wait_for_health meufoco-web
+            wait_for_http "https://api.meufoco.app/health"
+            wait_for_http "https://meufoco.app"
+            printf '%s\n' "$IMAGE_TAG" > .last_successful_tag
+            echo "deploy succeeded: $IMAGE_TAG"
+          }
+
+          if ! deploy; then
+            echo "deploy failed, attempting rollback"
+            rollback || true
+            exit 1
+          fi
+          EOF
