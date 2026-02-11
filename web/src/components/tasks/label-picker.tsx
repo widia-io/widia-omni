@@ -4,8 +4,6 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { cn } from "@/lib/cn";
 import type { Label } from "@/types/api";
 
-const MAX_DOTS = 3;
-
 const colorDot: Record<string, string> = {
   orange: "bg-accent-orange",
   blue: "bg-accent-blue",
@@ -13,6 +11,15 @@ const colorDot: Record<string, string> = {
   rose: "bg-accent-rose",
   sand: "bg-accent-sand",
   sage: "bg-accent-sage",
+};
+
+const colorText: Record<string, string> = {
+  orange: "text-accent-orange",
+  blue: "text-accent-blue",
+  green: "text-accent-green",
+  rose: "text-accent-rose",
+  sand: "text-accent-sand",
+  sage: "text-accent-sage",
 };
 
 interface LabelPickerProps {
@@ -33,7 +40,6 @@ export function LabelPicker({ selectedIds, onChange, onManageClick }: LabelPicke
   }
 
   const selected = (labels ?? []).filter((l) => selectedIds.includes(l.id));
-  const overflow = selected.length - MAX_DOTS;
 
   return (
     <Popover>
@@ -47,16 +53,12 @@ export function LabelPicker({ selectedIds, onChange, onManageClick }: LabelPicke
         >
           <Tag className="h-3 w-3 shrink-0 text-text-muted" />
           {selected.length > 0 ? (
-            <span className="flex items-center gap-1">
-              {selected.slice(0, MAX_DOTS).map((l) => (
-                <span
-                  key={l.id}
-                  className={cn("h-2 w-2 rounded-full", colorDot[l.color] ?? "bg-text-muted")}
-                />
+            <span className="flex flex-wrap items-center gap-1.5">
+              {selected.map((l) => (
+                <span key={l.id} className={cn("text-[11px] font-medium", colorText[l.color] ?? "text-text-muted")}>
+                  {l.name}
+                </span>
               ))}
-              {overflow > 0 && (
-                <span className="ml-0.5 text-text-muted">+{overflow}</span>
-              )}
             </span>
           ) : (
             <span>Etiquetas</span>

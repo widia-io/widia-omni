@@ -18,14 +18,12 @@ import { LabelPicker } from "@/components/tasks/label-picker";
 import { LabelManagerDialog } from "@/components/tasks/label-manager-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogTitle,
 } from "@/components/ui/dialog";
 import { useWorkspaceUsage } from "@/hooks/use-settings";
 import { cn } from "@/lib/cn";
@@ -839,18 +837,21 @@ function FilterChip({
 // ─── Edit Dialog ──────────────────────────────────────
 
 function TaskEditDialog({
-  task, parentId, onClose,
+  task, parentId, subtasks, onClose,
 }: {
   task?: Task;
   parentId?: string;
+  subtasks?: Task[];
   onClose: () => void;
 }) {
   const create = useCreateTask();
   const update = useUpdateTask();
+  const completeTask = useCompleteTask();
+  const reopenTask = useReopenTask();
   const { data: areas } = useAreas();
   const [title, setTitle] = useState(task?.title ?? "");
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? "medium");
-  const [dueDate, setDueDate] = useState(task?.due_date ? task.due_date.slice(0, 16) : "");
+  const [dueDate, setDueDate] = useState(task?.due_date ? task.due_date.slice(0, 10) : "");
   const [description, setDescription] = useState(task?.description ?? "");
   const [areaId, setAreaId] = useState(task?.area_id ?? "");
   const [goalId, setGoalId] = useState(task?.goal_id ?? "");
@@ -858,18 +859,23 @@ function TaskEditDialog({
   const [duration, setDuration] = useState(task?.duration_minutes ? String(task.duration_minutes) : "");
   const [labelIds, setLabelIds] = useState<string[]>(task?.labels?.map((l) => l.id) ?? []);
   const [labelMgrOpen, setLabelMgrOpen] = useState(false);
+  const [subtaskTitle, setSubtaskTitle] = useState("");
+  const subtaskRef = useRef<HTMLInputElement>(null);
 
   const goalParams = areaId ? { area_id: areaId } : undefined;
   const { data: goals } = useGoals(goalParams);
   const sectionParams = areaId ? { area_id: areaId } : undefined;
   const { data: sections } = useSections(sectionParams);
 
+  const area = areas?.find((a) => a.id === areaId);
+  const section = sections?.find((s) => s.id === sectionId);
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const payload: CreateTaskInput = {
       title,
       priority,
-      ...(dueDate && { due_date: new Date(dueDate).toISOString() }),
+      ...(dueDate && { due_date: new Date(dueDate + "T23:59:00").toISOString() }),
       ...(description && { description }),
       ...(areaId && { area_id: areaId }),
       ...(goalId && { goal_id: goalId }),
@@ -886,98 +892,203 @@ function TaskEditDialog({
     }
   }
 
+  function addSubtask() {
+    if (!subtaskTitle.trim() || !task) return;
+    create.mutate(
+      { title: subtaskTitle.trim(), priority: "medium", parent_id: task.id },
+      { onSuccess: () => { setSubtaskTitle(""); subtaskRef.current?.focus(); } },
+    );
+  }
+
+  const allPriorities: TaskPriority[] = ["critical", "high", "medium", "low"];
+
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label>Título</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Descrição</Label>
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Opcional" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Prioridade</Label>
-            <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Baixa</SelectItem>
-                <SelectItem value="medium">Média</SelectItem>
-                <SelectItem value="high">Alta</SelectItem>
-                <SelectItem value="critical">Crítica</SelectItem>
-              </SelectContent>
-            </Select>
+      <form onSubmit={handleSubmit} className="flex flex-col">
+        {/* Breadcrumb */}
+        {(area || section || parentId) && (
+          <div className="flex items-center gap-1.5 px-6 py-2.5 text-xs text-text-muted">
+            {area && (
+              <>
+                <Folder className="h-3 w-3" />
+                <span>{area.name}</span>
+              </>
+            )}
+            {area && section && <ChevronRight className="h-3 w-3 text-text-muted/50" />}
+            {section && <span>{section.name}</span>}
+            {parentId && <span className="italic">Sub-tarefa</span>}
           </div>
-          <div className="space-y-2">
-            <Label>Prazo</Label>
-            <Input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-          </div>
-        </div>
+        )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Área</Label>
-            <Select value={areaId} onValueChange={(v) => { setAreaId(v); setGoalId(""); setSectionId(""); }}>
-              <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-              <SelectContent>
-                {(areas ?? []).map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Meta</Label>
-            <Select value={goalId} onValueChange={setGoalId} disabled={!areaId}>
-              <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-              <SelectContent>
-                {(goals ?? []).map((g) => (
-                  <SelectItem key={g.id} value={g.id}>{g.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <div className="flex min-h-[360px]">
+          {/* ─── Left: Content ─── */}
+          <div className="flex flex-1 flex-col gap-3 p-6 pt-3">
+            <div className="flex items-start gap-3">
+              {task && (
+                <div className="pt-1">
+                  <PriorityCheckbox
+                    priority={priority}
+                    isCompleted={task.is_completed}
+                    onComplete={() => { completeTask.mutate(task.id); onClose(); }}
+                    onReopen={() => reopenTask.mutate(task.id)}
+                  />
+                </div>
+              )}
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Título da tarefa"
+                className="w-full bg-transparent text-lg font-semibold text-text-primary placeholder:text-text-muted/40 focus:outline-none"
+                autoFocus
+                required
+              />
+            </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          {!parentId && (
-            <div className="space-y-2">
-              <Label>Seção</Label>
-              <Select value={sectionId} onValueChange={setSectionId} disabled={!areaId}>
-                <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Adicionar descrição..."
+              className="w-full flex-1 resize-none bg-transparent text-sm leading-relaxed text-text-secondary placeholder:text-text-muted/40 focus:outline-none"
+              rows={3}
+            />
+
+            {/* Sub-tasks (editing only, non-subtask) */}
+            {task && !parentId && (
+              <div className="border-t border-border/40 pt-3">
+                {(subtasks ?? []).length > 0 && (
+                  <div className="mb-2 space-y-0.5">
+                    {(subtasks ?? []).map((sub) => (
+                      <div key={sub.id} className="flex items-center gap-2.5 rounded-lg px-1 py-1.5 transition-colors hover:bg-bg-elevated/50">
+                        <PriorityCheckbox
+                          priority={sub.priority}
+                          isCompleted={sub.is_completed}
+                          onComplete={() => completeTask.mutate(sub.id)}
+                          onReopen={() => reopenTask.mutate(sub.id)}
+                        />
+                        <span className={cn("text-sm", sub.is_completed && "text-text-muted line-through")}>{sub.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Plus className="h-3.5 w-3.5 text-text-muted/50" />
+                  <input
+                    ref={subtaskRef}
+                    value={subtaskTitle}
+                    onChange={(e) => setSubtaskTitle(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSubtask(); } }}
+                    placeholder="Adicionar sub-tarefa..."
+                    className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted/40 focus:outline-none"
+                  />
+                  {subtaskTitle.trim() && (
+                    <button
+                      type="button"
+                      onClick={addSubtask}
+                      className="rounded-md bg-accent-orange/10 px-2 py-0.5 text-xs font-medium text-accent-orange transition-colors hover:bg-accent-orange/20"
+                    >
+                      Adicionar
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ─── Right: Metadata sidebar ─── */}
+          <div className="w-[260px] shrink-0 border-l border-border/60 bg-bg-secondary/20">
+            <SidebarField label="Área">
+              <Select value={areaId} onValueChange={(v) => { setAreaId(v); setGoalId(""); setSectionId(""); }}>
+                <SelectTrigger className="h-8 border-border/50 text-xs"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                 <SelectContent>
-                  {(sections ?? []).map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  {(areas ?? []).map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label>Duração</Label>
-            <div className="flex items-center gap-2">
-              <Input type="number" min="1" value={duration} onChange={(e) => setDuration(e.target.value)} className="w-24" />
-              <span className="text-xs text-text-muted">min</span>
-            </div>
+            </SidebarField>
+
+            {areaId && (
+              <SidebarField label="Meta">
+                <Select value={goalId} onValueChange={setGoalId}>
+                  <SelectTrigger className="h-8 border-border/50 text-xs"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                  <SelectContent>
+                    {(goals ?? []).map((g) => (
+                      <SelectItem key={g.id} value={g.id}>{g.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </SidebarField>
+            )}
+
+            {areaId && !parentId && (
+              <SidebarField label="Seção">
+                <Select value={sectionId} onValueChange={setSectionId}>
+                  <SelectTrigger className="h-8 border-border/50 text-xs"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                  <SelectContent>
+                    {(sections ?? []).map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </SidebarField>
+            )}
+
+            <SidebarField label="Prazo">
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="h-8 border-border/50 text-xs" />
+            </SidebarField>
+
+            <SidebarField label="Prioridade">
+              <div className="flex flex-wrap gap-1.5">
+                {allPriorities.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPriority(p)}
+                    className={cn(
+                      "rounded-lg border px-2.5 py-1 text-xs font-medium transition-all",
+                      priority === p
+                        ? PRIORITY_PILL_ACTIVE[p]
+                        : "border-border/50 text-text-muted hover:border-border hover:text-text-secondary",
+                    )}
+                  >
+                    {PRIORITY_TOOLTIP[p]}
+                  </button>
+                ))}
+              </div>
+            </SidebarField>
+
+            <SidebarField label="Duração">
+              <div className="flex items-center gap-2">
+                <Input type="number" min="1" value={duration} onChange={(e) => setDuration(e.target.value)} className="h-8 w-20 border-border/50 text-xs" placeholder="—" />
+                <span className="text-xs text-text-muted">min</span>
+              </div>
+            </SidebarField>
+
+            <SidebarField label="Etiquetas" noBorder>
+              <LabelPicker selectedIds={labelIds} onChange={setLabelIds} onManageClick={() => setLabelMgrOpen(true)} />
+            </SidebarField>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Etiquetas</Label>
-          <LabelPicker selectedIds={labelIds} onChange={setLabelIds} onManageClick={() => setLabelMgrOpen(true)} />
+        {/* Bottom */}
+        <div className="border-t border-border px-6 py-4">
+          <Button type="submit" className="w-full" disabled={create.isPending || update.isPending}>
+            {task ? "Salvar" : "Criar tarefa"}
+          </Button>
         </div>
-
-        <Button type="submit" className="w-full" disabled={create.isPending || update.isPending}>
-          {task ? "Salvar" : "Criar tarefa"}
-        </Button>
       </form>
 
       <LabelManagerDialog open={labelMgrOpen} onOpenChange={setLabelMgrOpen} />
     </>
+  );
+}
+
+function SidebarField({ label, children, noBorder }: { label: string; children: React.ReactNode; noBorder?: boolean }) {
+  return (
+    <div className={cn("px-4 py-3", !noBorder && "border-b border-border/40")}>
+      <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-text-muted">{label}</div>
+      {children}
+    </div>
   );
 }
 
@@ -1387,13 +1498,16 @@ export function Component() {
 
       {/* ─── Edit Dialog ─────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={(v) => { if (!v) closeDialog(); else setDialogOpen(true); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editTask ? "Editar tarefa" : parentIdForNew ? "Nova sub-tarefa" : "Nova tarefa"}
-            </DialogTitle>
-          </DialogHeader>
-          <TaskEditDialog task={editTask} parentId={parentIdForNew} onClose={closeDialog} />
+        <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0">
+          <DialogTitle className="sr-only">
+            {editTask ? "Editar tarefa" : parentIdForNew ? "Nova sub-tarefa" : "Nova tarefa"}
+          </DialogTitle>
+          <TaskEditDialog
+            task={editTask}
+            parentId={parentIdForNew}
+            subtasks={editTask ? childrenMap.get(editTask.id) : undefined}
+            onClose={closeDialog}
+          />
         </DialogContent>
       </Dialog>
 
