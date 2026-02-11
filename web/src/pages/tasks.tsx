@@ -981,6 +981,39 @@ function TaskEditDialog({
   );
 }
 
+// ─── Completed Section ───────────────────────────────
+
+function CompletedSection({
+  tasks, render,
+}: {
+  tasks: Task[];
+  render: (task: Task, isSubtask?: boolean) => React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mt-2">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center gap-2 py-2 text-left"
+      >
+        {open
+          ? <ChevronDown className="h-3.5 w-3.5 text-text-muted" />
+          : <ChevronRight className="h-3.5 w-3.5 text-text-muted" />
+        }
+        <span className="text-xs font-medium text-text-muted">
+          Concluídas ({tasks.length})
+        </span>
+      </button>
+      {open && (
+        <div className="opacity-60">
+          {tasks.map((task) => render(task))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────
 
 export function Component() {
@@ -1296,6 +1329,8 @@ export function Component() {
           {sectionGroups ? (
             sectionGroups.map((group, idx) => {
               const collapsed = collapsedSections.has(group.id);
+              const groupPending = group.tasks.filter((t) => !t.is_completed);
+              const groupCompleted = group.tasks.filter((t) => t.is_completed);
               return (
                 <div key={group.id} className="mb-2">
                   {/* Section header */}
@@ -1314,13 +1349,16 @@ export function Component() {
                   {/* Section tasks */}
                   {!collapsed && (
                     <div>
-                      {group.tasks.map((task) => renderTaskWithChildren(task))}
+                      {groupPending.map((task) => renderTaskWithChildren(task))}
                       <InlineQuickAdd
                         sectionId={group.id !== "__none__" ? group.id : undefined}
                         onExpandedCreate={() => openCreate()}
                         onCreated={handleCreated}
                         trigger={idx === 0 ? quickAddTrigger : undefined}
                       />
+                      {groupCompleted.length > 0 && (
+                        <CompletedSection tasks={groupCompleted} render={renderTaskWithChildren} />
+                      )}
                     </div>
                   )}
                 </div>
@@ -1328,12 +1366,18 @@ export function Component() {
             })
           ) : (
             <div>
-              {topLevel.map((task) => renderTaskWithChildren(task))}
+              {topLevel.filter((t) => !t.is_completed).map((task) => renderTaskWithChildren(task))}
               <InlineQuickAdd
                 onExpandedCreate={() => openCreate()}
                 onCreated={handleCreated}
                 trigger={quickAddTrigger}
               />
+              {topLevel.some((t) => t.is_completed) && (
+                <CompletedSection
+                  tasks={topLevel.filter((t) => t.is_completed)}
+                  render={renderTaskWithChildren}
+                />
+              )}
             </div>
           )}
         </div>
