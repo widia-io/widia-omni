@@ -249,10 +249,16 @@ func (s *TaskService) Update(ctx context.Context, wsID, id uuid.UUID, req Update
 }
 
 func (s *TaskService) Delete(ctx context.Context, wsID, id uuid.UUID) error {
-	_, err := s.db.Exec(ctx, `
+	tag, err := s.db.Exec(ctx, `
 		UPDATE tasks SET deleted_at = now() WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 	`, id, wsID)
-	return err
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() > 0 {
+		_ = s.counterSvc.DecrementTasksToday(ctx, wsID)
+	}
+	return nil
 }
 
 func (s *TaskService) Complete(ctx context.Context, wsID, id uuid.UUID) (*domain.Task, error) {

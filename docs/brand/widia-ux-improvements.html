@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Widia Omni — UX Improvements Spec</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FDFCFA; --surface: #F6F4F0; --card: #FFFFFF;
+    --border: #E5E2DC; --text: #1A1A2E; --text2: #6B7280; --text3: #9CA3AF;
+    --accent: #E8580C; --accent-light: rgba(232,88,12,0.08);
+    --success: #16A34A; --info: #6366F1; --warning: #EAB308; --danger: #DC2626;
+    --area-saude: #EF4444; --area-carreira: #6366F1; --area-financas: #16A34A;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  /* Hero */
+  .hero { padding: 4rem 2rem 2rem; text-align: center; background: linear-gradient(180deg, #FDFCFA, var(--surface)); }
+  .hero-badge { display: inline-flex; padding: 6px 16px; background: var(--accent-light); border: 1px solid rgba(232,88,12,0.15); border-radius: 100px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 1.25rem; }
+  .hero h1 { font-family: 'Outfit'; font-size: 2.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { font-size: 1rem; color: var(--text2); max-width: 550px; margin: 0 auto; }
+
+  /* Container */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+  section { padding: 3.5rem 0; }
+  .divider { border: none; height: 1px; background: var(--border); max-width: 1100px; margin: 0 auto; }
+
+  /* Section header */
+  .sh { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 2rem; }
+  .sh-num { font-family: 'Outfit'; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; color: #fff; background: var(--accent); width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; }
+  .sh-text h2 { font-family: 'Outfit'; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 0.25rem; }
+  .sh-text p { font-size: 0.9rem; color: var(--text2); }
+
+  /* Before / After grid */
+  .ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 800px) { .ba-grid { grid-template-columns: 1fr; } }
+
+  .ba-card { border-radius: 20px; padding: 1.75rem; position: relative; overflow: hidden; }
+  .ba-card.before { background: #FEF2F2; border: 1px solid #FECACA; }
+  .ba-card.after { background: #F0FDF4; border: 1px solid #BBF7D0; }
+
+  .ba-label { font-family: 'Outfit'; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
+  .before .ba-label { color: #DC2626; }
+  .after .ba-label { color: #16A34A; }
+
+  /* Mock UI components */
+  .mock { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1rem; font-size: 0.82rem; }
+  .mock-surface { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1rem; font-size: 0.82rem; }
+
+  .mock-input {
+    width: 100%; padding: 10px 14px; border-radius: 10px; font-family: 'DM Sans'; font-size: 0.85rem;
+    outline: none; transition: all 0.2s;
+  }
+  .mock-input.weak { background: var(--surface); border: 1px solid var(--border); color: var(--text3); }
+  .mock-input.strong { background: var(--card); border: 1.5px solid #D1CFC9; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .mock-input.strong:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+
+  .mock-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; font-family: 'DM Sans'; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; }
+  .mock-btn.primary { background: var(--accent); color: #fff; }
+  .mock-btn.primary:hover { background: #D14D08; transform: translateY(-1px); }
+  .mock-btn.ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+  .mock-btn.ghost:hover { background: var(--surface); }
+  .mock-btn.text-btn { background: transparent; color: var(--accent); border: none; padding: 8px 0; }
+
+  .mock-label { font-size: 0.7rem; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+
+  /* Priority dots */
+  .priority-row { display: flex; gap: 8px; align-items: center; }
+  .p-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 700; cursor: pointer; transition: all 0.2s; position: relative; }
+  .p-dot:hover { transform: scale(1.15); }
+  .p-dot.old { border: 2px solid; background: transparent; }
+  .p-dot.new { border: 2px solid; }
+
+  /* Tooltip */
+  .p-dot .tooltip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 0.65rem; font-weight: 600; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .p-dot .tooltip::after { content:''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: var(--text); }
+  .p-dot:hover .tooltip { opacity: 1; }
+
+  /* Task row */
+  .task-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; transition: all 0.2s; }
+  .task-row:hover { background: var(--surface); }
+  .task-check { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; cursor: pointer; transition: all 0.2s; }
+  .task-check:hover { border-color: var(--accent); }
+  .task-check.done { background: var(--accent); border-color: var(--accent); }
+  .task-text { flex: 1; }
+  .task-meta { font-size: 0.7rem; color: var(--text3); }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 2.5rem 1rem; }
+  .empty-emoji { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .empty-title { font-family: 'Outfit'; font-size: 1rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .empty-desc { font-size: 0.85rem; color: var(--text2); margin-bottom: 1rem; }
+
+  /* Filter chips */
+  .chips-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; border-radius: 100px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .chip.inactive { background: var(--surface); color: var(--text2); border: 1px solid var(--border); }
+  .chip.inactive:hover { border-color: #C5C2BC; }
+  .chip.active { background: var(--accent-light); color: var(--accent); border: 1px solid rgba(232,88,12,0.2); }
+  .chip .chip-count { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 100px; font-size: 0.65rem; }
+  .chip.active .chip-count { background: rgba(232,88,12,0.12); }
+  .chip-clear { font-size: 0.72rem; color: var(--text3); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; margin-left: 4px; }
+  .chip-clear:hover { color: var(--accent); }
+
+  /* Toast / feedback */
+  .toast { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; background: #065F46; color: #ECFDF5; border-radius: 10px; font-size: 0.82rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.15); animation: toastIn 0.4s ease; }
+  .toast-icon { width: 18px; height: 18px; background: #10B981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Slide-in animation demo */
+  .task-animated { animation: slideIn 0.35s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* Implementation notes */
+  .impl-note { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; margin-top: 1.25rem; }
+  .impl-note h4 { font-family: 'Outfit'; font-size: 0.82rem; font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
+  .impl-note p { font-size: 0.82rem; color: var(--text2); }
+  .impl-note code { background: #F4F2EE; padding: 2px 7px; border-radius: 5px; font-size: 0.78em; color: var(--accent); }
+
+  /* Code block */
+  .code-sm { background: #1E1E2E; border-radius: 10px; padding: 1rem; overflow-x: auto; margin-top: 0.75rem; }
+  .code-sm pre { font-family: 'Courier New', monospace; font-size: 0.72rem; line-height: 1.7; color: #CDD6F4; }
+  .c { color: #6C7086; } .p { color: #89B4FA; } .v { color: #A6E3A1; } .s { color: #F38BA8; } .k { color: #CBA6F7; }
+
+  /* Full width card */
+  .full-card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 2rem; margin-top: 1.25rem; }
+
+  footer { text-align: center; padding: 3rem 2rem; color: var(--text3); font-size: 0.8rem; }
+  footer strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-badge">🔧 UX Improvements Spec</div>
+  <h1>Tarefas — <span>Refinamentos</span></h1>
+  <p>7 melhorias de UX para a tela de tarefas do Widia Omni, com exemplos visuais antes/depois e código de referência.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     1. HIERARQUIA DO INPUT
+     ═══════════════════════════════════════════ -->
+<div class="container">
+<section>
+  <div class="sh">
+    <div class="sh-num">01</div>
+    <div class="sh-text">
+      <h2>Hierarquia do input principal</h2>
+      <p>O campo de criação de tarefa precisa ser o protagonista da tela. Hoje ele se perde no fundo creme.</p>
+    </div>
+  </div>
+
+  <div class="ba-grid">
+    <div class="ba-card before">
+      <div class="ba-label">❌ Antes</div>
+      <div class="mock-surface">
+        <div class="mock-label">Nova tarefa</div>
+        <input class="mock-input weak" value="Nome da tarefa" readonly>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <div class="mock-btn ghost" style="font-size:0.72rem;">📎 Área</div>
+          <div class="mock-btn ghost" style="font-size:0.72rem;">🏷 Etiqueta</div>
+          <div style="flex:1;"></div>
+          <div class="mock-btn ghost" style="font-size:0.72rem;">Criar</div>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#991B1B; margin-top:0.75rem;">Input com fundo creme se mistura com a surface. Sem destaque visual, sem foco automático.</p>
+    </div>
+
+    <div class="ba-card after">
+      <div class="ba-label">✓ Depois</div>
+      <div class="mock">
+        <input class="mock-input strong" placeholder="O que precisa ser feito hoje?" autofocus style="margin-bottom:10px;">
+        <div style="display:flex; gap:8px; align-items: center;">
+          <div class="priority-row">
+            <div class="p-dot new" style="border-color:#DC2626; background:rgba(220,38,38,0.12);"><span style="color:#DC2626;">1</span></div>
+            <div class="p-dot new" style="border-color:#F59E0B; background:rgba(245,158,11,0.12);"><span style="color:#F59E0B;">2</span></div>
+            <div class="p-dot new" style="border-color:#6366F1; background:rgba(99,102,241,0.12);"><span style="color:#6366F1;">3</span></div>
+            <div class="p-dot new" style="border-color:#9CA3AF; background:rgba(156,163,175,0.10);"><span style="color:#9CA3AF;">4</span></div>
+          </div>
+          <div class="mock-btn ghost" style="font-size:0.72rem;">📎 Área</div>
+          <div class="mock-btn ghost" style="font-size:0.72rem;">🏷 Etiqueta</div>
+          <div style="flex:1;"></div>
+          <div class="mock-btn primary" style="font-size:0.72rem;">✓ Criar</div>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#166534; margin-top:0.75rem;">Card branco com borda mais forte + sombra sutil. Foco automático no input. Placeholder que guia a ação.</p>
+    </div>
+  </div>
+
+  <div class="impl-note">
+    <h4>💻 Implementação</h4>
+    <p>Card com <code>background: var(--color-card)</code> + <code>border: 1.5px solid var(--color-border)</code> + <code>shadow-sm</code>. Input com <code>autoFocus</code> e <code>onFocus</code> que adiciona ring de acento. Placeholder contextual em vez de label genérico.</p>
+    <div class="code-sm">
+<pre><span class="c">// Input com focus ring</span>
+&lt;<span class="s">input</span>
+  autoFocus
+  placeholder=<span class="v">"O que precisa ser feito hoje?"</span>
+  className=<span class="v">"bg-[var(--color-card)] border-[1.5px] border-[var(--color-border)]
+             focus:border-[var(--color-accent)] focus:ring-2
+             focus:ring-[var(--color-accent-subtle)] transition-all"</span>
+/&gt;</pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════
+     2. BOTÃO + INPUT DUPLICADO
+     ═══════════════════════════════════════════ -->
+<div class="container">
+<section>
+  <div class="sh">
+    <div class="sh-num">02</div>
+    <div class="sh-text">
+      <h2>Eliminar ambiguidade: botão + input</h2>
+      <p>Ter um botão "+ Nova tarefa" E um input aberto abaixo confunde. Uma única affordance.</p>
+    </div>
+  </div>
+
+  <div class="ba-grid">
+    <div class="ba-card before">
+      <div class="ba-label">❌ Antes — dois pontos de entrada</div>
+      <div class="mock-surface">
+        <div class="mock-btn primary" style="width:100%; justify-content:center; margin-bottom:12px;">+ Nova tarefa</div>
+        <div style="border-top:1px solid var(--border); padding-top:12px;">
+          <input class="mock-input weak" value="Nome da tarefa" readonly>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#991B1B; margin-top:0.75rem;">Usuário não sabe se clica no botão ou digita no input. Dois caminhos para a mesma ação = hesitação.</p>
+    </div>
+
+    <div class="ba-card after">
+      <div class="ba-label">✓ Depois — input único com ação inline</div>
+      <div class="mock">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="color:var(--accent); font-size:1.2rem; font-weight:700;">+</span>
+          <input class="mock-input strong" placeholder="Adicionar tarefa..." style="flex:1; border:none; box-shadow:none; padding:10px 0;">
+          <div class="mock-btn primary" style="font-size:0.72rem; opacity:0.4; pointer-events:none;">Criar</div>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#166534; margin-top:0.75rem;">Input inline fixo. Botão "Criar" aparece habilitado só quando há texto. Atalho: Enter para criar.</p>
+    </div>
+  </div>
+
+  <div class="impl-note">
+    <h4>💻 Implementação</h4>
+    <p>Remover o botão separado. O input inline é sempre visível. Botão "Criar" com <code>opacity: 0.4</code> quando vazio, <code>opacity: 1</code> quando tem texto. Submeter com <code>Enter</code> ou clique.</p>
+    <div class="code-sm">
+<pre><span class="k">const</span> [task, setTask] = useState(<span class="v">''</span>);
+
+&lt;<span class="s">div</span> className=<span class="v">"flex items-center gap-3"</span>&gt;
+  &lt;<span class="s">Plus</span> size={<span class="v">18</span>} className=<span class="v">"text-accent"</span> /&gt;
+  &lt;<span class="s">input</span>
+    value={task}
+    onChange={e =&gt; setTask(e.target.value)}
+    onKeyDown={e =&gt; e.key === <span class="v">'Enter'</span> && task && handleCreate()}
+    placeholder=<span class="v">"Adicionar tarefa..."</span>
+  /&gt;
+  &lt;<span class="s">button</span>
+    onClick={handleCreate}
+    disabled={!task}
+    className={task ? <span class="v">'opacity-100'</span> : <span class="v">'opacity-40 pointer-events-none'</span>}
+  &gt;Criar&lt;/<span class="s">button</span>&gt;
+&lt;/<span class="s">div</span>&gt;</pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════
+     3. PRIORIDADE (P1-P4)
+     ═══════════════════════════════════════════ -->
+<div class="container">
+<section>
+  <div class="sh">
+    <div class="sh-num">03</div>
+    <div class="sh-text">
+      <h2>Prioridade P1–P4 mais comunicativa</h2>
+      <p>Círculos coloridos sem contexto. Adicionar tooltips, preenchimento sutil e labels claros.</p>
+    </div>
+  </div>
+
+  <div class="ba-grid">
+    <div class="ba-card before">
+      <div class="ba-label">❌ Antes — bolinhas vazias</div>
+      <div class="mock-surface" style="display:flex; justify-content:center; padding:2rem;">
+        <div class="priority-row" style="gap:16px;">
+          <div class="p-dot old" style="border-color:#DC2626;"></div>
+          <div class="p-dot old" style="border-color:#F59E0B;"></div>
+          <div class="p-dot old" style="border-color:#6366F1;"></div>
+          <div class="p-dot old" style="border-color:#9CA3AF;"></div>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#991B1B; margin-top:0.75rem;">Círculos transparentes sem label. Novo usuário não sabe o que cada cor significa.</p>
+    </div>
+
+    <div class="ba-card after">
+      <div class="ba-label">✓ Depois — com fill sutil + tooltip + número</div>
+      <div class="mock" style="display:flex; justify-content:center; padding:2rem;">
+        <div class="priority-row" style="gap:16px;">
+          <div class="p-dot new" style="border-color:#DC2626; background:rgba(220,38,38,0.15);">
+            <span style="color:#DC2626; font-family:'Outfit'; font-size:0.6rem; font-weight:700;">1</span>
+            <span class="tooltip">🔴 Urgente</span>
+          </div>
+          <div class="p-dot new" style="border-color:#F59E0B; background:rgba(245,158,11,0.15);">
+            <span style="color:#F59E0B; font-family:'Outfit'; font-size:0.6rem; font-weight:700;">2</span>
+            <span class="tooltip">🟡 Importante</span>
+          </div>
+          <div class="p-dot new" style="border-color:#6366F1; background:rgba(99,102,241,0.15);">
+            <span style="color:#6366F1; font-family:'Outfit'; font-size:0.6rem; font-weight:700;">3</span>
+            <span class="tooltip">🔵 Normal</span>
+          </div>
+          <div class="p-dot new" style="border-color:#9CA3AF; background:rgba(156,163,175,0.12);">
+            <span style="color:#9CA3AF; font-family:'Outfit'; font-size:0.6rem; font-weight:700;">4</span>
+            <span class="tooltip">⚪ Baixa</span>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#166534; margin-top:0.75rem;">Passe o mouse nos círculos acima! ↑ Preenchimento sutil na mesma cor, número dentro, tooltip descritivo no hover.</p>
+    </div>
+  </div>
+
+  <div class="impl-note">
+    <h4>💻 Mapeamento de prioridades</h4>
+    <div class="code-sm">
+<pre><span class="k">const</span> PRIORITIES = {
+  <span class="v">1</span>: { label: <span class="v">'Urgente'</span>,   color: <span class="v">'#DC2626'</span>, bg: <span class="v">'rgba(220,38,38,0.15)'</span>,  emoji: <span class="v">'🔴'</span> },
+  <span class="v">2</span>: { label: <span class="v">'Importante'</span>, color: <span class="v">'#F59E0B'</span>, bg: <span class="v">'rgba(245,158,11,0.15)'</span>, emoji: <span class="v">'🟡'</span> },
+  <span class="v">3</span>: { label: <span class="v">'Normal'</span>,     color: <span class="v">'#6366F1'</span>, bg: <span class="v">'rgba(99,102,241,0.15)'</span>, emoji: <span class="v">'🔵'</span> },
+  <span class="v">4</span>: { label: <span class="v">'Baixa'</span>,      color: <span class="v">'#9CA3AF'</span>, bg: <span class="v">'rgba(156,163,175,0.12)'</span>, emoji: <span class="v">'⚪'</span> },
+};
+
+<span class="c">// Dark mode: mesmas cores, bg opacity sobe para 0.20</span></pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════
+     4. EMPTY STATE
+     ═══════════════════════════════════════════ -->
+<div class="container">
+<section>
+  <div class="sh">
+    <div class="sh-num">04</div>
+    <div class="sh-text">
+      <h2>Empty state inteligente</h2>
+      <p>Uma lista vazia é deprimente. Precisa motivar, não parecer quebrado.</p>
+    </div>
+  </div>
+
+  <div class="ba-grid">
+    <div class="ba-card before">
+      <div class="ba-label">❌ Antes — vazio e solitário</div>
+      <div class="mock-surface">
+        <div style="padding: 1.5rem;">
+          <div class="task-row" style="opacity:0.5;">
+            <div class="task-check"></div>
+            <div class="task-text" style="color:var(--text3);">Rentabilizar meuflip.com</div>
+            <div class="task-meta">0%</div>
+          </div>
+        </div>
+        <div style="height:100px;"></div>
+      </div>
+      <p style="font-size:0.78rem; color:#991B1B; margin-top:0.75rem;">Uma tarefa perdida no vazio. Sensação de produto inacabado.</p>
+    </div>
+
+    <div class="ba-card after">
+      <div class="ba-label">✓ Depois — estados com personalidade</div>
+      <div class="mock">
+        <!-- Tarefas ativas -->
+        <div class="task-row task-animated">
+          <div class="task-check"></div>
+          <div class="task-text"><strong>Rentabilizar meuflip.com</strong></div>
+          <div class="p-dot new" style="border-color:#DC2626; background:rgba(220,38,38,0.15); width:18px; height:18px;"><span style="color:#DC2626; font-size:0.5rem; font-weight:700;">1</span></div>
+        </div>
+
+        <!-- Divider -->
+        <div style="border-top:1px dashed var(--border); margin:12px 0;"></div>
+
+        <!-- Empty state -->
+        <div class="empty-state">
+          <div class="empty-emoji">🎯</div>
+          <div class="empty-title">Só 1 tarefa pendente!</div>
+          <div class="empty-desc">Que tal adicionar mais uma meta para hoje?</div>
+          <div class="mock-btn text-btn" style="font-size:0.82rem; margin:0 auto;">+ Adicionar tarefa</div>
+        </div>
+
+        <!-- Collapsed completed -->
+        <div style="border-top:1px solid var(--border); padding-top:10px; margin-top:8px;">
+          <div style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--text3); cursor:pointer;">
+            <span>▸</span>
+            <span>3 tarefas concluídas</span>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#166534; margin-top:0.75rem;">Mensagem motivacional + CTA contextual + seção collapsed de concluídas para dar sensação de progresso.</p>
+    </div>
+  </div>
+
+  <div class="impl-note">
+    <h4>💻 Variações de empty state</h4>
+    <div class="code-sm">
+<pre><span class="k">const</span> EMPTY_STATES = [
+  { emoji: <span class="v">'🎉'</span>, title: <span class="v">'Tudo limpo!'</span>,         desc: <span class="v">'Nada pendente. Que tal planejar algo importante?'</span> },
+  { emoji: <span class="v">'🎯'</span>, title: <span class="v">'Foco total'</span>,           desc: <span class="v">'Adicione suas prioridades do dia.'</span> },
+  { emoji: <span class="v">'☕'</span>, title: <span class="v">'Momento de planejar'</span>,   desc: <span class="v">'O que você quer conquistar hoje?'</span> },
+  { emoji: <span class="v">'🚀'</span>, title: <span class="v">'Pronto para decolar?'</span>,  desc: <span class="v">'Crie sua primeira tarefa e comece.'</span> },
+];
+
+<span class="c">// Escolher aleatoriamente ou por horário do dia</span></pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════
+     5. FILTROS
+     ═══════════════════════════════════════════ -->
+<div class="container">
+<section>
+  <div class="sh">
+    <div class="sh-num">05</div>
+    <div class="sh-text">
+      <h2>Filtros como chips ativos com contagem</h2>
+      <p>Filtros discretos demais não são usados. Chips visuais com estado ativo claro e contagem.</p>
+    </div>
+  </div>
+
+  <div class="ba-grid">
+    <div class="ba-card before">
+      <div class="ba-label">❌ Antes — dropdowns discretos</div>
+      <div class="mock-surface">
+        <div style="display:flex; gap:8px;">
+          <div class="mock-btn ghost" style="font-size:0.72rem;">Status ▾</div>
+          <div class="mock-btn ghost" style="font-size:0.72rem;">Área ▾</div>
+          <div class="mock-btn ghost" style="font-size:0.72rem;">Etiqueta ▾</div>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#991B1B; margin-top:0.75rem;">Parecem botões inativos. Não comunicam que são filtros nem que têm opções ativas.</p>
+    </div>
+
+    <div class="ba-card after">
+      <div class="ba-label">✓ Depois — chips com estado e contagem</div>
+      <div class="mock">
+        <div class="chips-row">
+          <div class="chip active">Abertas <span class="chip-count">3</span></div>
+          <div class="chip inactive">Concluídas <span class="chip-count">7</span></div>
+          <div class="chip inactive">Todas</div>
+          <span style="color:var(--border);">│</span>
+          <div class="chip active" style="background:rgba(239,68,68,0.08); color:#EF4444; border-color:rgba(239,68,68,0.2);">
+            ❤️ Saúde <span class="chip-count" style="background:rgba(239,68,68,0.12);">2</span>
+          </div>
+          <div class="chip inactive">💼 Carreira</div>
+          <span class="chip-clear">Limpar filtros</span>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#166534; margin-top:0.75rem;">Chips claros com contagem. Separador visual entre tipos de filtro. "Limpar filtros" sempre visível quando há filtro ativo.</p>
+    </div>
+  </div>
+
+  <div class="impl-note">
+    <h4>💻 Implementação</h4>
+    <p>Cada filtro é um <code>chip</code> que alterna entre <code>.inactive</code> e <code>.active</code>. Filtros de área usam a cor da área como acento. Separador <code>│</code> entre grupos (status vs área). Botão "Limpar filtros" aparece condicionalmente quando <code>activeFilters.length > 0</code>.</p>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════
+     6. FEEDBACK AO CRIAR
+     ═══════════════════════════════════════════ -->
+<div class="container">
+<section>
+  <div class="sh">
+    <div class="sh-num">06</div>
+    <div class="sh-text">
+      <h2>Feedback ao criar tarefa</h2>
+      <p>Criar uma tarefa precisa ter sensação de "aconteceu". Input limpa, tarefa entra com animação, toast confirma.</p>
+    </div>
+  </div>
+
+  <div class="ba-grid">
+    <div class="ba-card before">
+      <div class="ba-label">❌ Antes — silêncio total</div>
+      <div class="mock-surface" style="text-align:center; padding:2rem;">
+        <p style="font-size:0.85rem; color:#991B1B;">Clicou em "Criar"...<br>nada visível aconteceu.<br>A tarefa aparece? Sumiu? Deu erro?</p>
+      </div>
+    </div>
+
+    <div class="ba-card after">
+      <div class="ba-label">✓ Depois — feedback em 3 camadas</div>
+      <div class="mock">
+        <!-- Step 1: Input limpo -->
+        <input class="mock-input strong" placeholder="O que precisa ser feito hoje?" style="margin-bottom:12px; opacity:0.6;" readonly>
+
+        <!-- Step 2: Task animada -->
+        <div class="task-row task-animated" style="background: rgba(232,88,12,0.04); border: 1px solid rgba(232,88,12,0.1); border-radius:10px;">
+          <div class="task-check"></div>
+          <div class="task-text"><strong>Revisar proposta do cliente</strong></div>
+          <div class="p-dot new" style="border-color:#F59E0B; background:rgba(245,158,11,0.15); width:18px; height:18px;"><span style="color:#F59E0B; font-size:0.5rem; font-weight:700;">2</span></div>
+        </div>
+
+        <!-- Step 3: Toast -->
+        <div style="margin-top:16px; display:flex; justify-content:center;">
+          <div class="toast">
+            <div class="toast-icon">✓</div>
+            Tarefa criada
+          </div>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:#166534; margin-top:0.75rem;">1) Input limpa e refoca. 2) Tarefa entra com slide + highlight sutil. 3) Toast "Tarefa criada" por 2s.</p>
+    </div>
+  </div>
+
+  <div class="impl-note">
+    <h4>💻 Fluxo de criação</h4>
+    <div class="code-sm">
+<pre><span class="k">async function</span> <span class="s">handleCreate</span>() {
+  <span class="k">const</span> newTask = <span class="k">await</span> createTask({ name: task, priority, area });
+
+  <span class="c">// 1. Limpa input e refoca</span>
+  setTask(<span class="v">''</span>);
+  inputRef.current?.focus();
+
+  <span class="c">// 2. Adiciona com flag de animação</span>
+  setTasks(prev =&gt; [{ ...newTask, <span class="p">isNew</span>: <span class="v">true</span> }, ...prev]);
+
+  <span class="c">// 3. Toast</span>
+  toast.success(<span class="v">'Tarefa criada'</span>, { duration: <span class="v">2000</span> });
+
+  <span class="c">// 4. Remove highlight após animação</span>
+  setTimeout(() =&gt; {
+    setTasks(prev =&gt; prev.map(t =&gt;
+      t.id === newTask.id ? { ...t, <span class="p">isNew</span>: <span class="v">false</span> } : t
+    ));
+  }, <span class="v">1500</span>);
+}
+
+<span class="c">// Na task row:</span>
+&lt;<span class="s">div</span> className={cn(
+  <span class="v">'task-row'</span>,
+  task.isNew && <span class="v">'animate-slide-in bg-accent/5 border border-accent/10'</span>
+)} /&gt;</pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════
+     7. MICROCOPY
+     ═══════════════════════════════════════════ -->
+<div class="container">
+<section>
+  <div class="sh">
+    <div class="sh-num">07</div>
+    <div class="sh-text">
+      <h2>Micro-copy contextual</h2>
+      <p>Placeholders e labels genéricos não guiam. Texto contextual reduz hesitação e acelera ação.</p>
+    </div>
+  </div>
+
+  <div class="full-card">
+    <h3 style="font-family:'Outfit'; font-size:1.1rem; font-weight:700; margin-bottom:1.5rem;">Mapeamento de micro-copy</h3>
+
+    <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+      <tr style="border-bottom:2px solid var(--border);">
+        <th style="text-align:left; padding:8px 12px; font-family:'Outfit'; font-size:0.68rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text2);">Elemento</th>
+        <th style="text-align:left; padding:8px 12px; font-family:'Outfit'; font-size:0.68rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#DC2626;">Antes</th>
+        <th style="text-align:left; padding:8px 12px; font-family:'Outfit'; font-size:0.68rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#16A34A;">Depois</th>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:10px 12px; font-weight:600;">Placeholder do input</td>
+        <td style="padding:10px 12px; color:var(--text3);">"Nome da tarefa"</td>
+        <td style="padding:10px 12px; color:var(--text);">"O que precisa ser feito hoje?"</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:10px 12px; font-weight:600;">Botão de criar</td>
+        <td style="padding:10px 12px; color:var(--text3);">"Criar"</td>
+        <td style="padding:10px 12px; color:var(--text);">"✓ Criar" <span style="color:var(--text3);">(ou só Enter ↵)</span></td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:10px 12px; font-weight:600;">Lista vazia</td>
+        <td style="padding:10px 12px; color:var(--text3);">(nada)</td>
+        <td style="padding:10px 12px; color:var(--text);">"🎯 Que tal planejar algo importante?"</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:10px 12px; font-weight:600;">Filtro ativo</td>
+        <td style="padding:10px 12px; color:var(--text3);">"Status"</td>
+        <td style="padding:10px 12px; color:var(--text);">"Abertas (3)"</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:10px 12px; font-weight:600;">Toast de confirmação</td>
+        <td style="padding:10px 12px; color:var(--text3);">(nenhum)</td>
+        <td style="padding:10px 12px; color:var(--text);">"✓ Tarefa criada"</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:10px 12px; font-weight:600;">Concluir tarefa</td>
+        <td style="padding:10px 12px; color:var(--text3);">(nenhum)</td>
+        <td style="padding:10px 12px; color:var(--text);">"Feito! 🎉" <span style="color:var(--text3);">(toast 1.5s)</span></td>
+      </tr>
+      <tr>
+        <td style="padding:10px 12px; font-weight:600;">Seção de concluídas</td>
+        <td style="padding:10px 12px; color:var(--text3);">(nenhum)</td>
+        <td style="padding:10px 12px; color:var(--text);">"▸ 3 tarefas concluídas"</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="impl-note">
+    <h4>💡 Princípio</h4>
+    <p>Cada texto no sistema deve responder "o que eu faço aqui?" ou "o que acabou de acontecer?". Placeholder guia a ação, labels mostram estado, toasts confirmam resultado. Se o texto não faz nenhuma dessas 3 coisas, ele é ruído.</p>
+  </div>
+</section>
+</div>
+
+<hr class="divider">
+
+<!-- ═══════════════════════════════════════════
+     CHECKLIST FINAL
+     ═══════════════════════════════════════════ -->
+<div class="container">
+<section>
+  <div class="sh">
+    <div class="sh-num">✓</div>
+    <div class="sh-text">
+      <h2>Checklist de implementação</h2>
+      <p>Ordem sugerida de prioridade — do que impacta mais para o que é refinamento.</p>
+    </div>
+  </div>
+
+  <div class="full-card">
+    <div class="code-sm">
+<pre><span class="c">## Prioridade Alta (impacto imediato)</span>
+<span class="v">[ ]</span> <span class="p">#02</span> Remover botão "+ Nova tarefa", deixar input inline fixo
+<span class="v">[ ]</span> <span class="p">#01</span> Input com fundo card, borda mais forte, autofocus
+<span class="v">[ ]</span> <span class="p">#06</span> Feedback ao criar: limpar input + animação + toast
+<span class="v">[ ]</span> <span class="p">#07</span> Placeholder "O que precisa ser feito hoje?"
+
+<span class="c">## Prioridade Média (melhora a experiência)</span>
+<span class="v">[ ]</span> <span class="p">#04</span> Empty state com mensagem motivacional + CTA
+<span class="v">[ ]</span> <span class="p">#04</span> Seção collapsed "X tarefas concluídas"
+<span class="v">[ ]</span> <span class="p">#03</span> Prioridades com fill sutil + tooltip + número
+
+<span class="c">## Prioridade Menor (polimento)</span>
+<span class="v">[ ]</span> <span class="p">#05</span> Filtros como chips ativos com contagem
+<span class="v">[ ]</span> <span class="p">#05</span> Botão "Limpar filtros" condicional
+<span class="v">[ ]</span> <span class="p">#06</span> Highlight temporário na tarefa recém-criada
+<span class="v">[ ]</span> <span class="p">#07</span> Toast "Feito! 🎉" ao concluir tarefa</pre>
+    </div>
+  </div>
+</section>
+</div>
+
+<footer>
+  <strong>Widia Omni</strong> — UX Improvements Spec v1.0 · Fevereiro 2026
+</footer>
+
+</body>
+</html>

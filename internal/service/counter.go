@@ -47,6 +47,15 @@ func (s *CounterService) IncrementTasksToday(ctx context.Context, wsID uuid.UUID
 	return err
 }
 
+func (s *CounterService) DecrementTasksToday(ctx context.Context, wsID uuid.UUID) error {
+	_, err := s.db.Exec(ctx, `
+		UPDATE workspace_counters
+		SET tasks_created_today = GREATEST(0, tasks_created_today - 1)
+		WHERE workspace_id = $1 AND tasks_today_date = CURRENT_DATE
+	`, wsID)
+	return err
+}
+
 func (s *CounterService) IncrementTransactionsMonth(ctx context.Context, wsID uuid.UUID) error {
 	_, err := s.db.Exec(ctx, `
 		UPDATE workspace_counters
