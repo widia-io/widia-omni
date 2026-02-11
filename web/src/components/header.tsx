@@ -1,15 +1,32 @@
 import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router";
 import { Bell } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { getGreeting, formatDateShort } from "@/lib/format";
 import { useNotificationCount } from "@/hooks/use-notifications";
 import { useDashboard } from "@/hooks/use-dashboard";
+import { useSubscription } from "@/hooks/use-billing";
+import { Badge } from "@/components/ui/badge";
 import { NotificationPanel } from "@/components/notification-panel";
+import type { PlanTier } from "@/types/api";
+
+const tierLabel: Record<PlanTier, string> = {
+  free: "Free",
+  pro: "Pro",
+  premium: "Premium",
+};
+
+const tierBadge: Record<PlanTier, "default" | "orange" | "blue"> = {
+  free: "default",
+  pro: "orange",
+  premium: "blue",
+};
 
 export function Header() {
   const user = useAuthStore((s) => s.user);
   const { data: unreadCount } = useNotificationCount();
   const { data: dash } = useDashboard();
+  const { data: subscription } = useSubscription();
   const [showNotifs, setShowNotifs] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +61,13 @@ export function Header() {
         </p>
       </div>
       <div className="flex items-center gap-3">
+        {subscription && (
+          <Link to="/billing" title="Gerenciar plano">
+            <Badge variant={tierBadge[subscription.tier]} className="rounded-full px-2.5 py-1 text-[11px]">
+              {tierLabel[subscription.tier]}
+            </Badge>
+          </Link>
+        )}
         <div className="rounded-lg border border-border bg-bg-card px-3.5 py-2 font-mono text-[13px] text-text-secondary">
           {formatDateShort(new Date())}
         </div>
