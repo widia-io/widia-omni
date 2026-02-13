@@ -8,7 +8,7 @@ make obs-down     # Stop observability stack
 make obs-status   # Check container status
 ```
 
-## Links
+## Local Links
 
 | Service    | URL                            | Notes                    |
 |------------|--------------------------------|--------------------------|
@@ -16,20 +16,19 @@ make obs-status   # Check container status
 | Prometheus | http://localhost:9091          | Targets, query UI        |
 | Loki       | http://localhost:3100          | Log aggregation backend  |
 
+## Production Links
+
+| Service    | URL                               | Notes |
+|------------|-----------------------------------|-------|
+| Grafana    | https://grafana.meufoco.app       | Basic auth + login Grafana |
+| Prometheus | https://prometheus.meufoco.app    | Basic auth |
+| Loki       | https://loki.meufoco.app          | Basic auth |
+
 ## Grafana
 
-### Dashboard
+### Datasources
 
-Pre-provisioned **"Widia API"** dashboard with 8 panels:
-
-- Request Rate (req/s by method)
-- Error Rate (4xx + 5xx %)
-- Latency p50 / p95 / p99
-- Request Duration Heatmap
-- Active Subscriptions by Tier
-- Asynq Queue Depth
-- Asynq Job Failures
-- Entitlement Limits Hit
+Prometheus e Loki são provisionados automaticamente no Grafana (`deploy/observability/grafana/provisioning/datasources/datasources.yml`).
 
 ### Log Exploration
 

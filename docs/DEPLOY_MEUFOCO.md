@@ -50,6 +50,25 @@ Criar `Environment` chamado `production` no repositório `widia-io/widia-omni`.
 2. `MEUFOCO_API_URL` (`https://api.meufoco.app`)
 3. `MEUFOCO_SUPABASE_URL` (`https://supabase.meufoco.app`)
 
+### Variáveis obrigatórias no `.env.production` (observabilidade)
+
+```dotenv
+# Domínios públicos (Traefik)
+OBS_GRAFANA_HOST=grafana.meufoco.app
+OBS_PROMETHEUS_HOST=prometheus.meufoco.app
+OBS_LOKI_HOST=loki.meufoco.app
+
+# Basic auth compartilhado em Grafana/Prometheus/Loki
+# Gere com: htpasswd -nbB admin 'sua-senha-forte' | sed -e 's/\$/$$/g'
+OBS_BASIC_AUTH=admin:$$2y$$...
+
+# Login local do Grafana (troque em produção)
+GRAFANA_ADMIN_USER=admin
+GRAFANA_ADMIN_PASSWORD=troque-esta-senha
+```
+
+Sem `OBS_BASIC_AUTH` e `GRAFANA_ADMIN_PASSWORD`, o `docker compose` de produção falha por validação.
+
 ## Preparação One-Time do Servidor
 
 Executar uma vez no host (como root):
@@ -93,7 +112,7 @@ Workflow: `/Users/bruno/Developer/widia/widia-omni/.github/workflows/deploy-meuf
    - `sql/migrations/`
 5. Cria `.image-tag.env` com `IMAGE_TAG=<sha>`.
 6. Executa migrations com `migrate/migrate`.
-7. Sobe serviços `web`, `api`, `worker`, `redis`.
+7. Sobe serviços `web`, `api`, `worker`, `redis`, `prometheus`, `loki`, `promtail`, `grafana`.
 8. Valida:
    - `https://api.meufoco.app/health`
    - `https://meufoco.app`
@@ -109,7 +128,7 @@ Workflow: `/Users/bruno/Developer/widia/widia-omni/.github/workflows/rollback-me
 2. Informar `image_tag` (SHA já publicada no GHCR).
 3. Workflow faz:
    - pull das imagens da tag
-   - `up -d` em `web/api/worker`
+   - `up -d` em `web/api/worker/redis/prometheus/loki/promtail/grafana`
    - valida health
    - atualiza `.last_successful_tag`
 
@@ -126,6 +145,9 @@ docker logs meufoco-api --tail=200
 docker logs meufoco-web --tail=200
 curl -fsS https://api.meufoco.app/health
 curl -fsS https://meufoco.app
+curl -u admin:'sua-senha-forte' -fsS https://grafana.meufoco.app/api/health
+curl -u admin:'sua-senha-forte' -fsS https://prometheus.meufoco.app/-/healthy
+curl -u admin:'sua-senha-forte' -fsS https://loki.meufoco.app/ready
 ```
 
 Inspeção de imagem em execução:
@@ -139,4 +161,5 @@ docker inspect --format='{{.Config.Image}}' meufoco-web
 
 1. Este pipeline não deploya o stack `supabase-meufoco`.
 2. `.env.production` não é alterado pelo workflow.
-3. Rollback automático depende de `.last_successful_tag` existente.
+3. Publicação de observabilidade requer DNS apontando para o host (`grafana|prometheus|loki.meufoco.app`).
+4. Rollback automático depende de `.last_successful_tag` existente.
