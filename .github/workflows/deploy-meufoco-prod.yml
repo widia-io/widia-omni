@@ -143,7 +143,13 @@ jobs:
 
           tar czf /tmp/meufoco-deploy-bundle.tgz docker-compose.prod.yml deploy sql/migrations
           scp -P "$PORT" -i ~/.ssh/id_ed25519 /tmp/meufoco-deploy-bundle.tgz "$USER@$HOST:/tmp/meufoco-deploy-bundle.tgz"
-          ssh -p "$PORT" -i ~/.ssh/id_ed25519 "$USER@$HOST" "mkdir -p '$STACK_DIR' && tar xzf /tmp/meufoco-deploy-bundle.tgz -C '$STACK_DIR' && rm -f /tmp/meufoco-deploy-bundle.tgz"
+          ssh -p "$PORT" -i ~/.ssh/id_ed25519 "$USER@$HOST" "bash -s" <<EOF
+          set -Eeuo pipefail
+          mkdir -p "$STACK_DIR"
+          env -u TAR_OPTIONS tar --overwrite --no-same-owner --no-same-permissions -xzf /tmp/meufoco-deploy-bundle.tgz -C "$STACK_DIR"
+          find "$STACK_DIR/deploy/observability" -type f -name '._*' -delete 2>/dev/null || true
+          rm -f /tmp/meufoco-deploy-bundle.tgz
+          EOF
           rm -f /tmp/meufoco-deploy-bundle.tgz
 
       - name: Deploy and auto-rollback on failure
