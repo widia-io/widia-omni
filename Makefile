@@ -6,8 +6,13 @@ export
        test lint \
        migrate-up migrate-down sqlc-gen \
        infra-up infra-down infra-status \
+       stripe-listen stripe-webhook-secret \
        obs-up obs-down obs-status \
        install clean check
+
+PORT ?= 8080
+STRIPE_EVENTS ?= checkout.session.completed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted
+STRIPE_FORWARD_URL ?= http://localhost:$(PORT)/webhooks/stripe
 
 # ─── Development ─────────────────────────────────────────────
 
@@ -77,6 +82,14 @@ infra-down: ## Stop Supabase + Redis containers
 
 infra-status: ## Show infra container status
 	@docker compose -f $(INFRA_DIR)/docker-compose.yml ps
+
+# ─── Stripe ───────────────────────────────────────────────
+
+stripe-listen: ## Listen Stripe webhooks and forward to local API
+	stripe listen --events $(STRIPE_EVENTS) --forward-to $(STRIPE_FORWARD_URL)
+
+stripe-webhook-secret: ## Print webhook secret for current local forward setup
+	stripe listen --events $(STRIPE_EVENTS) --forward-to $(STRIPE_FORWARD_URL) --print-secret
 
 # ─── Observability (Prometheus + Grafana + Loki) ──────────────
 

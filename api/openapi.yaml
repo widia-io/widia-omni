@@ -2646,9 +2646,13 @@ paths:
             schema:
               type: object
               properties:
-                price_id:
+                tier:
                   type: string
-              required: [price_id]
+                  enum: [pro, premium]
+                interval:
+                  type: string
+                  enum: [monthly, yearly]
+              required: [tier, interval]
       responses:
         '200':
           description: Checkout URL

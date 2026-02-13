@@ -17,10 +17,7 @@ import (
 
 func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis.Client) *chi.Mux {
 	r := chi.NewRouter()
-	appURL := "http://localhost:5173"
-	if len(cfg.AllowedOrigins) > 0 {
-		appURL = cfg.AllowedOrigins[0]
-	}
+	appURL := cfg.AppURL
 
 	var queueClient *asynq.Client
 	if opt, err := redis.ParseURL(cfg.RedisURL); err == nil {

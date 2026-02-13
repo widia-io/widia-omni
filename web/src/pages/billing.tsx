@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Check, CreditCard, ExternalLink } from "lucide-react";
 import { usePlans, useSubscription, useCheckout, usePortal } from "@/hooks/use-billing";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ const statusColor: Record<string, "green" | "orange" | "rose" | "default"> = {
 };
 
 export function Component() {
+  const [interval, setInterval] = useState<"monthly" | "yearly">("monthly");
   const { data: plans, isLoading: loadingPlans } = usePlans();
   const { data: sub, isLoading: loadingSub } = useSubscription();
   const checkout = useCheckout();
@@ -53,9 +55,27 @@ export function Component() {
       )}
 
       <h2 className="text-lg font-semibold mb-4">Todos os planos</h2>
+      <div className="mb-4 inline-flex rounded-[10px] border border-border p-1">
+        <Button
+          size="sm"
+          variant={interval === "monthly" ? "default" : "ghost"}
+          onClick={() => setInterval("monthly")}
+        >
+          Mensal
+        </Button>
+        <Button
+          size="sm"
+          variant={interval === "yearly" ? "default" : "ghost"}
+          onClick={() => setInterval("yearly")}
+        >
+          Anual
+        </Button>
+      </div>
       <div className="grid gap-4 md:grid-cols-3">
         {(plans ?? []).map((plan) => {
           const isCurrent = sub?.tier === plan.tier;
+          const displayPrice = interval === "monthly" ? plan.price_monthly : plan.price_yearly;
+          const hasStripePrice = interval === "monthly" ? !!plan.stripe_price_monthly : !!plan.stripe_price_yearly;
           return (
             <div key={plan.id} className={cn(
               "flex flex-col rounded-[14px] border p-6",
@@ -63,8 +83,8 @@ export function Component() {
             )}>
               <h3 className="text-lg font-bold">{plan.name}</h3>
               <div className="mt-2 flex items-baseline gap-1">
-                <span className="text-2xl font-bold">{formatCurrency(plan.price_monthly)}</span>
-                <span className="text-sm text-text-muted">/mês</span>
+                <span className="text-2xl font-bold">{formatCurrency(displayPrice)}</span>
+                <span className="text-sm text-text-muted">{interval === "monthly" ? "/mês" : "/ano"}</span>
               </div>
               <ul className="mt-4 flex-1 space-y-2 text-sm text-text-secondary">
                 <li className="flex items-center gap-2"><Check className="h-3.5 w-3.5 text-accent-green" />{plan.limits.max_areas < 0 || plan.limits.max_areas >= 999 ? "Áreas ilimitadas" : `${plan.limits.max_areas} áreas`}</li>
@@ -75,9 +95,17 @@ export function Component() {
               </ul>
               {isCurrent ? (
                 <Button variant="outline" className="mt-4 w-full" disabled>Plano atual</Button>
+              ) : plan.tier === "free" ? (
+                <Button variant="outline" className="mt-4 w-full" disabled>Plano gratuito</Button>
+              ) : !hasStripePrice ? (
+                <Button variant="outline" className="mt-4 w-full" disabled>Indisponível</Button>
               ) : (
-                <Button className="mt-4 w-full" onClick={() => checkout.mutate(plan.id)} disabled={checkout.isPending}>
-                  Atualizar plano
+                <Button
+                  className="mt-4 w-full"
+                  onClick={() => checkout.mutate({ tier: plan.tier, interval })}
+                  disabled={checkout.isPending}
+                >
+                  {checkout.isPending ? "Redirecionando..." : "Atualizar plano"}
                 </Button>
               )}
             </div>
