@@ -241,6 +241,8 @@ func (s *BillingService) handleCheckoutCompleted(ctx context.Context, event stri
 	}
 	status := normalizeStripeStatus(sub.Status)
 	customerID := stringOrNilPtr(extractCustomerID(sess.Customer, sub.Customer))
+	periodStart := subscriptionPeriodStart(sub)
+	periodEnd := subscriptionPeriodEnd(sub)
 
 	_, err = s.db.Exec(ctx, `
 		UPDATE subscriptions
@@ -258,7 +260,7 @@ func (s *BillingService) handleCheckoutCompleted(ctx context.Context, event stri
 			updated_at = now()
 		WHERE workspace_id = $1
 	`, wsID, planID, tier, customerID, sub.ID, priceID, status,
-		unixToTimePtr(sub.CurrentPeriodStart), unixToTimePtr(sub.CurrentPeriodEnd),
+		periodStart, periodEnd,
 		unixToTimePtr(sub.TrialEnd), unixToTimePtr(sub.CancelAt), unixToTimePtr(sub.CanceledAt))
 	if err != nil {
 		return err
@@ -279,6 +281,15 @@ func (s *BillingService) handleSubscriptionUpdated(ctx context.Context, event st
 	wsID, err := s.resolveWorkspaceIDForSubscription(ctx, sub.ID, sub.Metadata)
 	if err != nil {
 		return err
+	}
+	periodStart := subscriptionPeriodStart(&sub)
+	periodEnd := subscriptionPeriodEnd(&sub)
+	stale, err := s.shouldIgnoreSubscriptionEvent(ctx, wsID, sub.ID, periodStart, true)
+	if err != nil {
+		return err
+	}
+	if stale {
+		return nil
 	}
 
 	var (
@@ -329,7 +340,7 @@ func (s *BillingService) handleSubscriptionUpdated(ctx context.Context, event st
 			updated_at = now()
 		WHERE workspace_id = $1
 	`, wsID, planID, tier, customerID, sub.ID, stripePriceID, status,
-		unixToTimePtr(sub.CurrentPeriodStart), unixToTimePtr(sub.CurrentPeriodEnd),
+		periodStart, periodEnd,
 		unixToTimePtr(sub.TrialEnd), unixToTimePtr(sub.CancelAt), unixToTimePtr(sub.CanceledAt))
 	if err != nil {
 		return err
@@ -351,6 +362,13 @@ func (s *BillingService) handleSubscriptionDeleted(ctx context.Context, event st
 	if err != nil {
 		return err
 	}
+	stale, err := s.shouldIgnoreSubscriptionEvent(ctx, wsID, sub.ID, nil, false)
+	if err != nil {
+		return err
+	}
+	if stale {
+		return nil
+	}
 	freePlanID, err := s.resolvePlanIDByTier(ctx, domain.TierFree)
 	if err != nil {
 		return err
@@ -366,7 +384,7 @@ func (s *BillingService) handleSubscriptionDeleted(ctx context.Context, event st
 			current_period_end = $4,
 			updated_at = now()
 		WHERE workspace_id = $1
-	`, wsID, freePlanID, unixToTimePtr(sub.CanceledAt), unixToTimePtr(sub.CurrentPeriodEnd))
+	`, wsID, freePlanID, unixToTimePtr(sub.CanceledAt), subscriptionPeriodEnd(&sub))
 	if err != nil {
 		return err
 	}
@@ -392,6 +410,41 @@ func (s *BillingService) resolveWorkspaceIDForSubscription(ctx context.Context, 
 		return uuid.Nil, fmt.Errorf("invalid workspace_id metadata: %w", err)
 	}
 	return wsID, nil
+}
+
+func (s *BillingService) shouldIgnoreSubscriptionEvent(ctx context.Context, wsID uuid.UUID, incomingSubID string, incomingPeriodStart *time.Time, allowReplacement bool) (bool, error) {
+	var (
+		currentSubID       *string
+		currentStatus      domain.SubscriptionStatus
+		currentPeriodStart *time.Time
+	)
+	err := s.db.QueryRow(ctx, `
+		SELECT stripe_subscription_id, status, current_period_start
+		FROM subscriptions
+		WHERE workspace_id = $1
+		LIMIT 1
+	`, wsID).Scan(&currentSubID, &currentStatus, &currentPeriodStart)
+	if err != nil {
+		return false, err
+	}
+	if currentSubID == nil || strings.TrimSpace(*currentSubID) == "" {
+		return false, nil
+	}
+	if *currentSubID == incomingSubID {
+		return false, nil
+	}
+	if currentStatus != domain.StatusActive && currentStatus != domain.StatusTrialing && currentStatus != domain.StatusPastDue {
+		return false, nil
+	}
+	if !allowReplacement {
+		return true, nil
+	}
+	if incomingPeriodStart != nil {
+		if currentPeriodStart == nil || incomingPeriodStart.After(*currentPeriodStart) {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (s *BillingService) resolvePlanByPriceID(ctx context.Context, priceID string) (uuid.UUID, domain.PlanTier, error) {
@@ -445,6 +498,29 @@ func firstSubscriptionPriceID(sub *stripe.Subscription) (string, bool) {
 		return "", false
 	}
 	return sub.Items.Data[0].Price.ID, true
+}
+
+func subscriptionPeriodStart(sub *stripe.Subscription) *time.Time {
+	if sub == nil {
+		return nil
+	}
+	if sub.CurrentPeriodStart > 0 {
+		return unixToTimePtr(sub.CurrentPeriodStart)
+	}
+	if sub.Created > 0 {
+		return unixToTimePtr(sub.Created)
+	}
+	return nil
+}
+
+func subscriptionPeriodEnd(sub *stripe.Subscription) *time.Time {
+	if sub == nil {
+		return nil
+	}
+	if sub.CurrentPeriodEnd > 0 {
+		return unixToTimePtr(sub.CurrentPeriodEnd)
+	}
+	return nil
 }
 
 func normalizeStripeStatus(status stripe.SubscriptionStatus) domain.SubscriptionStatus {
