@@ -15,10 +15,21 @@ function getInitialTheme(): Theme {
   return (localStorage.getItem("theme") as Theme) ?? "system";
 }
 
+function getInitialSidebarCollapsed(): boolean {
+  if (typeof window === "undefined") return true;
+  const stored = localStorage.getItem("sidebarCollapsed");
+  return stored === null ? true : stored === "true";
+}
+
 export const useUIStore = create<UIState>()((set, get) => ({
-  sidebarCollapsed: false,
+  sidebarCollapsed: getInitialSidebarCollapsed(),
   theme: getInitialTheme(),
-  toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  toggleSidebar: () =>
+    set((s) => {
+      const next = !s.sidebarCollapsed;
+      localStorage.setItem("sidebarCollapsed", String(next));
+      return { sidebarCollapsed: next };
+    }),
   setTheme: (theme) => {
     localStorage.setItem("theme", theme);
     set({ theme });
