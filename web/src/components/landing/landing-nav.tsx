@@ -1,8 +1,11 @@
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function LandingNav() {
+  const isAuthenticated = useAuthStore((s) => !!s.accessToken);
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-bg-primary/80 backdrop-blur-sm">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
@@ -15,12 +18,20 @@ export function LandingNav() {
           <a href="#pricing" className="text-sm text-text-secondary transition-colors hover:text-text-primary">Planos</a>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/login">Entrar</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link to="/register">Começar grátis</Link>
-          </Button>
+          {isAuthenticated ? (
+            <Button size="sm" asChild>
+              <Link to="/dashboard">Ir ao painel</Link>
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/login">Entrar</Link>
+              </Button>
+              <Button size="sm" asChild>
+                <Link to="/register">Começar grátis</Link>
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </nav>
