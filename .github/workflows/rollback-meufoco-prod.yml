@@ -88,10 +88,13 @@ jobs:
           }
 
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-          compose pull web api worker
-          compose up -d web api worker
+          compose pull web api worker prometheus loki promtail grafana
+          compose up -d web api worker redis prometheus loki promtail grafana
           wait_for_health meufoco-api
           wait_for_health meufoco-web
+          wait_for_health meufoco-prometheus
+          wait_for_health meufoco-loki
+          wait_for_health meufoco-grafana
           wait_for_http "https://api.meufoco.app/health"
           wait_for_http "https://meufoco.app"
           printf '%s\n' "$IMAGE_TAG" > .last_successful_tag

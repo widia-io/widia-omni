@@ -100,8 +100,141 @@ services:
     mem_limit: 256m
     cpus: "0.50"
 
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: meufoco-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+    networks:
+      - proxy
+      - meufoco
+    volumes:
+      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - meufoco_prometheus_data:/prometheus
+    labels:
+      - "com.widia.project=meufoco"
+      - "com.widia.service=prometheus"
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.meufoco-prometheus.rule=Host(`${OBS_PROMETHEUS_HOST:-prometheus.meufoco.app}`)"
+      - "traefik.http.routers.meufoco-prometheus.entrypoints=websecure"
+      - "traefik.http.routers.meufoco-prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.meufoco-prometheus.middlewares=meufoco-prometheus-auth"
+      - "traefik.http.middlewares.meufoco-prometheus-auth.basicauth.users=${OBS_BASIC_AUTH:?set OBS_BASIC_AUTH in .env.production}"
+      - "traefik.http.services.meufoco-prometheus.loadbalancer.server.port=9090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 512m
+    cpus: "1.00"
+
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: meufoco-loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/config.yml"]
+    networks:
+      - proxy
+      - meufoco
+    volumes:
+      - ./deploy/observability/loki-config.yml:/etc/loki/config.yml:ro
+      - meufoco_loki_data:/loki
+    labels:
+      - "com.widia.project=meufoco"
+      - "com.widia.service=loki"
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.meufoco-loki.rule=Host(`${OBS_LOKI_HOST:-loki.meufoco.app}`)"
+      - "traefik.http.routers.meufoco-loki.entrypoints=websecure"
+      - "traefik.http.routers.meufoco-loki.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.meufoco-loki.middlewares=meufoco-loki-auth"
+      - "traefik.http.middlewares.meufoco-loki-auth.basicauth.users=${OBS_BASIC_AUTH:?set OBS_BASIC_AUTH in .env.production}"
+      - "traefik.http.services.meufoco-loki.loadbalancer.server.port=3100"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3100/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 512m
+    cpus: "1.00"
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: meufoco-promtail
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/config.yml"]
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - meufoco
+    volumes:
+      - ./deploy/observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ./runtime/logs/api:/var/log/widia/api:ro
+      - ./runtime/logs/worker:/var/log/widia/worker:ro
+      - meufoco_promtail_data:/var/lib/promtail
+    labels:
+      - "com.widia.project=meufoco"
+      - "com.widia.service=promtail"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9080/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 128m
+    cpus: "0.50"
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    container_name: meufoco-grafana
+    restart: unless-stopped
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    environment:
+      - GF_SERVER_ROOT_URL=https://${OBS_GRAFANA_HOST:-grafana.meufoco.app}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env.production}
+    networks:
+      - proxy
+      - meufoco
+    volumes:
+      - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - meufoco_grafana_data:/var/lib/grafana
+    labels:
+      - "com.widia.project=meufoco"
+      - "com.widia.service=grafana"
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.meufoco-grafana.rule=Host(`${OBS_GRAFANA_HOST:-grafana.meufoco.app}`)"
+      - "traefik.http.routers.meufoco-grafana.entrypoints=websecure"
+      - "traefik.http.routers.meufoco-grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.meufoco-grafana.middlewares=meufoco-grafana-auth"
+      - "traefik.http.middlewares.meufoco-grafana-auth.basicauth.users=${OBS_BASIC_AUTH:?set OBS_BASIC_AUTH in .env.production}"
+      - "traefik.http.services.meufoco-grafana.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 384m
+    cpus: "0.75"
+
 volumes:
   meufoco_redis_data:
+  meufoco_prometheus_data:
+  meufoco_loki_data:
+  meufoco_promtail_data:
+  meufoco_grafana_data:
 
 networks:
   proxy:
