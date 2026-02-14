@@ -1,17 +1,21 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, Navigate, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRegister } from "@/hooks/use-register";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function Component() {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [searchParams] = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const register = useRegister();
   const referralCode = searchParams.get("ref") ?? undefined;
+
+  if (accessToken) return <Navigate to="/dashboard" replace />;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
