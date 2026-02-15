@@ -131,6 +131,14 @@ func (s *ProjectService) Create(ctx context.Context, wsID uuid.UUID, limits *dom
 		return nil, errors.New("project limit reached")
 	}
 
+	if req.AreaID == nil && req.GoalID != nil {
+		var areaID *uuid.UUID
+		_ = s.db.QueryRow(ctx, `SELECT area_id FROM goals WHERE id=$1 AND deleted_at IS NULL`, req.GoalID).Scan(&areaID)
+		if areaID != nil {
+			req.AreaID = areaID
+		}
+	}
+
 	if req.Color == "" {
 		req.Color = "blue"
 	}

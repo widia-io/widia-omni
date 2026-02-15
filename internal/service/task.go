@@ -11,6 +11,65 @@ import (
 	"github.com/widia-io/widia-omni/internal/observability"
 )
 
+func (s *TaskService) syncGoalProgress(ctx context.Context, wsID uuid.UUID, t *domain.Task) {
+	logger := observability.FromContext(ctx)
+
+	goalID := t.GoalID
+	if goalID == nil && t.ProjectID != nil {
+		var gid *uuid.UUID
+		_ = s.db.QueryRow(ctx, `SELECT goal_id FROM projects WHERE id=$1 AND deleted_at IS NULL`, t.ProjectID).Scan(&gid)
+		goalID = gid
+	}
+	if goalID == nil {
+		return
+	}
+
+	var targetValue *float64
+	var unit *string
+	err := s.db.QueryRow(ctx,
+		`SELECT target_value, unit FROM goals WHERE id=$1 AND workspace_id=$2 AND deleted_at IS NULL`,
+		goalID, wsID).Scan(&targetValue, &unit)
+	if err != nil {
+		logger.Warn().Err(err).Msg("syncGoalProgress: fetch goal failed")
+		return
+	}
+
+	if targetValue != nil && (unit == nil || *unit != "tasks") {
+		return
+	}
+
+	var total, completed int
+	err = s.db.QueryRow(ctx, `
+		SELECT COUNT(*),
+		       COUNT(*) FILTER (WHERE is_completed = true)
+		FROM tasks
+		WHERE deleted_at IS NULL AND (
+			goal_id = $1
+			OR project_id IN (SELECT id FROM projects WHERE goal_id = $1 AND deleted_at IS NULL)
+		)
+	`, goalID).Scan(&total, &completed)
+	if err != nil {
+		logger.Warn().Err(err).Msg("syncGoalProgress: count tasks failed")
+		return
+	}
+
+	_, err = s.db.Exec(ctx, `
+		UPDATE goals
+		SET current_value = $3, target_value = $4, unit = 'tasks',
+			status = CASE WHEN $3 >= $4 AND $4 > 0 THEN 'completed'::goal_status
+			              WHEN status = 'completed' AND $3 < $4 THEN 'on_track'::goal_status
+			              ELSE status END,
+			completed_at = CASE WHEN $3 >= $4 AND $4 > 0 THEN now()
+			                    WHEN $3 < $4 THEN NULL
+			                    ELSE completed_at END,
+			updated_at = now()
+		WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+	`, goalID, wsID, float64(completed), float64(total))
+	if err != nil {
+		logger.Warn().Err(err).Msg("syncGoalProgress: update goal failed")
+	}
+}
+
 type TaskService struct {
 	db         *pgxpool.Pool
 	counterSvc *CounterService
@@ -192,6 +251,14 @@ func (s *TaskService) Create(ctx context.Context, wsID uuid.UUID, limits *domain
 		return nil, errors.New("daily task limit reached")
 	}
 
+	if req.AreaID == nil && req.ProjectID != nil {
+		var areaID *uuid.UUID
+		_ = s.db.QueryRow(ctx, `SELECT area_id FROM projects WHERE id=$1 AND deleted_at IS NULL`, req.ProjectID).Scan(&areaID)
+		if areaID != nil {
+			req.AreaID = areaID
+		}
+	}
+
 	var t domain.Task
 	err = s.db.QueryRow(ctx, `
 		INSERT INTO tasks (workspace_id, area_id, goal_id, parent_id, section_id,
@@ -287,6 +354,7 @@ func (s *TaskService) Complete(ctx context.Context, wsID, id uuid.UUID) (*domain
 	if err != nil {
 		return nil, err
 	}
+	s.syncGoalProgress(ctx, wsID, t)
 	return t, nil
 }
 
@@ -298,6 +366,7 @@ func (s *TaskService) Reopen(ctx context.Context, wsID, id uuid.UUID) (*domain.T
 	if err != nil {
 		return nil, err
 	}
+	s.syncGoalProgress(ctx, wsID, t)
 	return t, nil
 }
 
