@@ -24,12 +24,64 @@ func (h *AreaHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Query().Get("include") == "stats" {
+		areas, err := h.areaSvc.ListWithStats(r.Context(), wsID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to list areas")
+			return
+		}
+		writeJSON(w, http.StatusOK, areas)
+		return
+	}
+
 	areas, err := h.areaSvc.List(r.Context(), wsID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list areas")
 		return
 	}
 	writeJSON(w, http.StatusOK, areas)
+}
+
+func (h *AreaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+	wsID, ok := middleware.GetWorkspaceID(r.Context())
+	if !ok {
+		writeError(w, http.StatusForbidden, "workspace not found")
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid area id")
+		return
+	}
+
+	area, err := h.areaSvc.GetByID(r.Context(), wsID, id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "area not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, area)
+}
+
+func (h *AreaHandler) GetSummary(w http.ResponseWriter, r *http.Request) {
+	wsID, ok := middleware.GetWorkspaceID(r.Context())
+	if !ok {
+		writeError(w, http.StatusForbidden, "workspace not found")
+		return
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid area id")
+		return
+	}
+
+	summary, err := h.areaSvc.GetSummary(r.Context(), wsID, id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "area not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, summary)
 }
 
 func (h *AreaHandler) Create(w http.ResponseWriter, r *http.Request) {

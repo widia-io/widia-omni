@@ -43,7 +43,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	counterSvc := service.NewCounterService(db)
 	entSvc := service.NewEntitlementService(db, rdb)
 	referralSvc := service.NewReferralService(db, appURL)
-	areaSvc := service.NewAreaService(db, counterSvc)
+	areaSvc := service.NewAreaService(db, counterSvc, rdb)
 	goalSvc := service.NewGoalService(db, counterSvc)
 	habitSvc := service.NewHabitService(db, counterSvc)
 	taskSvc := service.NewTaskService(db, counterSvc)
@@ -140,6 +140,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 		r.Route("/areas", func(r chi.Router) {
 			r.Get("/", areaH.List)
 			r.Post("/", areaH.Create)
+			r.Get("/{id}", areaH.GetByID)
+			r.Get("/{id}/summary", areaH.GetSummary)
 			r.Put("/{id}", areaH.Update)
 			r.Delete("/{id}", areaH.Delete)
 			r.Patch("/{id}/reorder", areaH.Reorder)
@@ -283,6 +285,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 		r.Use(middleware.RateLimit(rdb, 60))
 
 		r.Get("/areas", areaH.List)
+		r.Get("/areas/{id}", areaH.GetByID)
+		r.Get("/areas/{id}/summary", areaH.GetSummary)
 		r.Get("/goals", goalH.List)
 		r.Get("/goals/{id}", goalH.GetByID)
 		r.Get("/habits", habitH.List)
