@@ -11,6 +11,7 @@ type WorkspaceCounter struct {
 	AreasCount             int       `json:"areas_count"`
 	GoalsCount             int       `json:"goals_count"`
 	HabitsCount            int       `json:"habits_count"`
+	ProjectsCount          int       `json:"projects_count"`
 	MembersCount           int       `json:"members_count"`
 	TasksCreatedToday      int       `json:"tasks_created_today"`
 	TasksTodayDate         time.Time `json:"tasks_today_date"`

@@ -60,6 +60,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	financeSvc := service.NewFinanceService(db, counterSvc)
 	llmClient := llm.NewClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
 	insightSvc := service.NewInsightService(db, rdb, llmClient)
+	projectSvc := service.NewProjectService(db, counterSvc)
 	labelSvc := service.NewLabelService(db)
 	sectionSvc := service.NewSectionService(db)
 	apiKeySvc := service.NewAPIKeyService(db, rdb)
@@ -84,6 +85,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	exportH := handler.NewExportHandler(exportSvc)
 	financeH := handler.NewFinanceHandler(financeSvc)
 	insightH := handler.NewInsightHandler(insightSvc)
+	projectH := handler.NewProjectHandler(projectSvc)
 	labelH := handler.NewLabelHandler(labelSvc)
 	sectionH := handler.NewSectionHandler(sectionSvc)
 	apiKeyH := handler.NewAPIKeyHandler(apiKeySvc)
@@ -182,6 +184,23 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 			r.Put("/{id}", sectionH.Update)
 			r.Delete("/{id}", sectionH.Delete)
 			r.Patch("/{id}/reorder", sectionH.Reorder)
+		})
+
+		// Projects
+		r.Route("/projects", func(r chi.Router) {
+			r.Get("/", projectH.List)
+			r.Post("/", projectH.Create)
+			r.Get("/{id}", projectH.GetByID)
+			r.Put("/{id}", projectH.Update)
+			r.Delete("/{id}", projectH.Delete)
+			r.Patch("/{id}/reorder", projectH.Reorder)
+			r.Patch("/{id}/archive", projectH.Archive)
+			r.Patch("/{id}/unarchive", projectH.Unarchive)
+			r.Get("/{id}/sections", projectH.ListSections)
+			r.Post("/{id}/sections", projectH.CreateSection)
+			r.Put("/{id}/sections/{sectionId}", projectH.UpdateSection)
+			r.Delete("/{id}/sections/{sectionId}", projectH.DeleteSection)
+			r.Patch("/{id}/sections/{sectionId}/reorder", projectH.ReorderSection)
 		})
 
 		// Tasks
@@ -292,6 +311,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 		r.Get("/habits/streaks", habitH.GetStreaks)
 		r.Get("/labels", labelH.List)
 		r.Get("/sections", sectionH.List)
+		r.Get("/projects", projectH.List)
+		r.Get("/projects/{id}", projectH.GetByID)
 		r.Get("/tasks", taskH.List)
 		r.Get("/scores/current", scoreH.GetCurrent)
 		r.Get("/scores/history", scoreH.GetHistory)

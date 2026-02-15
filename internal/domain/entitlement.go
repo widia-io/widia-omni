@@ -33,6 +33,7 @@ type EntitlementLimits struct {
 	MaxAreas                int  `json:"max_areas"`
 	MaxGoals                int  `json:"max_goals"`
 	MaxHabits               int  `json:"max_habits"`
+	MaxProjects             int  `json:"max_projects"`
 	MaxMembers              int  `json:"max_members"`
 	MaxTasksPerDay          int  `json:"max_tasks_per_day"`
 	MaxTransactionsPerMonth int  `json:"max_transactions_per_month"`
@@ -71,6 +72,10 @@ func (l *EntitlementLimits) CanCreateGoal(currentCount int) bool {
 
 func (l *EntitlementLimits) CanCreateHabit(currentCount int) bool {
 	return l.IsUnlimited(l.MaxHabits) || currentCount < l.MaxHabits
+}
+
+func (l *EntitlementLimits) CanCreateProject(currentCount int) bool {
+	return l.IsUnlimited(l.MaxProjects) || currentCount < l.MaxProjects
 }
 
 func (l *EntitlementLimits) CanCreateTask(todayCount int) bool {
