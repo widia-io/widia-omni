@@ -473,3 +473,18 @@ export interface OnboardingStatus {
     habits: boolean;
   };
 }
+
+export interface AreaTemplate {
+  name: string;
+  slug: string;
+  icon: string;
+  color: string;
+  weight: number;
+  sort_order: number;
+}
+
+export interface GoalSuggestion {
+  area_slug: string;
+  title: string;
+  period: string;
+}

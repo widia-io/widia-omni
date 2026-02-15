@@ -206,6 +206,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 
 		// Onboarding
 		r.Route("/onboarding", func(r chi.Router) {
+			r.Get("/area-templates", onboardingH.GetAreaTemplates)
+			r.Get("/goal-suggestions", onboardingH.GetGoalSuggestions)
 			r.Get("/status", onboardingH.GetStatus)
 			r.Post("/areas", onboardingH.SetupAreas)
 			r.Post("/goals", onboardingH.SetupGoals)

@@ -1,11 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import type { OnboardingStatus, LifeArea, Goal, Habit } from "@/types/api";
+import type { OnboardingStatus, LifeArea, Goal, Habit, AreaTemplate, GoalSuggestion } from "@/types/api";
 
 export function useOnboardingStatus() {
   return useQuery({
     queryKey: ["onboarding"],
     queryFn: () => api<OnboardingStatus>("/api/v1/onboarding/status"),
+  });
+}
+
+export function useAreaTemplates(locale = "pt-BR") {
+  return useQuery({
+    queryKey: ["onboarding", "area-templates", locale],
+    queryFn: () => api<AreaTemplate[]>(`/api/v1/onboarding/area-templates?locale=${locale}`),
+  });
+}
+
+export function useGoalSuggestions(locale = "pt-BR", areaSlug?: string) {
+  return useQuery({
+    queryKey: ["onboarding", "goal-suggestions", locale, areaSlug],
+    queryFn: () => api<GoalSuggestion[]>(`/api/v1/onboarding/goal-suggestions?locale=${locale}&area_slug=${areaSlug}`),
+    enabled: !!areaSlug,
   });
 }
 

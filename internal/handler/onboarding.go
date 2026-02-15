@@ -15,6 +15,27 @@ func NewOnboardingHandler(onboardingSvc *service.OnboardingService) *OnboardingH
 	return &OnboardingHandler{onboardingSvc: onboardingSvc}
 }
 
+func (h *OnboardingHandler) GetAreaTemplates(w http.ResponseWriter, r *http.Request) {
+	locale := r.URL.Query().Get("locale")
+	if locale == "" {
+		locale = "en-US"
+	}
+	writeJSON(w, http.StatusOK, service.GetAreaTemplates(locale))
+}
+
+func (h *OnboardingHandler) GetGoalSuggestions(w http.ResponseWriter, r *http.Request) {
+	locale := r.URL.Query().Get("locale")
+	if locale == "" {
+		locale = "en-US"
+	}
+	areaSlug := r.URL.Query().Get("area_slug")
+	if areaSlug == "" {
+		writeError(w, http.StatusBadRequest, "area_slug is required")
+		return
+	}
+	writeJSON(w, http.StatusOK, service.GetGoalSuggestions(locale, areaSlug))
+}
+
 func (h *OnboardingHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
