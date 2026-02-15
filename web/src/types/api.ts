@@ -143,6 +143,41 @@ export interface LifeArea {
   updated_at: string;
 }
 
+// ─── Projects ───────────────────────────────────────
+export type ProjectStatus = "planning" | "active" | "paused" | "completed" | "cancelled";
+
+export interface Project {
+  id: string;
+  workspace_id: string;
+  area_id: string | null;
+  goal_id: string | null;
+  title: string;
+  description: string | null;
+  status: ProjectStatus;
+  color: string;
+  icon: string;
+  start_date: string | null;
+  target_date: string | null;
+  completed_at: string | null;
+  is_archived: boolean;
+  archived_at: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  tasks_total: number;
+  tasks_completed: number;
+}
+
+export interface ProjectSection {
+  id: string;
+  project_id: string;
+  name: string;
+  position: number;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── Goals ───────────────────────────────────────────
 export type GoalStatus = "not_started" | "on_track" | "at_risk" | "behind" | "completed" | "cancelled";
 export type GoalPeriod = "yearly" | "quarterly" | "monthly" | "weekly";
@@ -233,6 +268,8 @@ export interface Task {
   goal_id: string | null;
   parent_id: string | null;
   section_id: string | null;
+  project_id: string | null;
+  project_section_id: string | null;
   title: string;
   description: string | null;
   priority: TaskPriority;

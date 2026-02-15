@@ -12,6 +12,7 @@ import {
   Monitor,
   ChevronsRight,
   ChevronsLeft,
+  FolderKanban,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,6 +22,7 @@ import { Logo } from "@/components/logo";
 const navItems = [
   { icon: LayoutDashboard, to: "/dashboard", label: "Dashboard" },
   { icon: Target, to: "/goals", label: "Metas" },
+  { icon: FolderKanban, to: "/projects", label: "Projetos" },
   { icon: Activity, to: "/habits", label: "Hábitos" },
   { icon: DollarSign, to: "/finances", label: "Finanças" },
   { icon: Calendar, to: "/tasks", label: "Tarefas" },
@@ -31,6 +33,7 @@ const mobileNavItems = [
   { icon: LayoutDashboard, to: "/dashboard", label: "Dashboard" },
   { icon: Calendar, to: "/tasks", label: "Tarefas" },
   { icon: Target, to: "/goals", label: "Metas" },
+  { icon: FolderKanban, to: "/projects", label: "Projetos" },
   { icon: Activity, to: "/habits", label: "Hábitos" },
   { icon: DollarSign, to: "/finances", label: "Finanças" },
   { icon: Settings, to: "/settings", label: "Ajustes" },
@@ -155,7 +158,7 @@ export function Sidebar() {
       </TooltipProvider>
 
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-bg-card/95 px-2 pb-2 pt-1 backdrop-blur md:hidden">
-        <div className="grid grid-cols-6 gap-1">
+        <div className="grid grid-cols-7 gap-1">
           {mobileNavItems.map(({ icon: Icon, to, label }) => (
             <NavLink
               key={to}
