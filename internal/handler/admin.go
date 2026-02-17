@@ -26,6 +26,16 @@ func (h *AdminHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, metrics)
 }
 
+func (h *AdminHandler) GetOnboardingFunnel(w http.ResponseWriter, r *http.Request) {
+	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
+	funnel, err := h.adminSvc.GetOnboardingFunnel(r.Context(), days)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to get onboarding funnel")
+		return
+	}
+	writeJSON(w, http.StatusOK, funnel)
+}
+
 func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))

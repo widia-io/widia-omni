@@ -43,6 +43,12 @@ func (h *TaskHandler) List(w http.ResponseWriter, r *http.Request) {
 			f.SectionID = &id
 		}
 	}
+	if v := r.URL.Query().Get("project_id"); v != "" {
+		id, err := uuid.Parse(v)
+		if err == nil {
+			f.ProjectID = &id
+		}
+	}
 	if v := r.URL.Query().Get("parent_id"); v != "" {
 		id, err := uuid.Parse(v)
 		if err == nil {

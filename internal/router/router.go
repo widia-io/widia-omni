@@ -43,7 +43,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	counterSvc := service.NewCounterService(db)
 	entSvc := service.NewEntitlementService(db, rdb)
 	referralSvc := service.NewReferralService(db, appURL)
-	areaSvc := service.NewAreaService(db, counterSvc)
+	areaSvc := service.NewAreaService(db, counterSvc, rdb)
 	goalSvc := service.NewGoalService(db, counterSvc)
 	habitSvc := service.NewHabitService(db, counterSvc)
 	taskSvc := service.NewTaskService(db, counterSvc)
@@ -55,11 +55,11 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	scoreSvc := service.NewScoreService(db, rdb)
 	notifSvc := service.NewNotificationService(db)
 	auditSvc := service.NewAuditService(db)
-	_ = auditSvc // used by workers and future middleware
 	exportSvc := service.NewExportService(db)
 	financeSvc := service.NewFinanceService(db, counterSvc)
 	llmClient := llm.NewClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
 	insightSvc := service.NewInsightService(db, rdb, llmClient)
+	projectSvc := service.NewProjectService(db, counterSvc)
 	labelSvc := service.NewLabelService(db)
 	sectionSvc := service.NewSectionService(db)
 	apiKeySvc := service.NewAPIKeyService(db, rdb)
@@ -76,7 +76,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	taskH := handler.NewTaskHandler(taskSvc)
 	billingH := handler.NewBillingHandler(billingSvc)
 	webhookH := handler.NewStripeWebhookHandler(billingSvc)
-	onboardingH := handler.NewOnboardingHandler(onboardingSvc)
+	onboardingH := handler.NewOnboardingHandler(onboardingSvc, projectSvc, taskSvc, auditSvc)
 	dashH := handler.NewDashboardHandler(dashSvc)
 	journalH := handler.NewJournalHandler(journalSvc)
 	scoreH := handler.NewScoreHandler(scoreSvc)
@@ -84,6 +84,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	exportH := handler.NewExportHandler(exportSvc)
 	financeH := handler.NewFinanceHandler(financeSvc)
 	insightH := handler.NewInsightHandler(insightSvc)
+	projectH := handler.NewProjectHandler(projectSvc)
 	labelH := handler.NewLabelHandler(labelSvc)
 	sectionH := handler.NewSectionHandler(sectionSvc)
 	apiKeyH := handler.NewAPIKeyHandler(apiKeySvc)
@@ -140,6 +141,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 		r.Route("/areas", func(r chi.Router) {
 			r.Get("/", areaH.List)
 			r.Post("/", areaH.Create)
+			r.Get("/{id}", areaH.GetByID)
+			r.Get("/{id}/summary", areaH.GetSummary)
 			r.Put("/{id}", areaH.Update)
 			r.Delete("/{id}", areaH.Delete)
 			r.Patch("/{id}/reorder", areaH.Reorder)
@@ -184,6 +187,23 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 			r.Patch("/{id}/reorder", sectionH.Reorder)
 		})
 
+		// Projects
+		r.Route("/projects", func(r chi.Router) {
+			r.Get("/", projectH.List)
+			r.Post("/", projectH.Create)
+			r.Get("/{id}", projectH.GetByID)
+			r.Put("/{id}", projectH.Update)
+			r.Delete("/{id}", projectH.Delete)
+			r.Patch("/{id}/reorder", projectH.Reorder)
+			r.Patch("/{id}/archive", projectH.Archive)
+			r.Patch("/{id}/unarchive", projectH.Unarchive)
+			r.Get("/{id}/sections", projectH.ListSections)
+			r.Post("/{id}/sections", projectH.CreateSection)
+			r.Put("/{id}/sections/{sectionId}", projectH.UpdateSection)
+			r.Delete("/{id}/sections/{sectionId}", projectH.DeleteSection)
+			r.Patch("/{id}/sections/{sectionId}/reorder", projectH.ReorderSection)
+		})
+
 		// Tasks
 		r.Route("/tasks", func(r chi.Router) {
 			r.Get("/", taskH.List)
@@ -206,10 +226,15 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 
 		// Onboarding
 		r.Route("/onboarding", func(r chi.Router) {
+			r.Get("/area-templates", onboardingH.GetAreaTemplates)
+			r.Get("/goal-suggestions", onboardingH.GetGoalSuggestions)
 			r.Get("/status", onboardingH.GetStatus)
 			r.Post("/areas", onboardingH.SetupAreas)
 			r.Post("/goals", onboardingH.SetupGoals)
 			r.Post("/habits", onboardingH.SetupHabits)
+			r.Post("/habits/skip", onboardingH.SkipHabits)
+			r.Post("/project", onboardingH.SetupProject)
+			r.Post("/first-task", onboardingH.SetupFirstTask)
 			r.Post("/complete", onboardingH.Complete)
 		})
 
@@ -283,6 +308,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 		r.Use(middleware.RateLimit(rdb, 60))
 
 		r.Get("/areas", areaH.List)
+		r.Get("/areas/{id}", areaH.GetByID)
+		r.Get("/areas/{id}/summary", areaH.GetSummary)
 		r.Get("/goals", goalH.List)
 		r.Get("/goals/{id}", goalH.GetByID)
 		r.Get("/habits", habitH.List)
@@ -290,6 +317,8 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 		r.Get("/habits/streaks", habitH.GetStreaks)
 		r.Get("/labels", labelH.List)
 		r.Get("/sections", sectionH.List)
+		r.Get("/projects", projectH.List)
+		r.Get("/projects/{id}", projectH.GetByID)
 		r.Get("/tasks", taskH.List)
 		r.Get("/scores/current", scoreH.GetCurrent)
 		r.Get("/scores/history", scoreH.GetHistory)
@@ -305,6 +334,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	r.Route("/admin", func(r chi.Router) {
 		r.Use(middleware.AdminAuth(cfg.SupabaseServiceKey))
 		r.Get("/metrics", adminH.GetMetrics)
+		r.Get("/onboarding/funnel", adminH.GetOnboardingFunnel)
 		r.Get("/users", adminH.ListUsers)
 		r.Get("/users/{id}", adminH.GetUser)
 		r.Get("/workspaces/{id}/usage", adminH.GetWorkspaceUsage)

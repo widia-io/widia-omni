@@ -2,12 +2,15 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 	"unicode"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/widia-io/widia-omni/internal/domain"
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
@@ -22,14 +25,36 @@ func NewOnboardingService(db *pgxpool.Pool) *OnboardingService {
 }
 
 type OnboardingSteps struct {
-	Areas  bool `json:"areas"`
-	Goals  bool `json:"goals"`
-	Habits bool `json:"habits"`
+	Areas     bool `json:"areas"`
+	Goals     bool `json:"goals"`
+	Habits    bool `json:"habits"`
+	Project   bool `json:"project"`
+	FirstTask bool `json:"first_task"`
 }
 
 type OnboardingStatus struct {
-	Completed bool           `json:"completed"`
-	Steps     OnboardingSteps `json:"steps"`
+	Completed   bool            `json:"completed"`
+	HabitsState string          `json:"habits_state"`
+	Steps       OnboardingSteps `json:"steps"`
+}
+
+const (
+	HabitsStatePending   = "pending"
+	HabitsStateCompleted = "completed"
+	HabitsStateSkipped   = "skipped"
+)
+
+var (
+	ErrOnboardingGoalAreaRequired = errors.New("goal area_id is required")
+	ErrOnboardingAreaNotFound     = errors.New("onboarding area not found")
+)
+
+type OnboardingIncompleteError struct {
+	MissingSteps []string
+}
+
+func (e *OnboardingIncompleteError) Error() string {
+	return "onboarding incomplete"
 }
 
 func (s *OnboardingService) GetStatus(ctx context.Context, userID, wsID uuid.UUID) (*OnboardingStatus, error) {
@@ -39,24 +64,60 @@ func (s *OnboardingService) GetStatus(ctx context.Context, userID, wsID uuid.UUI
 		return nil, err
 	}
 
-	var areasCount, goalsCount, habitsCount int
+	var areasCount, goalsCount, habitsCount, projectsCount, firstTaskCount int
 	err = s.db.QueryRow(ctx, `
 		SELECT
 			(SELECT COUNT(*) FROM life_areas WHERE workspace_id = $1 AND deleted_at IS NULL),
 			(SELECT COUNT(*) FROM goals WHERE workspace_id = $1 AND deleted_at IS NULL),
-			(SELECT COUNT(*) FROM habits WHERE workspace_id = $1 AND deleted_at IS NULL)
-	`, wsID).Scan(&areasCount, &goalsCount, &habitsCount)
+			(SELECT COUNT(*) FROM habits WHERE workspace_id = $1 AND deleted_at IS NULL),
+			(SELECT COUNT(*) FROM projects WHERE workspace_id = $1 AND deleted_at IS NULL),
+			(SELECT COUNT(*) FROM tasks WHERE workspace_id = $1 AND deleted_at IS NULL AND project_id IS NOT NULL)
+	`, wsID).Scan(&areasCount, &goalsCount, &habitsCount, &projectsCount, &firstTaskCount)
 	if err != nil {
 		return nil, err
 	}
 
+	var habitsSkipped bool
+	err = s.db.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM audit_log
+			WHERE workspace_id = $1
+			  AND user_id = $2
+			  AND action = 'onboarding_habits_skipped'
+		)
+	`, wsID, userID).Scan(&habitsSkipped)
+	if err != nil {
+		return nil, err
+	}
+
+	habitsState := HabitsStatePending
+	if habitsCount > 0 {
+		habitsState = HabitsStateCompleted
+	} else if habitsSkipped {
+		habitsState = HabitsStateSkipped
+	}
+
+	steps := OnboardingSteps{
+		Areas:     areasCount > 0,
+		Goals:     goalsCount > 0,
+		Habits:    habitsState != HabitsStatePending,
+		Project:   projectsCount > 0,
+		FirstTask: firstTaskCount > 0,
+	}
+	if completed {
+		steps = OnboardingSteps{
+			Areas: true, Goals: true, Habits: true, Project: true, FirstTask: true,
+		}
+		if habitsState == HabitsStatePending {
+			habitsState = HabitsStateCompleted
+		}
+	}
+
 	return &OnboardingStatus{
-		Completed: completed,
-		Steps: OnboardingSteps{
-			Areas:  areasCount > 0,
-			Goals:  goalsCount > 0,
-			Habits: habitsCount > 0,
-		},
+		Completed:   completed,
+		HabitsState: habitsState,
+		Steps:       steps,
 	}, nil
 }
 
@@ -83,13 +144,14 @@ func slugify(s string) string {
 	return strings.Trim(b.String(), "-")
 }
 
-func (s *OnboardingService) SetupAreas(ctx context.Context, wsID uuid.UUID, areas []SetupAreaItem) error {
+func (s *OnboardingService) SetupAreas(ctx context.Context, wsID uuid.UUID, areas []SetupAreaItem) ([]domain.LifeArea, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
+	created := make([]domain.LifeArea, 0, len(areas))
 	for i, a := range areas {
 		slug := a.Slug
 		if slug == "" {
@@ -99,15 +161,25 @@ func (s *OnboardingService) SetupAreas(ctx context.Context, wsID uuid.UUID, area
 		if order == 0 {
 			order = i + 1
 		}
-		_, err := tx.Exec(ctx, `
+		var area domain.LifeArea
+		err := tx.QueryRow(ctx, `
 			INSERT INTO life_areas (workspace_id, name, slug, icon, color, weight, sort_order)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
-		`, wsID, a.Name, slug, a.Icon, a.Color, a.Weight, order)
+			RETURNING id, workspace_id, name, slug, icon, color, weight, sort_order, is_active,
+			          created_at, updated_at
+		`, wsID, a.Name, slug, a.Icon, a.Color, a.Weight, order).Scan(
+			&area.ID, &area.WorkspaceID, &area.Name, &area.Slug, &area.Icon, &area.Color,
+			&area.Weight, &area.SortOrder, &area.IsActive, &area.CreatedAt, &area.UpdatedAt,
+		)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		created = append(created, area)
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return created, nil
 }
 
 type SetupGoalItem struct {
@@ -152,14 +224,25 @@ func (s *OnboardingService) SetupGoals(ctx context.Context, wsID uuid.UUID, goal
 	defer tx.Rollback(ctx)
 
 	for _, g := range goals {
+		if g.AreaID == nil {
+			return ErrOnboardingGoalAreaRequired
+		}
+		exists, err := areaExists(ctx, tx, wsID, *g.AreaID)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return ErrOnboardingAreaNotFound
+		}
+
 		startDate, endDate := g.StartDate, g.EndDate
 		if startDate == "" || endDate == "" {
 			startDate, endDate = defaultGoalDates(g.Period)
 		}
-		_, err := tx.Exec(ctx, `
-			INSERT INTO goals (workspace_id, area_id, title, period, start_date, end_date)
-			VALUES ($1, $2, $3, $4, $5, $6)
-		`, wsID, g.AreaID, g.Title, g.Period, startDate, endDate)
+		_, err = tx.Exec(ctx, `
+				INSERT INTO goals (workspace_id, area_id, title, period, start_date, end_date)
+				VALUES ($1, $2, $3, $4, $5, $6)
+			`, wsID, g.AreaID, g.Title, g.Period, startDate, endDate)
 		if err != nil {
 			return err
 		}
@@ -206,7 +289,47 @@ func (s *OnboardingService) SetupHabits(ctx context.Context, wsID uuid.UUID, hab
 	return tx.Commit(ctx)
 }
 
-func (s *OnboardingService) Complete(ctx context.Context, userID uuid.UUID) error {
-	_, err := s.db.Exec(ctx, `UPDATE user_profiles SET onboarding_completed = true WHERE id = $1`, userID)
+func (s *OnboardingService) Complete(ctx context.Context, userID, wsID uuid.UUID) error {
+	status, err := s.GetStatus(ctx, userID, wsID)
+	if err != nil {
+		return err
+	}
+	if status.Completed {
+		return nil
+	}
+
+	missing := make([]string, 0, 5)
+	if !status.Steps.Areas {
+		missing = append(missing, "areas")
+	}
+	if !status.Steps.Goals {
+		missing = append(missing, "goals")
+	}
+	if !status.Steps.Habits {
+		missing = append(missing, "habits")
+	}
+	if !status.Steps.Project {
+		missing = append(missing, "project")
+	}
+	if !status.Steps.FirstTask {
+		missing = append(missing, "first_task")
+	}
+	if len(missing) > 0 {
+		return &OnboardingIncompleteError{MissingSteps: missing}
+	}
+
+	_, err = s.db.Exec(ctx, `UPDATE user_profiles SET onboarding_completed = true WHERE id = $1`, userID)
 	return err
+}
+
+func areaExists(ctx context.Context, tx pgx.Tx, wsID, areaID uuid.UUID) (bool, error) {
+	var exists bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM life_areas
+			WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+		)
+	`, areaID, wsID).Scan(&exists)
+	return exists, err
 }

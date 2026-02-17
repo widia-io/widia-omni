@@ -5,6 +5,7 @@ import { useAreas, useCreateArea, useUpdateArea, useDeleteArea } from "@/hooks/u
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -18,13 +19,14 @@ function AreaFormDialog({ area, onClose }: { area?: LifeArea; onClose: () => voi
   const [icon, setIcon] = useState(area?.icon ?? "🎯");
   const [color, setColor] = useState(area?.color ?? "orange");
   const [weight, setWeight] = useState(String(area?.weight ?? 1));
+  const [isActive, setIsActive] = useState(area?.is_active ?? true);
 
   const colors = ["green", "orange", "blue", "rose", "sand", "sage"];
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const slug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    const data = { name, slug, icon, color, weight: Number(weight) };
+    const data = { name, slug, icon, color, weight: Number(weight), is_active: isActive };
     if (area) {
       update.mutate({ id: area.id, ...data }, { onSuccess: onClose });
     } else {
@@ -53,6 +55,10 @@ function AreaFormDialog({ area, onClose }: { area?: LifeArea; onClose: () => voi
       <div className="space-y-2">
         <Label>Peso</Label>
         <Input type="number" min="0" max="10" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} />
+      </div>
+      <div className="flex items-center gap-2">
+        <Checkbox checked={isActive} onCheckedChange={(v) => setIsActive(Boolean(v))} />
+        <Label>Área ativa</Label>
       </div>
       <Button type="submit" className="w-full" disabled={create.isPending || update.isPending}>
         {area ? "Salvar" : "Criar area"}

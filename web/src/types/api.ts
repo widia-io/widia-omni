@@ -102,6 +102,7 @@ export interface WorkspaceCounters {
   areas_count: number;
   goals_count: number;
   habits_count: number;
+  projects_count: number;
   members_count: number;
   tasks_created_today: number;
   transactions_month_count: number;
@@ -112,6 +113,7 @@ export interface EntitlementLimits {
   max_areas: number;
   max_goals: number;
   max_habits: number;
+  max_projects: number;
   max_members: number;
   max_tasks_per_day: number;
   max_transactions_per_month: number;
@@ -139,6 +141,41 @@ export interface LifeArea {
   weight: number;
   sort_order: number;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Projects ───────────────────────────────────────
+export type ProjectStatus = "planning" | "active" | "paused" | "completed" | "cancelled";
+
+export interface Project {
+  id: string;
+  workspace_id: string;
+  area_id: string | null;
+  goal_id: string | null;
+  title: string;
+  description: string | null;
+  status: ProjectStatus;
+  color: string;
+  icon: string;
+  start_date: string | null;
+  target_date: string | null;
+  completed_at: string | null;
+  is_archived: boolean;
+  archived_at: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  tasks_total: number;
+  tasks_completed: number;
+}
+
+export interface ProjectSection {
+  id: string;
+  project_id: string;
+  name: string;
+  position: number;
+  color: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -233,6 +270,8 @@ export interface Task {
   goal_id: string | null;
   parent_id: string | null;
   section_id: string | null;
+  project_id: string | null;
+  project_section_id: string | null;
   title: string;
   description: string | null;
   priority: TaskPriority;
@@ -455,6 +494,7 @@ export interface FinanceSummary {
 export interface DashboardData {
   areas_count: number;
   active_goals: number;
+  active_projects: number;
   today_tasks: number;
   completed_today: number;
   habits_today: number;
@@ -467,9 +507,27 @@ export interface DashboardData {
 // ─── Onboarding ──────────────────────────────────────
 export interface OnboardingStatus {
   completed: boolean;
+  habits_state: "pending" | "completed" | "skipped";
   steps: {
     areas: boolean;
     goals: boolean;
     habits: boolean;
+    project: boolean;
+    first_task: boolean;
   };
+}
+
+export interface AreaTemplate {
+  name: string;
+  slug: string;
+  icon: string;
+  color: string;
+  weight: number;
+  sort_order: number;
+}
+
+export interface GoalSuggestion {
+  area_slug: string;
+  title: string;
+  period: string;
 }

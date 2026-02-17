@@ -11,6 +11,65 @@ import (
 	"github.com/widia-io/widia-omni/internal/observability"
 )
 
+func (s *TaskService) syncGoalProgress(ctx context.Context, wsID uuid.UUID, t *domain.Task) {
+	logger := observability.FromContext(ctx)
+
+	goalID := t.GoalID
+	if goalID == nil && t.ProjectID != nil {
+		var gid *uuid.UUID
+		_ = s.db.QueryRow(ctx, `SELECT goal_id FROM projects WHERE id=$1 AND deleted_at IS NULL`, t.ProjectID).Scan(&gid)
+		goalID = gid
+	}
+	if goalID == nil {
+		return
+	}
+
+	var targetValue *float64
+	var unit *string
+	err := s.db.QueryRow(ctx,
+		`SELECT target_value, unit FROM goals WHERE id=$1 AND workspace_id=$2 AND deleted_at IS NULL`,
+		goalID, wsID).Scan(&targetValue, &unit)
+	if err != nil {
+		logger.Warn().Err(err).Msg("syncGoalProgress: fetch goal failed")
+		return
+	}
+
+	if targetValue != nil && (unit == nil || *unit != "tasks") {
+		return
+	}
+
+	var total, completed int
+	err = s.db.QueryRow(ctx, `
+		SELECT COUNT(*),
+		       COUNT(*) FILTER (WHERE is_completed = true)
+		FROM tasks
+		WHERE deleted_at IS NULL AND (
+			goal_id = $1
+			OR project_id IN (SELECT id FROM projects WHERE goal_id = $1 AND deleted_at IS NULL)
+		)
+	`, goalID).Scan(&total, &completed)
+	if err != nil {
+		logger.Warn().Err(err).Msg("syncGoalProgress: count tasks failed")
+		return
+	}
+
+	_, err = s.db.Exec(ctx, `
+		UPDATE goals
+		SET current_value = $3, target_value = $4, unit = 'tasks',
+			status = CASE WHEN $3 >= $4 AND $4 > 0 THEN 'completed'::goal_status
+			              WHEN status = 'completed' AND $3 < $4 THEN 'on_track'::goal_status
+			              ELSE status END,
+			completed_at = CASE WHEN $3 >= $4 AND $4 > 0 THEN now()
+			                    WHEN $3 < $4 THEN NULL
+			                    ELSE completed_at END,
+			updated_at = now()
+		WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+	`, goalID, wsID, float64(completed), float64(total))
+	if err != nil {
+		logger.Warn().Err(err).Msg("syncGoalProgress: update goal failed")
+	}
+}
+
 type TaskService struct {
 	db         *pgxpool.Pool
 	counterSvc *CounterService
@@ -21,11 +80,13 @@ func NewTaskService(db *pgxpool.Pool, counterSvc *CounterService) *TaskService {
 }
 
 var taskSelectCols = `t.id, t.workspace_id, t.area_id, t.goal_id, t.parent_id, t.section_id,
+	t.project_id, t.project_section_id,
 	t.title, t.description, t.priority, t.position,
 	t.is_completed, t.is_focus, t.due_date, t.duration_minutes,
 	t.completed_at, t.created_at, t.updated_at`
 
 var taskReturnCols = `id, workspace_id, area_id, goal_id, parent_id, section_id,
+	project_id, project_section_id,
 	title, description, priority, position,
 	is_completed, is_focus, due_date, duration_minutes,
 	completed_at, created_at, updated_at`
@@ -33,6 +94,7 @@ var taskReturnCols = `id, workspace_id, area_id, goal_id, parent_id, section_id,
 func scanTask(row interface{ Scan(dest ...any) error }) (domain.Task, error) {
 	var t domain.Task
 	err := row.Scan(&t.ID, &t.WorkspaceID, &t.AreaID, &t.GoalID, &t.ParentID, &t.SectionID,
+		&t.ProjectID, &t.ProjectSectionID,
 		&t.Title, &t.Description, &t.Priority, &t.Position,
 		&t.IsCompleted, &t.IsFocus, &t.DueDate, &t.DurationMinutes,
 		&t.CompletedAt, &t.CreatedAt, &t.UpdatedAt)
@@ -43,6 +105,7 @@ type TaskFilters struct {
 	AreaID      *uuid.UUID `json:"area_id"`
 	GoalID      *uuid.UUID `json:"goal_id"`
 	SectionID   *uuid.UUID `json:"section_id"`
+	ProjectID   *uuid.UUID `json:"project_id"`
 	ParentID    *uuid.UUID `json:"parent_id"`
 	LabelID     *uuid.UUID `json:"label_id"`
 	IsCompleted *bool      `json:"is_completed"`
@@ -69,6 +132,11 @@ func (s *TaskService) List(ctx context.Context, wsID uuid.UUID, f TaskFilters) (
 	if f.SectionID != nil {
 		query += fmt.Sprintf(` AND t.section_id = $%d`, idx)
 		args = append(args, *f.SectionID)
+		idx++
+	}
+	if f.ProjectID != nil {
+		query += fmt.Sprintf(` AND t.project_id = $%d`, idx)
+		args = append(args, *f.ProjectID)
 		idx++
 	}
 	if f.ParentID != nil {
@@ -158,17 +226,19 @@ func (s *TaskService) List(ctx context.Context, wsID uuid.UUID, f TaskFilters) (
 }
 
 type CreateTaskRequest struct {
-	AreaID          *uuid.UUID         `json:"area_id"`
-	GoalID          *uuid.UUID         `json:"goal_id"`
-	ParentID        *uuid.UUID         `json:"parent_id"`
-	SectionID       *uuid.UUID         `json:"section_id"`
-	Title           string             `json:"title"`
-	Description     *string            `json:"description"`
-	Priority        domain.TaskPriority `json:"priority"`
-	DueDate         *string            `json:"due_date"`
-	IsFocus         bool               `json:"is_focus"`
-	DurationMinutes *int               `json:"duration_minutes"`
-	LabelIDs        []uuid.UUID        `json:"label_ids"`
+	AreaID           *uuid.UUID          `json:"area_id"`
+	GoalID           *uuid.UUID          `json:"goal_id"`
+	ParentID         *uuid.UUID          `json:"parent_id"`
+	SectionID        *uuid.UUID          `json:"section_id"`
+	ProjectID        *uuid.UUID          `json:"project_id"`
+	ProjectSectionID *uuid.UUID          `json:"project_section_id"`
+	Title            string              `json:"title"`
+	Description      *string             `json:"description"`
+	Priority         domain.TaskPriority `json:"priority"`
+	DueDate          *string             `json:"due_date"`
+	IsFocus          bool                `json:"is_focus"`
+	DurationMinutes  *int                `json:"duration_minutes"`
+	LabelIDs         []uuid.UUID         `json:"label_ids"`
 }
 
 func (s *TaskService) Create(ctx context.Context, wsID uuid.UUID, limits *domain.EntitlementLimits, req CreateTaskRequest) (*domain.Task, error) {
@@ -181,15 +251,26 @@ func (s *TaskService) Create(ctx context.Context, wsID uuid.UUID, limits *domain
 		return nil, errors.New("daily task limit reached")
 	}
 
+	if req.AreaID == nil && req.ProjectID != nil {
+		var areaID *uuid.UUID
+		_ = s.db.QueryRow(ctx, `SELECT area_id FROM projects WHERE id=$1 AND deleted_at IS NULL`, req.ProjectID).Scan(&areaID)
+		if areaID != nil {
+			req.AreaID = areaID
+		}
+	}
+
 	var t domain.Task
 	err = s.db.QueryRow(ctx, `
 		INSERT INTO tasks (workspace_id, area_id, goal_id, parent_id, section_id,
+			project_id, project_section_id,
 			title, description, priority, due_date, is_focus, duration_minutes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING `+taskReturnCols,
 		wsID, req.AreaID, req.GoalID, req.ParentID, req.SectionID,
+		req.ProjectID, req.ProjectSectionID,
 		req.Title, req.Description, req.Priority, req.DueDate, req.IsFocus, req.DurationMinutes,
 	).Scan(&t.ID, &t.WorkspaceID, &t.AreaID, &t.GoalID, &t.ParentID, &t.SectionID,
+		&t.ProjectID, &t.ProjectSectionID,
 		&t.Title, &t.Description, &t.Priority, &t.Position,
 		&t.IsCompleted, &t.IsFocus, &t.DueDate, &t.DurationMinutes,
 		&t.CompletedAt, &t.CreatedAt, &t.UpdatedAt)
@@ -209,28 +290,32 @@ func (s *TaskService) Create(ctx context.Context, wsID uuid.UUID, limits *domain
 }
 
 type UpdateTaskRequest struct {
-	AreaID          *uuid.UUID          `json:"area_id"`
-	GoalID          *uuid.UUID          `json:"goal_id"`
-	SectionID       *uuid.UUID          `json:"section_id"`
-	Title           string              `json:"title"`
-	Description     *string             `json:"description"`
-	Priority        domain.TaskPriority `json:"priority"`
-	DueDate         *string             `json:"due_date"`
-	DurationMinutes *int                `json:"duration_minutes"`
-	LabelIDs        *[]uuid.UUID        `json:"label_ids"`
+	AreaID           *uuid.UUID          `json:"area_id"`
+	GoalID           *uuid.UUID          `json:"goal_id"`
+	SectionID        *uuid.UUID          `json:"section_id"`
+	ProjectID        *uuid.UUID          `json:"project_id"`
+	ProjectSectionID *uuid.UUID          `json:"project_section_id"`
+	Title            string              `json:"title"`
+	Description      *string             `json:"description"`
+	Priority         domain.TaskPriority `json:"priority"`
+	DueDate          *string             `json:"due_date"`
+	DurationMinutes  *int                `json:"duration_minutes"`
+	LabelIDs         *[]uuid.UUID        `json:"label_ids"`
 }
 
 func (s *TaskService) Update(ctx context.Context, wsID, id uuid.UUID, req UpdateTaskRequest) (*domain.Task, error) {
 	var t domain.Task
 	err := s.db.QueryRow(ctx, `
 		UPDATE tasks
-		SET area_id = $3, goal_id = $4, section_id = $5, title = $6, description = $7,
-			priority = $8, due_date = $9, duration_minutes = $10, updated_at = now()
+		SET area_id = $3, goal_id = $4, section_id = $5, project_id = $6, project_section_id = $7,
+			title = $8, description = $9, priority = $10, due_date = $11, duration_minutes = $12,
+			updated_at = now()
 		WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 		RETURNING `+taskReturnCols,
-		id, wsID, req.AreaID, req.GoalID, req.SectionID, req.Title, req.Description,
-		req.Priority, req.DueDate, req.DurationMinutes,
+		id, wsID, req.AreaID, req.GoalID, req.SectionID, req.ProjectID, req.ProjectSectionID,
+		req.Title, req.Description, req.Priority, req.DueDate, req.DurationMinutes,
 	).Scan(&t.ID, &t.WorkspaceID, &t.AreaID, &t.GoalID, &t.ParentID, &t.SectionID,
+		&t.ProjectID, &t.ProjectSectionID,
 		&t.Title, &t.Description, &t.Priority, &t.Position,
 		&t.IsCompleted, &t.IsFocus, &t.DueDate, &t.DurationMinutes,
 		&t.CompletedAt, &t.CreatedAt, &t.UpdatedAt)
@@ -269,6 +354,7 @@ func (s *TaskService) Complete(ctx context.Context, wsID, id uuid.UUID) (*domain
 	if err != nil {
 		return nil, err
 	}
+	s.syncGoalProgress(ctx, wsID, t)
 	return t, nil
 }
 
@@ -280,6 +366,7 @@ func (s *TaskService) Reopen(ctx context.Context, wsID, id uuid.UUID) (*domain.T
 	if err != nil {
 		return nil, err
 	}
+	s.syncGoalProgress(ctx, wsID, t)
 	return t, nil
 }
 

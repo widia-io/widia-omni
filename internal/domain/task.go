@@ -22,6 +22,8 @@ type Task struct {
 	GoalID          *uuid.UUID   `json:"goal_id,omitempty"`
 	ParentID        *uuid.UUID   `json:"parent_id,omitempty"`
 	SectionID       *uuid.UUID   `json:"section_id,omitempty"`
+	ProjectID       *uuid.UUID   `json:"project_id,omitempty"`
+	ProjectSectionID *uuid.UUID  `json:"project_section_id,omitempty"`
 	Title           string       `json:"title"`
 	Description     *string      `json:"description,omitempty"`
 	Priority        TaskPriority `json:"priority"`
