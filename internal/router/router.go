@@ -55,7 +55,6 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	scoreSvc := service.NewScoreService(db, rdb)
 	notifSvc := service.NewNotificationService(db)
 	auditSvc := service.NewAuditService(db)
-	_ = auditSvc // used by workers and future middleware
 	exportSvc := service.NewExportService(db)
 	financeSvc := service.NewFinanceService(db, counterSvc)
 	llmClient := llm.NewClient(cfg.OpenRouterAPIKey, cfg.OpenRouterModel)
@@ -77,7 +76,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	taskH := handler.NewTaskHandler(taskSvc)
 	billingH := handler.NewBillingHandler(billingSvc)
 	webhookH := handler.NewStripeWebhookHandler(billingSvc)
-	onboardingH := handler.NewOnboardingHandler(onboardingSvc)
+	onboardingH := handler.NewOnboardingHandler(onboardingSvc, projectSvc, taskSvc, auditSvc)
 	dashH := handler.NewDashboardHandler(dashSvc)
 	journalH := handler.NewJournalHandler(journalSvc)
 	scoreH := handler.NewScoreHandler(scoreSvc)
@@ -233,6 +232,9 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 			r.Post("/areas", onboardingH.SetupAreas)
 			r.Post("/goals", onboardingH.SetupGoals)
 			r.Post("/habits", onboardingH.SetupHabits)
+			r.Post("/habits/skip", onboardingH.SkipHabits)
+			r.Post("/project", onboardingH.SetupProject)
+			r.Post("/first-task", onboardingH.SetupFirstTask)
 			r.Post("/complete", onboardingH.Complete)
 		})
 
@@ -332,6 +334,7 @@ func New(cfg *config.Config, logger zerolog.Logger, db *pgxpool.Pool, rdb *redis
 	r.Route("/admin", func(r chi.Router) {
 		r.Use(middleware.AdminAuth(cfg.SupabaseServiceKey))
 		r.Get("/metrics", adminH.GetMetrics)
+		r.Get("/onboarding/funnel", adminH.GetOnboardingFunnel)
 		r.Get("/users", adminH.ListUsers)
 		r.Get("/users/{id}", adminH.GetUser)
 		r.Get("/workspaces/{id}/usage", adminH.GetWorkspaceUsage)

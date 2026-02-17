@@ -308,6 +308,8 @@ components:
           type: integer
         habits_count:
           type: integer
+        projects_count:
+          type: integer
         members_count:
           type: integer
         tasks_created_today:
@@ -326,6 +328,8 @@ components:
         max_goals:
           type: integer
         max_habits:
+          type: integer
+        max_projects:
           type: integer
         max_members:
           type: integer
@@ -492,6 +496,66 @@ components:
           type: string
           format: date-time
 
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: string
+          format: uuid
+        area_id:
+          type: string
+          format: uuid
+          nullable: true
+        goal_id:
+          type: string
+          format: uuid
+          nullable: true
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [planning, active, paused, completed, cancelled]
+        color:
+          type: string
+        icon:
+          type: string
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        target_date:
+          type: string
+          format: date
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_archived:
+          type: boolean
+        archived_at:
+          type: string
+          format: date-time
+          nullable: true
+        sort_order:
+          type: integer
+        tasks_total:
+          type: integer
+        tasks_completed:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
     Goal:
       type: object
       properties:
@@ -632,6 +696,22 @@ components:
           format: uuid
           nullable: true
         goal_id:
+          type: string
+          format: uuid
+          nullable: true
+        parent_id:
+          type: string
+          format: uuid
+          nullable: true
+        section_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_id:
+          type: string
+          format: uuid
+          nullable: true
+        project_section_id:
           type: string
           format: uuid
           nullable: true
@@ -1007,6 +1087,8 @@ components:
         areas_count:
           type: integer
         active_goals:
+          type: integer
+        active_projects:
           type: integer
         today_tasks:
           type: integer
@@ -2245,6 +2327,11 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: project_id
+          in: query
+          schema:
+            type: string
+            format: uuid
         - name: is_completed
           in: query
           schema:
@@ -2284,6 +2371,12 @@ paths:
                   type: string
                   format: uuid
                 goal_id:
+                  type: string
+                  format: uuid
+                project_id:
+                  type: string
+                  format: uuid
+                project_section_id:
                   type: string
                   format: uuid
                 title:
@@ -2330,6 +2423,12 @@ paths:
                   type: string
                   format: uuid
                 goal_id:
+                  type: string
+                  format: uuid
+                project_id:
+                  type: string
+                  format: uuid
+                project_section_id:
                   type: string
                   format: uuid
                 title:
@@ -2700,8 +2799,22 @@ paths:
                 properties:
                   completed:
                     type: boolean
+                  habits_state:
+                    type: string
+                    enum: [pending, completed, skipped]
                   steps:
                     type: object
+                    properties:
+                      areas:
+                        type: boolean
+                      goals:
+                        type: boolean
+                      habits:
+                        type: boolean
+                      project:
+                        type: boolean
+                      first_task:
+                        type: boolean
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -2729,10 +2842,20 @@ paths:
                         type: string
                       color:
                         type: string
+                      weight:
+                        type: number
+                      sort_order:
+                        type: integer
               required: [areas]
       responses:
-        '200':
+        '201':
           description: Areas created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LifeArea'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -2751,9 +2874,27 @@ paths:
                   type: array
                   items:
                     type: object
+                    properties:
+                      area_id:
+                        type: string
+                        format: uuid
+                      title:
+                        type: string
+                      period:
+                        type: string
+                        enum: [yearly, quarterly, monthly, weekly]
+                      start_date:
+                        type: string
+                        format: date
+                      end_date:
+                        type: string
+                        format: date
+                    required: [area_id, title, period]
       responses:
-        '200':
+        '201':
           description: Goals created
+        '422':
+          description: Invalid onboarding goal payload
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -2772,11 +2913,118 @@ paths:
                   type: array
                   items:
                     type: object
+                    properties:
+                      area_id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      color:
+                        type: string
+                      frequency:
+                        type: string
+                        enum: [daily, weekly, custom]
+                      target_per_week:
+                        type: integer
+                    required: [name]
       responses:
-        '200':
+        '201':
           description: Habits created
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/onboarding/habits/skip:
+    post:
+      tags: [Onboarding]
+      summary: Skip habits step
+      responses:
+        '200':
+          description: Habits skipped
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/onboarding/project:
+    post:
+      tags: [Onboarding]
+      summary: Create onboarding project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                area_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                goal_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                title:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                color:
+                  type: string
+                icon:
+                  type: string
+                start_date:
+                  type: string
+                  format: date
+                  nullable: true
+                target_date:
+                  type: string
+                  format: date
+                  nullable: true
+              required: [title]
+      responses:
+        '201':
+          description: Created onboarding project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/onboarding/first-task:
+    post:
+      tags: [Onboarding]
+      summary: Create first onboarding task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                title:
+                  type: string
+                description:
+                  type: string
+                due_date:
+                  type: string
+                  format: date-time
+              required: [project_id, title]
+      responses:
+        '201':
+          description: Created first onboarding task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/onboarding/complete:
     post:
@@ -2785,6 +3033,19 @@ paths:
       responses:
         '200':
           description: Onboarding completed
+        '422':
+          description: Onboarding incomplete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  missing_steps:
+                    type: array
+                    items:
+                      type: string
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -3170,6 +3431,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminMetrics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /admin/onboarding/funnel:
+    get:
+      tags: [Admin]
+      summary: Get onboarding funnel metrics
+      security:
+        - serviceKeyAuth: []
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+      responses:
+        '200':
+          description: Onboarding funnel metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  window_days:
+                    type: integer
+                  started:
+                    type: integer
+                  areas_completed:
+                    type: integer
+                  goals_completed:
+                    type: integer
+                  habits_completed:
+                    type: integer
+                  habits_skipped:
+                    type: integer
+                  habits_done:
+                    type: integer
+                  project_completed:
+                    type: integer
+                  first_task_completed:
+                    type: integer
+                  completed:
+                    type: integer
+                  conversion_to_completed:
+                    type: number
+                  conversion_to_areas:
+                    type: number
+                  conversion_to_goals:
+                    type: number
+                  conversion_to_habits_done:
+                    type: number
         '401':
           $ref: '#/components/responses/Unauthorized'
 

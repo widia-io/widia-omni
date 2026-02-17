@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import type { Project } from "@/types/api";
+import type { Project, ProjectSection } from "@/types/api";
 
 export function useProjects(params?: Record<string, string>) {
   return useQuery({
@@ -14,6 +14,14 @@ export function useProject(id: string) {
     queryKey: ["projects", id],
     queryFn: () => api<Project>(`/api/v1/projects/${id}`),
     enabled: !!id,
+  });
+}
+
+export function useProjectSections(projectId?: string) {
+  return useQuery({
+    queryKey: ["projects", projectId, "sections"],
+    queryFn: () => api<ProjectSection[]>(`/api/v1/projects/${projectId}/sections`),
+    enabled: !!projectId,
   });
 }
 

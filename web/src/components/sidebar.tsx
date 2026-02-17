@@ -1,6 +1,7 @@
 import { Link, NavLink, useLocation } from "react-router";
 import {
   LayoutDashboard,
+  Grid3X3,
   Target,
   Activity,
   DollarSign,
@@ -21,19 +22,21 @@ import { Logo } from "@/components/logo";
 
 const navItems = [
   { icon: LayoutDashboard, to: "/dashboard", label: "Dashboard" },
+  { icon: Grid3X3, to: "/areas", label: "Áreas" },
   { icon: Target, to: "/goals", label: "Metas" },
   { icon: FolderKanban, to: "/projects", label: "Projetos" },
+  { icon: Calendar, to: "/tasks", label: "Tarefas" },
   { icon: Activity, to: "/habits", label: "Hábitos" },
   { icon: DollarSign, to: "/finances", label: "Finanças" },
-  { icon: Calendar, to: "/tasks", label: "Tarefas" },
   { icon: PenLine, to: "/journal", label: "Journal" },
 ] as const;
 
 const mobileNavItems = [
   { icon: LayoutDashboard, to: "/dashboard", label: "Dashboard" },
-  { icon: Calendar, to: "/tasks", label: "Tarefas" },
+  { icon: Grid3X3, to: "/areas", label: "Áreas" },
   { icon: Target, to: "/goals", label: "Metas" },
   { icon: FolderKanban, to: "/projects", label: "Projetos" },
+  { icon: Calendar, to: "/tasks", label: "Tarefas" },
   { icon: Activity, to: "/habits", label: "Hábitos" },
   { icon: DollarSign, to: "/finances", label: "Finanças" },
   { icon: Settings, to: "/settings", label: "Ajustes" },
@@ -158,7 +161,7 @@ export function Sidebar() {
       </TooltipProvider>
 
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-bg-card/95 px-2 pb-2 pt-1 backdrop-blur md:hidden">
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-8 gap-1">
           {mobileNavItems.map(({ icon: Icon, to, label }) => (
             <NavLink
               key={to}

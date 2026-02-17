@@ -12,6 +12,7 @@ import {
 import type { CreateTaskInput } from "@/hooks/use-tasks";
 import { useAreas } from "@/hooks/use-areas";
 import { useGoals } from "@/hooks/use-goals";
+import { useProjects, useProjectSections } from "@/hooks/use-projects";
 import { useLabels } from "@/hooks/use-labels";
 import { useSections, useCreateSection } from "@/hooks/use-sections";
 import { LabelPicker } from "@/components/tasks/label-picker";
@@ -539,7 +540,7 @@ function InlineQuickAdd({
 // ─── Task Row ─────────────────────────────────────────
 
 function TaskRow({
-  task, childCount, isSubtask, isExpanded, onToggleExpand, onEdit, onAddSubtask, isRecent,
+  task, childCount, isSubtask, isExpanded, onToggleExpand, onEdit, onAddSubtask, isRecent, projectName,
 }: {
   task: Task;
   childCount: number;
@@ -549,6 +550,7 @@ function TaskRow({
   onEdit: () => void;
   onAddSubtask?: () => void;
   isRecent?: boolean;
+  projectName?: string;
 }) {
   const deleteTask = useDeleteTask();
   const completeTask = useCompleteTask();
@@ -571,7 +573,7 @@ function TaskRow({
   const dueInfo = task.due_date ? formatDueDate(task.due_date) : null;
 
   const hasLabels = (task.labels ?? []).length > 0;
-  const hasMeta = dueInfo || hasLabels || (task.duration_minutes && !task.is_completed);
+  const hasMeta = dueInfo || hasLabels || (task.duration_minutes && !task.is_completed) || projectName;
 
   return (
     <div
@@ -608,6 +610,13 @@ function TaskRow({
         {/* Meta row: date + duration + labels */}
         {hasMeta && (
           <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            {projectName && (
+              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-accent-blue/25 bg-accent-blue/10 px-2 py-0.5 text-[11px] text-accent-blue">
+                <Folder className="h-3 w-3" />
+                {projectName}
+              </span>
+            )}
+
             {/* Due date */}
             {dueInfo && (
               dueInfo.badge ? (
@@ -852,6 +861,7 @@ function TaskEditDialog({
   const completeTask = useCompleteTask();
   const reopenTask = useReopenTask();
   const { data: areas } = useAreas();
+  const { data: projects } = useProjects();
   const [title, setTitle] = useState(task?.title ?? "");
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? "medium");
   const [dueDate, setDueDate] = useState(task?.due_date ? task.due_date.slice(0, 10) : "");
@@ -859,6 +869,8 @@ function TaskEditDialog({
   const [areaId, setAreaId] = useState(task?.area_id ?? "");
   const [goalId, setGoalId] = useState(task?.goal_id ?? "");
   const [sectionId, setSectionId] = useState(task?.section_id ?? "");
+  const [projectId, setProjectId] = useState(task?.project_id ?? "");
+  const [projectSectionId, setProjectSectionId] = useState(task?.project_section_id ?? "");
   const [duration, setDuration] = useState(task?.duration_minutes ? String(task.duration_minutes) : "");
   const [labelIds, setLabelIds] = useState<string[]>(task?.labels?.map((l) => l.id) ?? []);
   const [labelMgrOpen, setLabelMgrOpen] = useState(false);
@@ -869,6 +881,7 @@ function TaskEditDialog({
   const { data: goals } = useGoals(goalParams);
   const sectionParams = areaId ? { area_id: areaId } : undefined;
   const { data: sections } = useSections(sectionParams);
+  const { data: projectSections } = useProjectSections(projectId || undefined);
 
   const area = areas?.find((a) => a.id === areaId);
   const section = sections?.find((s) => s.id === sectionId);
@@ -882,6 +895,8 @@ function TaskEditDialog({
       ...(description && { description }),
       ...(areaId && { area_id: areaId }),
       ...(goalId && { goal_id: goalId }),
+      ...(projectId && { project_id: projectId }),
+      ...(projectSectionId && { project_section_id: projectSectionId }),
       ...(!parentId && sectionId && { section_id: sectionId }),
       ...(parentId && { parent_id: parentId }),
       ...(duration && { duration_minutes: Number(duration) }),
@@ -1010,6 +1025,53 @@ function TaskEditDialog({
               </Select>
             </SidebarField>
 
+            {!parentId && (
+              <SidebarField label="Projeto">
+                <Select
+                  value={projectId || "__none__"}
+                  onValueChange={(v) => {
+                    if (v === "__none__") {
+                      setProjectId("");
+                      setProjectSectionId("");
+                      return;
+                    }
+                    setProjectId(v);
+                    setProjectSectionId("");
+
+                    const selectedProject = (projects ?? []).find((project) => project.id === v);
+                    if (selectedProject?.area_id) {
+                      setAreaId(selectedProject.area_id);
+                    }
+                    if (selectedProject?.goal_id) {
+                      setGoalId(selectedProject.goal_id);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8 border-border/50 text-xs"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
+                    {(projects ?? []).map((project) => (
+                      <SelectItem key={project.id} value={project.id}>{project.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </SidebarField>
+            )}
+
+            {projectId && !parentId && (
+              <SidebarField label="Coluna do projeto">
+                <Select value={projectSectionId || "__none__"} onValueChange={(v) => setProjectSectionId(v === "__none__" ? "" : v)}>
+                  <SelectTrigger className="h-8 border-border/50 text-xs"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nenhuma</SelectItem>
+                    {(projectSections ?? []).map((section) => (
+                      <SelectItem key={section.id} value={section.id}>{section.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </SidebarField>
+            )}
+
             {areaId && (
               <SidebarField label="Meta">
                 <Select value={goalId} onValueChange={setGoalId}>
@@ -1134,6 +1196,7 @@ export function Component() {
   const [filter, setFilter] = useState<Record<string, string>>({});
   const { data: tasks, isLoading } = useTasks(filter);
   const { data: areas } = useAreas();
+  const { data: projects } = useProjects();
   const { data: labels } = useLabels();
   const sectionParams = filter.area_id ? { area_id: filter.area_id } : undefined;
   const { data: sections } = useSections(sectionParams);
@@ -1280,6 +1343,7 @@ export function Component() {
 
   const pendingCount = topLevel.filter((t) => !t.is_completed).length;
   const completedCount = topLevel.filter((t) => t.is_completed).length;
+  const projectMap = new Map((projects ?? []).map((project) => [project.id, project.title]));
 
   // ─── Loading ──────────────────────────────────────
 
@@ -1313,6 +1377,7 @@ export function Component() {
           onEdit={() => openEdit(task)}
           onAddSubtask={() => openCreate(task.id)}
           isRecent={recentIds.has(task.id)}
+          projectName={task.project_id ? projectMap.get(task.project_id) : undefined}
         />
         {expanded && children.length > 0 && (
           <div>
@@ -1373,6 +1438,22 @@ export function Component() {
                 isActive={filter.area_id === a.id}
                 activeClass={AREA_CHIP_ACTIVE[a.color] ?? "bg-accent-orange/10 text-accent-orange border-accent-orange/20"}
                 onClick={() => toggleFilter("area_id", a.id)}
+              />
+            ))}
+          </>
+        )}
+
+        {(projects ?? []).length > 0 && (
+          <>
+            <span className="mx-0.5 h-4 w-px bg-border" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Projetos</span>
+            {(projects ?? []).map((project) => (
+              <FilterChip
+                key={project.id}
+                label={project.title}
+                isActive={filter.project_id === project.id}
+                activeClass="bg-accent-blue/10 text-accent-blue border-accent-blue/20"
+                onClick={() => toggleFilter("project_id", project.id)}
               />
             ))}
           </>

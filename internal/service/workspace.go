@@ -107,12 +107,12 @@ type WorkspaceUsage struct {
 func (s *WorkspaceService) GetUsage(ctx context.Context, wsID uuid.UUID) (*WorkspaceUsage, error) {
 	var c domain.WorkspaceCounter
 	err := s.db.QueryRow(ctx, `
-		SELECT workspace_id, areas_count, goals_count, habits_count, members_count,
+		SELECT workspace_id, areas_count, goals_count, habits_count, projects_count, members_count,
 			   tasks_created_today, tasks_today_date, transactions_month_count,
 			   transactions_month, storage_bytes_used, updated_at
 		FROM workspace_counters WHERE workspace_id = $1
 	`, wsID).Scan(
-		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount, &c.MembersCount,
+		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount, &c.ProjectsCount, &c.MembersCount,
 		&c.TasksCreatedToday, &c.TasksTodayDate, &c.TransactionsMonthCount,
 		&c.TransactionsMonth, &c.StorageBytesUsed, &c.UpdatedAt,
 	)

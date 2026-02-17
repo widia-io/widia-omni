@@ -114,14 +114,14 @@ type UpdateAreaRequest struct {
 	Icon     string  `json:"icon"`
 	Color    string  `json:"color"`
 	Weight   float64 `json:"weight"`
-	IsActive bool    `json:"is_active"`
+	IsActive *bool   `json:"is_active"`
 }
 
 func (s *AreaService) Update(ctx context.Context, wsID, id uuid.UUID, req UpdateAreaRequest) (*domain.LifeArea, error) {
 	var a domain.LifeArea
 	err := s.db.QueryRow(ctx, `
 		UPDATE life_areas
-		SET name = $3, icon = $4, color = $5, weight = $6, is_active = $7, updated_at = now()
+		SET name = $3, icon = $4, color = $5, weight = $6, is_active = COALESCE($7::boolean, is_active), updated_at = now()
 		WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 		RETURNING id, workspace_id, name, slug, icon, color, weight, sort_order, is_active,
 				  created_at, updated_at

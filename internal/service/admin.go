@@ -25,6 +25,23 @@ type AdminMetrics struct {
 	ActiveSubs      map[string]int `json:"active_subscriptions"`
 }
 
+type OnboardingFunnel struct {
+	WindowDays             int     `json:"window_days"`
+	Started                int     `json:"started"`
+	AreasCompleted         int     `json:"areas_completed"`
+	GoalsCompleted         int     `json:"goals_completed"`
+	HabitsCompleted        int     `json:"habits_completed"`
+	HabitsSkipped          int     `json:"habits_skipped"`
+	HabitsDone             int     `json:"habits_done"`
+	ProjectCompleted       int     `json:"project_completed"`
+	FirstTaskCompleted     int     `json:"first_task_completed"`
+	Completed              int     `json:"completed"`
+	ConversionToCompleted  float64 `json:"conversion_to_completed"`
+	ConversionToAreas      float64 `json:"conversion_to_areas"`
+	ConversionToGoals      float64 `json:"conversion_to_goals"`
+	ConversionToHabitsDone float64 `json:"conversion_to_habits_done"`
+}
+
 func (s *AdminService) GetMetrics(ctx context.Context) (*AdminMetrics, error) {
 	m := &AdminMetrics{ActiveSubs: make(map[string]int)}
 
@@ -56,6 +73,71 @@ func (s *AdminService) GetMetrics(ctx context.Context) (*AdminMetrics, error) {
 		m.ActiveSubs[tier] = count
 	}
 	return m, nil
+}
+
+func (s *AdminService) GetOnboardingFunnel(ctx context.Context, days int) (*OnboardingFunnel, error) {
+	if days <= 0 {
+		days = 30
+	}
+	if days > 365 {
+		days = 365
+	}
+
+	actions := []string{
+		"onboarding_started",
+		"onboarding_areas_completed",
+		"onboarding_goals_completed",
+		"onboarding_habits_completed",
+		"onboarding_habits_skipped",
+		"onboarding_project_completed",
+		"onboarding_first_task_completed",
+		"onboarding_completed",
+	}
+
+	rows, err := s.db.Query(ctx, `
+		SELECT action, COUNT(DISTINCT user_id)
+		FROM audit_log
+		WHERE action = ANY($1)
+		  AND created_at >= now() - ($2 || ' days')::interval
+		GROUP BY action
+	`, actions, days)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	counts := make(map[string]int, len(actions))
+	for rows.Next() {
+		var action string
+		var count int
+		if err := rows.Scan(&action, &count); err != nil {
+			return nil, err
+		}
+		counts[action] = count
+	}
+
+	funnel := &OnboardingFunnel{
+		WindowDays:         days,
+		Started:            counts["onboarding_started"],
+		AreasCompleted:     counts["onboarding_areas_completed"],
+		GoalsCompleted:     counts["onboarding_goals_completed"],
+		HabitsCompleted:    counts["onboarding_habits_completed"],
+		HabitsSkipped:      counts["onboarding_habits_skipped"],
+		ProjectCompleted:   counts["onboarding_project_completed"],
+		FirstTaskCompleted: counts["onboarding_first_task_completed"],
+		Completed:          counts["onboarding_completed"],
+	}
+	funnel.HabitsDone = funnel.HabitsCompleted + funnel.HabitsSkipped
+
+	if funnel.Started > 0 {
+		started := float64(funnel.Started)
+		funnel.ConversionToCompleted = float64(funnel.Completed) / started
+		funnel.ConversionToAreas = float64(funnel.AreasCompleted) / started
+		funnel.ConversionToGoals = float64(funnel.GoalsCompleted) / started
+		funnel.ConversionToHabitsDone = float64(funnel.HabitsDone) / started
+	}
+
+	return funnel, nil
 }
 
 type AdminUser struct {
@@ -127,12 +209,12 @@ func (s *AdminService) GetUser(ctx context.Context, userID uuid.UUID) (*AdminUse
 
 	var c domain.WorkspaceCounter
 	err = s.db.QueryRow(ctx, `
-		SELECT workspace_id, areas_count, goals_count, habits_count, members_count,
+		SELECT workspace_id, areas_count, goals_count, habits_count, projects_count, members_count,
 			   tasks_created_today, tasks_today_date, transactions_month_count,
 			   transactions_month, storage_bytes_used, updated_at
 		FROM workspace_counters WHERE workspace_id = $1
 	`, u.WorkspaceID).Scan(
-		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount, &c.MembersCount,
+		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount, &c.ProjectsCount, &c.MembersCount,
 		&c.TasksCreatedToday, &c.TasksTodayDate, &c.TransactionsMonthCount,
 		&c.TransactionsMonth, &c.StorageBytesUsed, &c.UpdatedAt,
 	)
@@ -159,12 +241,12 @@ func (s *AdminService) GetWorkspaceUsage(ctx context.Context, wsID uuid.UUID) (*
 
 	var c domain.WorkspaceCounter
 	err := s.db.QueryRow(ctx, `
-		SELECT workspace_id, areas_count, goals_count, habits_count, members_count,
+		SELECT workspace_id, areas_count, goals_count, habits_count, projects_count, members_count,
 			   tasks_created_today, tasks_today_date, transactions_month_count,
 			   transactions_month, storage_bytes_used, updated_at
 		FROM workspace_counters WHERE workspace_id = $1
 	`, wsID).Scan(
-		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount, &c.MembersCount,
+		&c.WorkspaceID, &c.AreasCount, &c.GoalsCount, &c.HabitsCount, &c.ProjectsCount, &c.MembersCount,
 		&c.TasksCreatedToday, &c.TasksTodayDate, &c.TransactionsMonthCount,
 		&c.TransactionsMonth, &c.StorageBytesUsed, &c.UpdatedAt,
 	)

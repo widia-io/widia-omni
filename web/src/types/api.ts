@@ -102,6 +102,7 @@ export interface WorkspaceCounters {
   areas_count: number;
   goals_count: number;
   habits_count: number;
+  projects_count: number;
   members_count: number;
   tasks_created_today: number;
   transactions_month_count: number;
@@ -112,6 +113,7 @@ export interface EntitlementLimits {
   max_areas: number;
   max_goals: number;
   max_habits: number;
+  max_projects: number;
   max_members: number;
   max_tasks_per_day: number;
   max_transactions_per_month: number;
@@ -492,6 +494,7 @@ export interface FinanceSummary {
 export interface DashboardData {
   areas_count: number;
   active_goals: number;
+  active_projects: number;
   today_tasks: number;
   completed_today: number;
   habits_today: number;
@@ -504,10 +507,13 @@ export interface DashboardData {
 // ─── Onboarding ──────────────────────────────────────
 export interface OnboardingStatus {
   completed: boolean;
+  habits_state: "pending" | "completed" | "skipped";
   steps: {
     areas: boolean;
     goals: boolean;
     habits: boolean;
+    project: boolean;
+    first_task: boolean;
   };
 }
 

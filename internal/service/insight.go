@@ -25,13 +25,15 @@ func NewInsightService(db *pgxpool.Pool, rdb *redis.Client, llmClient *llm.Clien
 }
 
 type insightData struct {
-	Areas       []insightArea       `json:"areas"`
-	LifeScore   *insightLifeScore   `json:"life_score"`
-	Journal     []insightJournal    `json:"journal"`
-	Habits      []insightHabit      `json:"habits"`
-	Goals       []insightGoal       `json:"goals"`
-	Tasks       insightTasks        `json:"tasks"`
-	Finance     *insightFinance     `json:"finance,omitempty"`
+	Areas               []insightArea     `json:"areas"`
+	LifeScore           *insightLifeScore `json:"life_score"`
+	Journal             []insightJournal  `json:"journal"`
+	Habits              []insightHabit    `json:"habits"`
+	Goals               []insightGoal     `json:"goals"`
+	Projects            []insightProject  `json:"projects"`
+	GoalsWithoutProject int               `json:"goals_without_project"`
+	Tasks               insightTasks      `json:"tasks"`
+	Finance             *insightFinance   `json:"finance,omitempty"`
 }
 
 type insightArea struct {
@@ -68,6 +70,17 @@ type insightGoal struct {
 	ProgressPct float64 `json:"progress_pct"`
 	DaysLeft    int     `json:"days_left"`
 	Status      string  `json:"status"`
+}
+
+type insightProject struct {
+	Title          string  `json:"title"`
+	AreaName       string  `json:"area_name"`
+	GoalName       string  `json:"goal_name"`
+	Status         string  `json:"status"`
+	TasksTotal     int     `json:"tasks_total"`
+	TasksCompleted int     `json:"tasks_completed"`
+	OverdueTasks   int     `json:"overdue_tasks"`
+	ProgressPct    float64 `json:"progress_pct"`
 }
 
 type insightTasks struct {
@@ -301,6 +314,56 @@ func (s *InsightService) gatherInsightData(ctx context.Context, wsID uuid.UUID, 
 		data.Goals = append(data.Goals, g)
 	}
 
+	// Projects
+	projectRows, err := s.db.Query(ctx, `
+		SELECT p.title,
+		       COALESCE(la.name, 'Sem área') AS area_name,
+		       COALESCE(g.title, 'Sem meta') AS goal_name,
+		       p.status,
+		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL) AS tasks_total,
+		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.is_completed = true) AS tasks_completed,
+		       (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.is_completed = false AND t.due_date < CURRENT_DATE) AS overdue_tasks
+		FROM projects p
+		LEFT JOIN life_areas la ON la.id = p.area_id
+		LEFT JOIN goals g ON g.id = p.goal_id
+		WHERE p.workspace_id = $1 AND p.deleted_at IS NULL AND p.is_archived = false
+		ORDER BY p.created_at DESC
+		LIMIT 20
+	`, wsID)
+	if err != nil {
+		return nil, err
+	}
+	defer projectRows.Close()
+	for projectRows.Next() {
+		var p insightProject
+		if err := projectRows.Scan(&p.Title, &p.AreaName, &p.GoalName, &p.Status, &p.TasksTotal, &p.TasksCompleted, &p.OverdueTasks); err != nil {
+			return nil, err
+		}
+		if p.TasksTotal > 0 {
+			p.ProgressPct = float64(p.TasksCompleted) / float64(p.TasksTotal) * 100
+		}
+		data.Projects = append(data.Projects, p)
+	}
+
+	// Active goals without an active project attached
+	if err := s.db.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM goals g
+		WHERE g.workspace_id = $1
+		  AND g.deleted_at IS NULL
+		  AND g.status NOT IN ('completed', 'cancelled')
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM projects p
+			WHERE p.goal_id = g.id
+			  AND p.deleted_at IS NULL
+			  AND p.is_archived = false
+			  AND p.status IN ('planning', 'active')
+		  )
+	`, wsID).Scan(&data.GoalsWithoutProject); err != nil {
+		return nil, err
+	}
+
 	// Tasks
 	s.db.QueryRow(ctx, `
 		SELECT
@@ -434,6 +497,17 @@ Guidelines:
 		}
 		sb.WriteString("\n")
 	}
+
+	// Projects
+	if len(data.Projects) > 0 {
+		sb.WriteString("## Projects\n")
+		for _, p := range data.Projects {
+			sb.WriteString(fmt.Sprintf("- %s (%s | %s): status=%s, progress=%.0f%% (%d/%d), overdue_tasks=%d\n",
+				p.Title, p.AreaName, p.GoalName, p.Status, p.ProgressPct, p.TasksCompleted, p.TasksTotal, p.OverdueTasks))
+		}
+		sb.WriteString("\n")
+	}
+	sb.WriteString(fmt.Sprintf("## Goal Risk\nActive goals without active project: %d\n\n", data.GoalsWithoutProject))
 
 	// Tasks
 	sb.WriteString(fmt.Sprintf("## Tasks\nTotal: %d | Completed: %d | Overdue: %d\n\n", data.Tasks.Total, data.Tasks.Completed, data.Tasks.Overdue))

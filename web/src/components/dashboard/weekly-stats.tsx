@@ -25,8 +25,8 @@ export function WeeklyStats() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-3 gap-5 mb-5">
-        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-[14px]" />)}
+      <div className="grid grid-cols-1 gap-5 mb-5 md:grid-cols-2 xl:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-[14px]" />)}
       </div>
     );
   }
@@ -56,10 +56,18 @@ export function WeeklyStats() {
       color: "var(--accent)",
       bars: [40, 55, 60, 50, 75, 85, 20],
     },
+    {
+      label: "Projetos Ativos",
+      value: data?.active_projects ?? 0,
+      suffix: "",
+      sub: "iniciativas em andamento",
+      color: "var(--area-indigo)",
+      bars: [15, 35, 55, 45, 65, 75, 95],
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-5 mb-5 md:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 mb-5 md:grid-cols-2 xl:grid-cols-4">
       {stats.map((s, i) => (
         <div
           key={i}

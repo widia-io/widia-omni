@@ -18,6 +18,8 @@ export interface CreateTaskInput {
   goal_id?: string;
   parent_id?: string;
   section_id?: string;
+  project_id?: string;
+  project_section_id?: string;
   due_date?: string;
   duration_minutes?: number;
   is_focus?: boolean;
