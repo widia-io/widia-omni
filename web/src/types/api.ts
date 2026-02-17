@@ -145,6 +145,30 @@ export interface LifeArea {
   updated_at: string;
 }
 
+export interface AreaWithStats extends LifeArea {
+  goals_count: number;
+  projects_count: number;
+  tasks_pending: number;
+  area_score: number | null;
+}
+
+export interface AreaStats {
+  goals_active: number;
+  goals_completed: number;
+  projects_active: number;
+  projects_completed: number;
+  tasks_pending: number;
+  tasks_completed_this_week: number;
+  habits_active: number;
+  current_streak_avg: number;
+  area_score: number | null;
+}
+
+export interface AreaSummary {
+  area: LifeArea;
+  stats: AreaStats;
+}
+
 // ─── Projects ───────────────────────────────────────
 export type ProjectStatus = "planning" | "active" | "paused" | "completed" | "cancelled";
 

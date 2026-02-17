@@ -1,11 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import type { LifeArea } from "@/types/api";
+import type { LifeArea, AreaWithStats, AreaSummary } from "@/types/api";
 
 export function useAreas() {
   return useQuery({
     queryKey: ["areas"],
-    queryFn: () => api<LifeArea[]>("/api/v1/areas"),
+    queryFn: () => api<AreaWithStats[]>("/api/v1/areas", { params: { include: "stats" } }),
+  });
+}
+
+export function useAreaSummary(id: string) {
+  return useQuery({
+    queryKey: ["areas", id, "summary"],
+    queryFn: () => api<AreaSummary>(`/api/v1/areas/${id}/summary`),
+    enabled: !!id,
   });
 }
 

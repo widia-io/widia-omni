@@ -1,18 +1,31 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Plus } from "lucide-react";
 import { areaIconMap } from "@/lib/icons";
-import { useAreas, useCreateArea, useUpdateArea, useDeleteArea } from "@/hooks/use-areas";
+import { useAreas, useCreateArea, useUpdateArea } from "@/hooks/use-areas";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/cn";
-import type { LifeArea } from "@/types/api";
+import type { LifeArea, AreaWithStats } from "@/types/api";
 
-function AreaFormDialog({ area, onClose }: { area?: LifeArea; onClose: () => void }) {
+const colorMap: Record<string, { bg: string; text: string; bar: string }> = {
+  green: { bg: "bg-accent-green-soft", text: "text-accent-green", bar: "from-accent-green to-accent-sage" },
+  orange: { bg: "bg-accent-orange-soft", text: "text-accent-orange", bar: "from-accent-orange to-accent-sand" },
+  blue: { bg: "bg-accent-blue-soft", text: "text-accent-blue", bar: "from-accent-blue to-accent-sage" },
+  rose: { bg: "bg-accent-rose-soft", text: "text-accent-rose", bar: "from-accent-rose to-accent-orange" },
+  sand: { bg: "bg-accent-sand-soft", text: "text-accent-sand", bar: "from-accent-sand to-accent-blue" },
+  sage: { bg: "bg-accent-sage-soft", text: "text-accent-sage", bar: "from-accent-sage to-accent-green" },
+};
+
+function getColorClasses(color: string) {
+  return colorMap[color] ?? colorMap["orange"]!;
+}
+
+export function AreaFormDialog({ area, onClose }: { area?: LifeArea; onClose: () => void }) {
   const create = useCreateArea();
   const update = useUpdateArea();
   const [name, setName] = useState(area?.name ?? "");
@@ -67,14 +80,61 @@ function AreaFormDialog({ area, onClose }: { area?: LifeArea; onClose: () => voi
   );
 }
 
+function AreaCard({ area, index }: { area: AreaWithStats; index: number }) {
+  const navigate = useNavigate();
+  const c = getColorClasses(area.color);
+  const score = area.area_score ?? 0;
+
+  return (
+    <div
+      onClick={() => navigate(`/areas/${area.id}`)}
+      className={cn(
+        "group relative cursor-pointer overflow-hidden rounded-[14px] border border-border bg-bg-card p-[18px_20px] transition-all duration-[250ms] hover:-translate-y-0.5 hover:border-transparent animate-in",
+      )}
+      style={{ animationDelay: `${0.15 + index * 0.05}s` }}
+    >
+      <div className={cn("absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r opacity-0 transition-opacity group-hover:opacity-100", c.bar)} />
+
+      <div className="flex items-center justify-between mb-3">
+        <div className={cn("flex h-[34px] w-[34px] items-center justify-center rounded-[9px]", c.bg)}>
+          {(() => { const Icon = areaIconMap[area.icon]; return Icon ? <Icon size={18} className={c.text} /> : <span className="text-lg">{area.icon}</span>; })()}
+        </div>
+        <span className={cn("font-mono text-xl font-bold", c.text)}>{score}</span>
+      </div>
+
+      <div className="text-sm font-semibold">{area.name}</div>
+
+      <div className="mt-2 text-xs text-text-muted">
+        {area.tasks_pending} tarefas · {area.goals_count} metas · {area.projects_count} projetos
+      </div>
+
+      <div className="h-[3px] mt-3 overflow-hidden rounded-[3px] bg-border">
+        <div
+          className={cn("h-full rounded-[3px] bg-gradient-to-r transition-all duration-[1.5s]", c.bar)}
+          style={{ width: `${score}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function Component() {
   const { data: areas, isLoading } = useAreas();
-  const deleteArea = useDeleteArea();
   const [editArea, setEditArea] = useState<LifeArea | undefined>();
   const [open, setOpen] = useState(false);
 
   if (isLoading) {
-    return <div className="grid grid-cols-3 gap-4">{[1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-32 rounded-[14px]" />)}</div>;
+    return (
+      <div>
+        <div className="mb-6 flex items-center justify-between">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-8 w-28" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-32 rounded-[14px]" />)}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -92,21 +152,9 @@ export function Component() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {(areas ?? []).map((area) => (
-          <Card key={area.id} className="cursor-pointer transition-all hover:-translate-y-0.5" onClick={() => { setEditArea(area); setOpen(true); }}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-2xl">{(() => { const Icon = areaIconMap[area.icon]; return Icon ? <Icon size={24} /> : area.icon; })()}</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); deleteArea.mutate(area.id); }}
-                className="text-xs text-text-muted hover:text-accent-rose transition-colors"
-              >
-                Excluir
-              </button>
-            </div>
-            <div className="font-semibold">{area.name}</div>
-            <div className="mt-1 text-xs text-text-muted">Peso: {area.weight}</div>
-          </Card>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {(areas ?? []).map((area, i) => (
+          <AreaCard key={area.id} area={area} index={i} />
         ))}
       </div>
     </div>
