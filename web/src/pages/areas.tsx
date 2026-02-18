@@ -1,17 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { Plus, LayoutGrid, Search, X } from "lucide-react";
-import { areaIconMap } from "@/lib/icons";
-import { useAreas, useCreateArea, useUpdateArea } from "@/hooks/use-areas";
+import { Plus, LayoutGrid, Search, X, GripVertical } from "lucide-react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+  sortableKeyboardCoordinates,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToParentElement } from "@dnd-kit/modifiers";
+import {
+  getAreaIcon,
+  getAreaIconWithFallback,
+  isRawAreaIcon,
+} from "@/lib/icons";
+import { useAreas, useReorderArea } from "@/hooks/use-areas";
+import { useWorkspaceUsage } from "@/hooks/use-settings";
+import { AreaFormDialog } from "@/components/areas/area-form-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { IconPicker } from "@/components/ui/icon-picker";
 import { cn } from "@/lib/cn";
-import type { LifeArea, AreaWithStats } from "@/types/api";
+import type { LifeArea, AreaWithStats, WorkspaceUsage } from "@/types/api";
 
 const colorMap: Record<string, { bg: string; text: string; bar: string }> = {
   green: { bg: "bg-accent-green-soft", text: "text-accent-green", bar: "from-accent-green to-accent-sage" },
@@ -24,6 +46,18 @@ const colorMap: Record<string, { bg: string; text: string; bar: string }> = {
 
 function getColorClasses(color: string) {
   return colorMap[color] ?? colorMap["orange"]!;
+}
+
+function getAreaDisplayName(area: Pick<AreaWithStats, "name" | "slug"> | Pick<LifeArea, "name" | "slug">) {
+  const name = area.name?.trim();
+  if (name) return name;
+  const slug = area.slug?.trim();
+  if (!slug) return "Área sem nome";
+  return slug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function FilterChip({
@@ -48,84 +82,149 @@ function FilterChip({
   );
 }
 
-export function AreaFormDialog({ area, onClose }: { area?: LifeArea; onClose: () => void }) {
-  const create = useCreateArea();
-  const update = useUpdateArea();
-  const [name, setName] = useState(area?.name ?? "");
-  const [icon, setIcon] = useState(area?.icon ?? "heart");
-  const [color, setColor] = useState(area?.color ?? "orange");
-  const [weight, setWeight] = useState(String(area?.weight ?? 1));
-  const [isActive, setIsActive] = useState(area?.is_active ?? true);
+function AreaUsageBadge({ usage }: { usage?: WorkspaceUsage }) {
+  if (!usage) return null;
 
-  const colors = ["green", "orange", "blue", "rose", "sand", "sage"];
+  const used = usage.counters.areas_count;
+  const max = usage.limits.max_areas;
+  const isUnlimited = max === -1;
+  const ratio = isUnlimited ? 0 : max > 0 ? used / max : 0;
+  const isFull = !isUnlimited && ratio >= 1;
+  const isWarning = !isUnlimited && ratio >= 0.8 && !isFull;
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const slug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    const data = { name, slug, icon, color, weight: Number(weight), is_active: isActive };
-    if (area) {
-      update.mutate({ id: area.id, ...data }, { onSuccess: onClose });
-    } else {
-      create.mutate(data, { onSuccess: onClose });
-    }
-  }
+  const accentColor = isFull
+    ? "text-accent-rose"
+    : isWarning
+      ? "text-accent-orange"
+      : "text-text-muted";
+
+  const barColor = isFull
+    ? "bg-accent-rose"
+    : isWarning
+      ? "bg-accent-orange"
+      : "bg-accent-green";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label>Nome</Label>
-        <Input value={name} onChange={(e) => setName(e.target.value)} required />
+    <div className="flex items-center gap-2.5 rounded-full border border-border/60 px-3 py-1">
+      <div className="flex items-baseline gap-1">
+        <span className={cn("font-mono text-xs font-semibold tabular-nums", accentColor)}>
+          {used}
+        </span>
+        <span className="text-[10px] text-text-muted">/</span>
+        <span className="font-mono text-[10px] text-text-muted">
+          {isUnlimited ? "∞" : max}
+        </span>
+        <span className="text-[10px] text-text-muted">áreas</span>
       </div>
-      <div className="space-y-2">
-        <Label>Ícone</Label>
-        <IconPicker value={icon} onChange={setIcon} />
-      </div>
-      <div className="space-y-2">
-        <Label>Cor</Label>
-        <div className="flex gap-2">
-          {colors.map((c) => (
-            <button key={c} type="button" onClick={() => setColor(c)} className={cn("h-8 w-8 rounded-lg border-2 transition-colors", color === c ? "border-text-primary" : "border-transparent", `bg-accent-${c}`)} />
-          ))}
+      {!isUnlimited && (
+        <div className="h-1 w-14 overflow-hidden rounded-full bg-border/50">
+          <div
+            className={cn("h-full rounded-full transition-all duration-700 ease-out", barColor)}
+            style={{ width: `${Math.min(ratio * 100, 100)}%` }}
+          />
         </div>
-      </div>
-      <div className="space-y-2">
-        <Label>Peso</Label>
-        <Input type="number" min="0" max="10" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} />
-      </div>
-      <div className="flex items-center gap-2">
-        <Checkbox checked={isActive} onCheckedChange={(v) => setIsActive(Boolean(v))} />
-        <Label>Área ativa</Label>
-      </div>
-      <Button type="submit" className="w-full" disabled={create.isPending || update.isPending}>
-        {area ? "Salvar" : "Criar area"}
-      </Button>
-    </form>
+      )}
+    </div>
   );
 }
 
-function AreaCard({ area, index }: { area: AreaWithStats; index: number }) {
+function AreaPlanGate({
+  used,
+  max,
+  isFull,
+  onUpgrade,
+}: {
+  used: number;
+  max: number;
+  isFull: boolean;
+  onUpgrade: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border px-4 py-3",
+        isFull
+          ? "border-accent-rose/30 bg-accent-rose/10"
+          : "border-accent-orange/30 bg-accent-orange/10",
+      )}
+    >
+      <div className="text-sm">
+        <p className={cn("font-medium", isFull ? "text-accent-rose" : "text-accent-orange")}>
+          {isFull ? "Limite de áreas atingido" : "Você está próximo do limite de áreas"}
+        </p>
+        <p className="text-xs text-text-secondary">
+          Uso atual: {used}/{max} áreas.
+          {isFull ? " A criação de novas áreas está bloqueada no plano atual." : " Faça upgrade para evitar bloqueio."}
+        </p>
+      </div>
+      <Button size="sm" variant="outline" onClick={onUpgrade}>
+        Ver planos
+      </Button>
+    </div>
+  );
+}
+
+function SortableAreaCard({ area, index }: { area: AreaWithStats; index: number }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: area.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    animationDelay: `${0.15 + index * 0.05}s`,
+  };
+
   const navigate = useNavigate();
   const c = getColorClasses(area.color);
   const score = area.area_score ?? 0;
+  const inactive = area.is_active === false;
+  const Icon = getAreaIcon(area.icon);
+  const FallbackIcon = getAreaIconWithFallback(area);
+  const rawIcon = area.icon?.trim();
+  const showRawIcon = isRawAreaIcon(rawIcon);
+  const displayName = getAreaDisplayName(area);
 
   return (
     <div
-      onClick={() => navigate(`/areas/${area.id}`)}
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
       className={cn(
         "group relative cursor-pointer overflow-hidden rounded-[14px] border border-border bg-bg-card p-[18px_20px] transition-all duration-[250ms] hover:-translate-y-0.5 hover:border-transparent animate-in",
+        isDragging && "z-50 shadow-lg opacity-90",
+        inactive && "opacity-60",
       )}
-      style={{ animationDelay: `${0.15 + index * 0.05}s` }}
+      onClick={() => { if (!isDragging) navigate(`/areas/${area.id}`); }}
     >
       <div className={cn("absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r opacity-0 transition-opacity group-hover:opacity-100", c.bar)} />
 
+      {inactive && (
+        <span className="absolute top-2 right-2 rounded-full bg-border px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
+          Inativa
+        </span>
+      )}
+
+      <div
+        className="absolute top-2 left-2 z-10 flex h-8 w-8 items-center justify-center rounded opacity-40 transition-opacity group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical size={16} className="text-text-muted" />
+      </div>
+
       <div className="flex items-center justify-between mb-3">
         <div className={cn("flex h-[34px] w-[34px] items-center justify-center rounded-[9px]", c.bg)}>
-          {(() => { const Icon = areaIconMap[area.icon]; return Icon ? <Icon size={18} className={c.text} /> : <span className="text-lg">{area.icon}</span>; })()}
+          {Icon ? <Icon size={18} className={c.text} /> : showRawIcon ? <span className="text-lg">{rawIcon}</span> : <FallbackIcon size={18} className={c.text} />}
         </div>
         <span className={cn("font-mono text-xl font-bold", c.text)}>{score}</span>
       </div>
 
-      <div className="text-sm font-semibold">{area.name}</div>
+      <div className="text-sm font-semibold">{displayName}</div>
 
       <div className="mt-2 text-xs text-text-muted">
         {area.tasks_pending} tarefas · {area.goals_count} metas · {area.projects_count} projetos
@@ -142,13 +241,49 @@ function AreaCard({ area, index }: { area: AreaWithStats; index: number }) {
 }
 
 export function Component() {
+  const navigate = useNavigate();
   const { data: areas, isLoading } = useAreas();
+  const { data: usage } = useWorkspaceUsage();
+  const qc = useQueryClient();
+  const reorderArea = useReorderArea();
   const [editArea, setEditArea] = useState<LifeArea | undefined>();
+  const [orderedAreas, setOrderedAreas] = useState<AreaWithStats[]>([]);
+  const [isReordering, setIsReordering] = useState(false);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
+  const maxAreas = usage?.limits.max_areas ?? null;
+  const usedAreas = usage?.counters.areas_count ?? null;
+  const isUnlimited = maxAreas === -1;
+  const usageRatio = !isUnlimited && maxAreas && usedAreas !== null ? usedAreas / maxAreas : 0;
+  const areaLimitReached = Boolean(usage) && !isUnlimited && maxAreas !== null && usedAreas !== null && usedAreas >= maxAreas;
+  const areaLimitWarning = Boolean(usage) && !isUnlimited && maxAreas !== null && usedAreas !== null && usageRatio >= 0.8 && !areaLimitReached;
+  const showPlanGate = areaLimitReached || areaLimitWarning;
 
-  const filtered = (areas ?? []).filter((a) => {
+  // Keyboard shortcut: N to open create dialog
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.target as HTMLElement)?.isContentEditable) return;
+      if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        if (areaLimitReached) {
+          toast.error("Limite de áreas atingido. Faça upgrade para criar mais.");
+          return;
+        }
+        setOpen(true);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [areaLimitReached]);
+
+  useEffect(() => {
+    setOrderedAreas(areas ?? []);
+  }, [areas]);
+
+  const filtered = orderedAreas.filter((a) => {
     if (!showInactive && !a.is_active) return false;
     if (search && !a.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -156,6 +291,55 @@ export function Component() {
 
   const hasFilters = search !== "" || showInactive;
   const isEmpty = filtered.length === 0;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (isReordering || !over || active.id === over.id || !orderedAreas.length || !filtered.length) return;
+
+    const filteredIDs = filtered.map((a) => a.id);
+    const fromIndex = filteredIDs.findIndex((id) => id === active.id);
+    const toIndex = filteredIDs.findIndex((id) => id === over.id);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const reorderedFilteredIDs = arrayMove(filteredIDs, fromIndex, toIndex);
+    const filteredByID = new Map(filtered.map((area) => [area.id, area]));
+    const reorderedFilteredAreas = reorderedFilteredIDs
+      .map((id) => filteredByID.get(id))
+      .filter((area): area is AreaWithStats => Boolean(area));
+
+    let cursor = 0;
+    const reconstructed = orderedAreas.map((area) => {
+      if (!filteredByID.has(area.id)) return area;
+      const next = reorderedFilteredAreas[cursor];
+      cursor += 1;
+      return next ?? area;
+    });
+
+    const movedID = String(active.id);
+    const newSortOrder = reconstructed.findIndex((a) => a.id === movedID) + 1;
+    if (newSortOrder <= 0) return;
+
+    const previous = orderedAreas;
+    const optimistic = reconstructed.map((area, i) => ({ ...area, sort_order: i + 1 }));
+    setOrderedAreas(optimistic);
+    qc.setQueryData<AreaWithStats[]>(["areas"], optimistic);
+    setIsReordering(true);
+
+    try {
+      await reorderArea.mutateAsync({ id: movedID, sort_order: newSortOrder });
+    } catch {
+      setOrderedAreas(previous);
+      qc.setQueryData<AreaWithStats[]>(["areas"], previous);
+      toast.error("Erro ao reordenar áreas");
+    } finally {
+      setIsReordering(false);
+    }
+  }, [orderedAreas, filtered, isReordering, reorderArea, qc]);
 
   if (isLoading) {
     return (
@@ -165,7 +349,7 @@ export function Component() {
           <Skeleton className="h-8 w-28" />
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-32 rounded-[14px]" />)}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32 rounded-[14px]" />)}
         </div>
       </div>
     );
@@ -173,20 +357,34 @@ export function Component() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Areas de Vida</h1>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Áreas de Vida</h1>
+          <AreaUsageBadge usage={usage} />
+        </div>
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditArea(undefined); }}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4" /> Nova area</Button>
+            <Button size="sm" disabled={areaLimitReached} title={areaLimitReached ? "Limite de áreas atingido" : undefined}>
+              <Plus className="h-4 w-4" /> Nova área
+            </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>{editArea ? "Editar area" : "Nova area"}</DialogTitle></DialogHeader>
+          <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0">
+            <DialogHeader className="sr-only"><DialogTitle>{editArea ? "Editar área" : "Nova área"}</DialogTitle></DialogHeader>
             <AreaFormDialog area={editArea} onClose={() => setOpen(false)} />
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* ─── Filter bar ──────────────────────────── */}
+      {showPlanGate && maxAreas !== null && usedAreas !== null && (
+        <AreaPlanGate
+          used={usedAreas}
+          max={maxAreas}
+          isFull={areaLimitReached}
+          onUpgrade={() => navigate("/billing")}
+        />
+      )}
+
+      {/* Filter bar */}
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <FilterChip label="Ativas" isActive={!showInactive} onClick={() => setShowInactive(false)} />
         <FilterChip label="Inativas" isActive={showInactive} onClick={() => setShowInactive(true)} />
@@ -209,7 +407,7 @@ export function Component() {
         )}
       </div>
 
-      {/* ─── Area grid / empty state ─────────────── */}
+      {/* Area grid / empty state */}
       {isEmpty ? (
         <div className="flex flex-col items-center gap-3 py-16 text-text-muted">
           <LayoutGrid className="h-10 w-10" />
@@ -217,19 +415,35 @@ export function Component() {
             <p className="text-sm font-medium text-text-primary">Organize sua vida em áreas</p>
             <p className="mt-1 text-xs">Crie sua primeira área para começar.</p>
             <button
-              onClick={() => setOpen(true)}
-              className="mt-3 text-xs font-medium text-accent-orange transition-opacity hover:opacity-80"
+              onClick={() => {
+                if (areaLimitReached) {
+                  toast.error("Limite de áreas atingido. Faça upgrade para criar mais.");
+                  return;
+                }
+                setOpen(true);
+              }}
+              className="mt-3 text-xs font-medium text-accent-orange transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={areaLimitReached}
             >
-              + Nova área
+              {areaLimitReached ? "Limite de áreas atingido" : "+ Nova área"}
             </button>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((area, i) => (
-            <AreaCard key={area.id} area={area} index={i} />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToParentElement]}
+        >
+          <SortableContext items={filtered.map((a) => a.id)} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((area, i) => (
+                <SortableAreaCard key={area.id} area={area} index={i} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
     </div>
   );

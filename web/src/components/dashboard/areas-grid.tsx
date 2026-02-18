@@ -2,7 +2,7 @@ import { useAreas } from "@/hooks/use-areas";
 import { useScoreHistory } from "@/hooks/use-scores";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
-import { areaIconMap } from "@/lib/icons";
+import { getAreaIcon, getAreaIconWithFallback, isRawAreaIcon } from "@/lib/icons";
 
 const colorMap: Record<string, { bg: string; text: string; bar: string; border: string; shadow: string }> = {
   green: {
@@ -35,6 +35,18 @@ function getColorClasses(color: string) {
   return colorMap[color] ?? colorMap["orange"]!;
 }
 
+function getAreaDisplayName(name: string, slug: string) {
+  const trimmed = name?.trim();
+  if (trimmed) return trimmed;
+  const normalizedSlug = slug?.trim();
+  if (!normalizedSlug) return "Área sem nome";
+  return normalizedSlug
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function AreasGrid() {
   const { data: areas, isLoading } = useAreas();
   const { data: history } = useScoreHistory(1);
@@ -56,6 +68,11 @@ export function AreasGrid() {
       {(areas ?? []).slice(0, 6).map((area, i) => {
         const c = getColorClasses(area.color);
         const score = areaScores.get(area.id) ?? 0;
+        const Icon = getAreaIcon(area.icon);
+        const FallbackIcon = getAreaIconWithFallback(area);
+        const rawIcon = area.icon?.trim();
+        const showRawIcon = isRawAreaIcon(rawIcon);
+        const displayName = getAreaDisplayName(area.name, area.slug);
 
         return (
           <div
@@ -70,11 +87,11 @@ export function AreasGrid() {
 
             <div className="flex items-center justify-between mb-3">
               <div className={cn("flex h-[34px] w-[34px] items-center justify-center rounded-[9px]", c.bg)}>
-                {(() => { const Icon = areaIconMap[area.icon]; return Icon ? <Icon size={18} className={c.text} /> : null; })()}
+                {Icon ? <Icon size={18} className={c.text} /> : showRawIcon ? <span className="text-lg">{rawIcon}</span> : <FallbackIcon size={18} className={c.text} />}
               </div>
               <span className={cn("font-mono text-xl font-bold", c.text)}>{score}</span>
             </div>
-            <div className="text-sm font-semibold">{area.name}</div>
+            <div className="text-sm font-semibold">{displayName}</div>
             <div className="h-[3px] mt-3 overflow-hidden rounded-[3px] bg-border">
               <div
                 className={cn("h-full rounded-[3px] bg-gradient-to-r transition-all duration-[1.5s]", c.bar)}

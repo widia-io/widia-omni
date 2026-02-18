@@ -1,185 +1,109 @@
-# Areas UX/UI Audit — Areas vs Tasks
+# Areas UX/UI Audit — Áreas vs Tarefas
 
 ## Resumo Executivo
 
-Tasks é experiência madura (~1600 linhas), múltiplos padrões de interação, feedback visual rico. Areas é CRUD básico (~114 linhas). O AreasGrid do dashboard (90 linhas) já tem mais craft que a página dedicada.
+A experiência de Áreas evoluiu de CRUD básico para uma tela operacional com cards ricos, filtros, detail view, confirmação destrutiva, reorder drag-and-drop e feedback por toast. Ainda assim, Tarefas continua mais madura em densidade de interação. Esta rodada fecha os gaps críticos de UX restantes e alinha o modal de Área ao padrão híbrido `Todoist + Tasks`.
 
 ---
 
 ## Changelog
 
-### P0 Implemented — PR #13 (`feat/areas-ux-upgrade`)
+### P0 Implementado — PR #13 (`feat/areas-ux-upgrade`)
 
 | Item | Status | Notes |
 |---|---|---|
-| 1. Area detail page | Done | `/areas/:id` with stats, goals, tasks preview (top 5), projects |
-| 2. Enrich cards | Done | Score, progress bar, counters (tasks/goals/projects), icon bg, hover accent |
-| 3. Delete with confirmation | Done | `ConfirmDialog` shows linked entity counts from AreaSummary |
+| Area detail page | Done | `/areas/:id` com stats, metas, tarefas (preview) e projetos |
+| Enriquecimento de cards | Done | Score, barra, counters (tasks/goals/projects), ícone e hover accent |
+| Delete com confirmação | Done | `ConfirmDialog` com contexto de entidades vinculadas |
 
-**Files changed:**
-- `web/src/types/api.ts` — `AreaWithStats`, `AreaStats`, `AreaSummary`
-- `web/src/hooks/use-areas.ts` — `useAreas(?include=stats)`, `useAreaSummary(id)`
-- `web/src/pages/areas.tsx` — rich cards, exported `AreaFormDialog`
-- `web/src/pages/area-detail.tsx` — new detail page
-- `web/src/components/ui/confirm-dialog.tsx` — reusable confirm dialog
-- `web/src/routes/index.tsx` — `areas/:id` route
-
-### P1 Implemented — `feat/areas-ux-upgrade`
+### P1 Implementado — `feat/areas-ux-upgrade`
 
 | Item | Status | Notes |
 |---|---|---|
-| 4. Icon picker | Done | Popover grid of `areaIconMap` icons with search, reusable `IconPicker` component |
-| 5. Empty state | Done | Centered LayoutGrid icon + message + CTA opens create dialog |
-| 6. Filter/search | Done | FilterChip Ativas/Inativas toggle + inline search + "Limpar" reset |
+| Icon picker | Done | Componente reutilizável com busca |
+| Empty state | Done | Mensagem + CTA para criar área |
+| Filtro e busca | Done | Chips Ativas/Inativas + busca textual + limpar |
 
-**Files changed:**
-- `web/src/components/ui/icon-picker.tsx` — new reusable icon picker popover
-- `web/src/pages/areas.tsx` — IconPicker in form, FilterChip, search, empty state
+### P2 (parcialmente já implementado no código)
 
----
-
-## 1. O que Tasks faz bem (e Areas não tem)
-
-| Capacidade | Tasks | Areas |
+| Item | Status | Notes |
 |---|---|---|
-| **Criação rápida** | Inline quick-add com smart parsing (`p1`, `hoje`, `dd/mm`) | Só dialog |
-| **Criação expandida** | Dialog 2 colunas com sidebar de metadata | Dialog single-column, 5 campos |
-| **Filtros** | 5 categorias (status, áreas, projetos, seções, labels) com chips | Zero |
-| **Hierarquia** | Parent/child com expand/collapse | Flat |
-| **Indicadores visuais** | Priority checkbox colorido, due date badges, labels, focus star, project badge, duration | Só ícone + peso |
-| **Ações inline** | 6 ações no hover (reabrir, focus, agendar, sub-tarefa, menu, expand) | Só "Excluir" |
-| **Keyboard shortcuts** | `Q` para quick-add, `Escape` para cancelar | Nenhum |
-| **Empty state** | Mensagem randomizada + CTA | Grid vazia (silêncio) |
-| **Progressive disclosure** | Ações aparecem no hover, seções colapsáveis | Tudo visível sempre |
-| **Feedback de criação** | Animação slideIn + highlight laranja por 1.5s | Nada |
-| **Usage tracking** | Badge com contador diário + progress bar | Nada |
-| **Seções colapsáveis** | CompletedSection com toggle | N/A |
+| Shortcut `N` para nova área | Done | Atalho global na página de Áreas |
+| Drag to reorder | Done | DnD com persistência via `/areas/:id/reorder` |
+| Toasts em create/update/delete | Done | Feedback de sucesso/erro nas mutações de Área |
+| Color picker com labels | Done | Swatches com labels de texto |
+| Skeleton responsivo | Done | Grid 1/2/3 colunas por breakpoint |
 
----
+### Correções críticas desta entrega (atual)
 
-## 2. Problemas específicos da página Areas
-
-### ~~2.1. Card anêmico~~ — FIXED
-
-Cards agora mostram score, progress bar, counters (tasks/goals/projects), ícone com fundo colorido.
-
-### ~~2.2. Dashboard AreasGrid é MELHOR que a página Areas~~ — FIXED
-
-Página Areas agora usa mesmo pattern do AreasGrid (score, progress bar, gradientes, hover accent, staggered animation).
-
-### ~~2.3. Sem detail view~~ — FIXED
-
-Click no card navega para `/areas/:id` com stats, goals, tasks preview, projects.
-
-### ~~2.4. Delete sem confirmação~~ — FIXED
-
-`ConfirmDialog` mostra contagem de entidades vinculadas antes de excluir.
-
-### 2.5. Form dialog básico
-
-- Campo "Icone" é text input livre — user precisa saber emoji ou nome Lucide
-- Sem preview, busca ou picker de ícones
-- Cor é 6 botões sem label — problema de acessibilidade
-- Peso é número sem contexto (o que significa peso 3 vs 7?)
-
-### 2.6. Sem busca/filtro
-
-Com 6+ áreas, sem filtro por nome, cor, status ativo/inativo.
-
-### 2.7. Áreas inativas invisíveis
-
-Checkbox `is_active` existe no form, sem indicação visual no card nem filtro.
-
----
-
-## 3. Recomendações priorizadas
-
-### P0 — Impacto alto, esforço baixo — DONE (PR #13)
-
-1. ~~**Area detail page**~~: `/areas/:id` com stats row, goals list, tasks preview (top 5 + "Ver todas"), projects, edit/delete.
-
-2. ~~**Enriquecer os cards**~~: Score mono, progress bar gradient, counters (tasks/goals/projects), icon bg, hover accent line, staggered animation.
-
-3. ~~**Delete com confirmação**~~: `ConfirmDialog` com variant destructive, mostra contagem de entidades vinculadas.
-
-### P1 — Impacto alto, esforço médio — DONE
-
-4. ~~**Icon picker**~~: Popover grid com todos ícones de `areaIconMap`, busca por nome, seleção com highlight. Componente reutilizável `icon-picker.tsx`.
-
-5. ~~**Empty state**~~: Centered LayoutGrid icon + "Organize sua vida em áreas" + CTA "Nova área".
-
-6. ~~**Filtro/busca**~~: FilterChip Ativas/Inativas + search input + "Limpar" button. Client-side filtering.
-
-7. **Inline stats no card**: (already done in P0)
-   ```
-   ┌─────────────────────────┐
-   │ 🏋️ Saúde          Score: 72 │
-   │ ━━━━━━━━━━━░░░░          │
-   │ 5 tasks · 2 goals · 1 projeto │
-   └─────────────────────────┘
-   ```
-
-### P2 — Nice to have
-
-8. **Keyboard shortcut** (`N` para nova área)
-9. **Drag to reorder** (weight manual é confuso)
-10. **Color picker melhorado**: Labels de texto nas cores + preview
-11. **Toast notifications** em create/update/delete
-12. **Skeleton loading** responsivo (hardcoded 3 colunas em mobile)
-
----
-
-## 4. Padrões de Tasks para reutilizar
-
-| Pattern | Onde está | Como usar em Areas |
+| Item | Status | Notes |
 |---|---|---|
-| `FilterChip` | `tasks.tsx:817` | Filtro ativo/inativo + cor |
-| `CompletedSection` | `tasks.tsx:1162` | Seção "Áreas inativas" colapsável |
-| `SidebarField` | `tasks.tsx:1151` | Detail panel da área |
-| Empty state pattern | `tasks.tsx:1507-1520` | Empty state Areas |
-| `AREA_CHIP_ACTIVE` colors | `tasks.tsx:72-79` | Badges coloridos nos cards |
-| Animação slideIn | `tasks.tsx:583` | Feedback ao criar área |
+| Refatoração completa do modal de Área | Done | Componente único reutilizado em `/areas` e `/areas/:id` |
+| Deeplink para Tasks com filtro aplicado | Done | `tasks.tsx` lê `?area_id=` na inicialização |
+| Estado de erro/not-found em `/areas/:id` | Done | Empty/error state com CTA “Voltar para Áreas” |
+| ConfirmDialog assíncrono correto | Done | Não fecha automaticamente; fechamento controlado por sucesso |
+| Tokens inválidos no IconPicker | Done | Classes substituídas por tokens válidos do design system |
+| Padronização PT-BR no escopo alterado | Done | “Áreas”, “área”, “Ícone”, “Criar área”, “Editar área” |
+| Consumo de limite na home de Áreas | Done | Badge de uso (`usado/limite`) no header, no mesmo padrão de Tarefas |
+| Sync bidirecional URL↔filtros em Tasks | Done | Filtros refletem em querystring e restauram estado via back/forward |
+| URL sync com filtros avançados em Tasks | Done | Inclui `goal_id`, `due_from` e `due_to` no parse/build da querystring |
+| Ações inline no detail da Área | Done | Criação rápida de tarefa/meta/projeto em `/areas/:id`, pré-vinculada à área |
+| Header mobile otimizado no detail da Área | Done | Ações compactas e hierarquia em duas camadas para melhor legibilidade no mobile |
+| Cobertura de testes críticos (web) | Done | Unit/component tests para URL de filtros, modal de área (Enter/Esc/limite) e ConfirmDialog |
 
 ---
 
-## 5. Visão proposta
+## Estado Atual: Áreas vs Tarefas
 
-```
-┌──────────────────────────────────────────────┐
-│  Areas de Vida          [Busca] [+ Nova área] │
-│                                               │
-│  [Ativas ✓] [Inativas] [Todas]               │
-│                                               │
-│  ┌─────────────┐ ┌─────────────┐ ┌────────── │
-│  │ 🏋️ Saúde     │ │ 💼 Carreira  │ │ 📚 ...   │
-│  │ Score: 72   │ │ Score: 45   │ │          │
-│  │ ━━━━━━━░░░  │ │ ━━━░░░░░░░ │ │          │
-│  │ 8 tasks     │ │ 3 tasks     │ │          │
-│  │ 2 goals     │ │ 1 goal      │ │          │
-│  │ 1 projeto   │ │             │ │          │
-│  └─────────────┘ └─────────────┘ └────────── │
-│                                               │
-│  Click no card → Abre detail panel/page:      │
-│  ┌──────────────────────────────────────────┐ │
-│  │ Saúde — Editar                          │ │
-│  │ Score: 72  Weight: 5  Cor: 🟢           │ │
-│  │                                          │ │
-│  │ Goals (2)                                │ │
-│  │  ✅ Perder 5kg (80%)                    │ │
-│  │  ⏳ Correr maratona (20%)               │ │
-│  │                                          │ │
-│  │ Tasks pendentes (8)  [Ver todas →]       │ │
-│  │  ☐ Treinar hoje                         │ │
-│  │  ☐ Comprar suplementos                  │ │
-│  │  ...                                    │ │
-│  │                                          │ │
-│  │ Seções: Rotina · Projetos · Estudos     │ │
-│  └──────────────────────────────────────────┘ │
-└──────────────────────────────────────────────┘
-```
+| Capacidade | Tarefas | Áreas |
+|---|---|---|
+| Criação rápida | Inline quick-add + parsing inteligente | Modal rápido com foco no nome + metadata lateral |
+| Criação expandida | Dialog rico com sidebar e metadados | Dialog híbrido (principal + sidebar + avançado) |
+| Filtros | Status, áreas, projetos, seções, labels | Ativas/inativas + busca |
+| Hierarquia | Subtarefas + seções + colapso | Lista de áreas (flat) |
+| Navegação contextual | Alta | Média (lista -> detail -> links para tarefas/projetos) |
+| Feedback de ação | Alto (toasts + animações) | Alto (toasts + confirmações + estados de erro) |
+| Reordenação | Reorder de tarefas/seções | Reorder por drag-and-drop |
 
 ---
 
-## Conclusão
+## Gaps Críticos Fechados nesta Rodada
 
-A página Areas hoje é um **form CRUD sem contexto** — user cria áreas mas não tem visibilidade sobre elas. O dashboard (AreasGrid) oferece mais valor visual. Prioridade #1: **dar profundidade à área** — mostrar o que está dentro (tasks, goals, scores, projetos) e permitir navegação. Os patterns já existem no codebase (Tasks), é questão de reutilizá-los.
+1. **Deep link quebrado para Tasks**
+   - Antes: `/tasks?area_id=...` não aplicava filtro automaticamente.
+   - Agora: filtro inicial por `area_id` é aplicado na montagem da página.
+
+2. **Resiliência insuficiente no detail de Área**
+   - Antes: `isLoading || !summary` podia mascarar erro como loading infinito.
+   - Agora: estados explícitos de loading vs erro/not-found.
+
+3. **Confirmação destrutiva prematura**
+   - Antes: diálogo fechava no clique de confirmar, antes do sucesso da mutation.
+   - Agora: diálogo só fecha no sucesso, mantendo contexto no erro.
+
+4. **Inconsistência visual no IconPicker**
+   - Antes: classes inexistentes (`bg-bg-base`, `hover:bg-bg-hover`).
+   - Agora: tokens válidos e consistentes com superfícies do app.
+
+5. **Inconsistência de linguagem PT-BR**
+   - Antes: mix de textos sem acentuação.
+   - Agora: padronização no escopo alterado.
+
+---
+
+## Arquivos-chave da rodada atual
+
+- `web/src/components/areas/area-form-dialog.tsx`
+- `web/src/pages/areas.tsx`
+- `web/src/pages/area-detail.tsx`
+- `web/src/pages/tasks.tsx`
+- `web/src/components/ui/confirm-dialog.tsx`
+- `web/src/components/ui/icon-picker.tsx`
+
+---
+
+## Próximos passos recomendados (não incluídos)
+
+1. Adicionar cenário E2E para criação inline no detail de Área (tarefa/meta/projeto) validando vínculo automático por `area_id`.
+2. Expandir URL sync para filtros adicionais de Tasks, se forem promovidos na UI (ex.: `has_parent`, janelas de data preset, multi-select de etiquetas).
+3. Ajustar tracking/telemetria das novas ações inline de Área para medir adoção (quando houver camada de analytics).

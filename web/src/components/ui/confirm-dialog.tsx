@@ -44,7 +44,7 @@ export function ConfirmDialog({
           <Button
             variant={variant === "destructive" ? "destructive" : "default"}
             size="sm"
-            onClick={() => { onConfirm(); onOpenChange(false); }}
+            onClick={onConfirm}
             disabled={loading}
           >
             {confirmLabel}

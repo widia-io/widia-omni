@@ -35,6 +35,16 @@ export function useUpdateArea() {
   });
 }
 
+export function useReorderArea() {
+  return useMutation({
+    mutationFn: ({ id, sort_order }: { id: string; sort_order: number }) =>
+      api<{ status: string }>(`/api/v1/areas/${id}/reorder`, {
+        method: "PATCH",
+        body: JSON.stringify({ sort_order }),
+      }),
+  });
+}
+
 export function useDeleteArea() {
   const qc = useQueryClient();
   return useMutation({

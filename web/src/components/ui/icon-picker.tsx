@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
-import { areaIconMap } from "@/lib/icons";
+import { areaIconMap, getAreaIcon, getAreaIconWithFallback } from "@/lib/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/cn";
 
@@ -20,7 +20,7 @@ export function IconPicker({
     ? entries.filter(([key]) => key.includes(search.toLowerCase()))
     : entries;
 
-  const CurrentIcon = areaIconMap[value];
+  const CurrentIcon = getAreaIcon(value) ?? getAreaIconWithFallback({ icon: value });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -44,7 +44,7 @@ export function IconPicker({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar..."
-            className="w-full rounded-md border border-border bg-bg-base py-1.5 pl-8 pr-2 text-xs outline-none placeholder:text-text-muted focus:border-text-muted"
+            className="w-full rounded-md border border-border bg-bg-card py-1.5 pl-8 pr-2 text-xs outline-none placeholder:text-text-muted focus:border-text-muted"
           />
         </div>
         <div className="grid grid-cols-4 gap-1">
@@ -54,7 +54,7 @@ export function IconPicker({
               type="button"
               onClick={() => { onChange(key); setOpen(false); setSearch(""); }}
               className={cn(
-                "flex h-9 w-full items-center justify-center rounded-md transition-colors hover:bg-bg-hover",
+                "flex h-9 w-full items-center justify-center rounded-md transition-colors hover:bg-bg-secondary",
                 value === key && "bg-accent-orange/10 text-accent-orange",
               )}
               title={key}
