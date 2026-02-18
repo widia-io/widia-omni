@@ -110,18 +110,23 @@ func (s *AreaService) Create(ctx context.Context, wsID uuid.UUID, limits *domain
 }
 
 type UpdateAreaRequest struct {
-	Name     string  `json:"name"`
-	Icon     string  `json:"icon"`
-	Color    string  `json:"color"`
-	Weight   float64 `json:"weight"`
-	IsActive *bool   `json:"is_active"`
+	Name     *string  `json:"name"`
+	Icon     *string  `json:"icon"`
+	Color    *string  `json:"color"`
+	Weight   *float64 `json:"weight"`
+	IsActive *bool    `json:"is_active"`
 }
 
 func (s *AreaService) Update(ctx context.Context, wsID, id uuid.UUID, req UpdateAreaRequest) (*domain.LifeArea, error) {
 	var a domain.LifeArea
 	err := s.db.QueryRow(ctx, `
 		UPDATE life_areas
-		SET name = $3, icon = $4, color = $5, weight = $6, is_active = COALESCE($7::boolean, is_active), updated_at = now()
+		SET name = COALESCE($3, name),
+			icon = COALESCE($4, icon),
+			color = COALESCE($5, color),
+			weight = COALESCE($6, weight),
+			is_active = COALESCE($7::boolean, is_active),
+			updated_at = now()
 		WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 		RETURNING id, workspace_id, name, slug, icon, color, weight, sort_order, is_active,
 				  created_at, updated_at
@@ -143,11 +148,78 @@ func (s *AreaService) Delete(ctx context.Context, wsID, id uuid.UUID) error {
 }
 
 func (s *AreaService) Reorder(ctx context.Context, wsID, id uuid.UUID, sortOrder int) error {
-	_, err := s.db.Exec(ctx, `
-		UPDATE life_areas SET sort_order = $3, updated_at = now()
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var currentOrder int
+	if err := tx.QueryRow(ctx, `
+		SELECT sort_order
+		FROM life_areas
 		WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
-	`, id, wsID, sortOrder)
-	return err
+		FOR UPDATE
+	`, id, wsID).Scan(&currentOrder); err != nil {
+		return err
+	}
+
+	var maxOrder int
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE(MAX(sort_order), 0)
+		FROM life_areas
+		WHERE workspace_id = $1 AND deleted_at IS NULL
+	`, wsID).Scan(&maxOrder); err != nil {
+		return err
+	}
+
+	if maxOrder < 1 {
+		maxOrder = 1
+	}
+	if sortOrder < 1 {
+		sortOrder = 1
+	}
+	if sortOrder > maxOrder {
+		sortOrder = maxOrder
+	}
+	if sortOrder == currentOrder {
+		return tx.Commit(ctx)
+	}
+
+	if sortOrder < currentOrder {
+		_, err = tx.Exec(ctx, `
+			UPDATE life_areas
+			SET sort_order = sort_order + 1, updated_at = now()
+			WHERE workspace_id = $1
+			  AND deleted_at IS NULL
+			  AND id <> $2
+			  AND sort_order >= $3
+			  AND sort_order < $4
+		`, wsID, id, sortOrder, currentOrder)
+	} else {
+		_, err = tx.Exec(ctx, `
+			UPDATE life_areas
+			SET sort_order = sort_order - 1, updated_at = now()
+			WHERE workspace_id = $1
+			  AND deleted_at IS NULL
+			  AND id <> $2
+			  AND sort_order > $3
+			  AND sort_order <= $4
+		`, wsID, id, currentOrder, sortOrder)
+	}
+	if err != nil {
+		return err
+	}
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE life_areas
+		SET sort_order = $3, updated_at = now()
+		WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+	`, id, wsID, sortOrder); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (s *AreaService) GetByID(ctx context.Context, wsID, id uuid.UUID) (*domain.LifeArea, error) {

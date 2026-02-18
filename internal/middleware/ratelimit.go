@@ -23,9 +23,10 @@ func RateLimit(rdb *redis.Client, requestsPerMinute int) func(http.Handler) http
 				return
 			}
 
+			limit := requestsPerMinute
 			ent, ok := GetEntitlements(r.Context())
 			if ok && ent.APIRateLimitPerMinute > 0 {
-				requestsPerMinute = ent.APIRateLimitPerMinute
+				limit = ent.APIRateLimitPerMinute
 			}
 
 			prefix := "rl"
@@ -46,12 +47,15 @@ func RateLimit(rdb *redis.Client, requestsPerMinute int) func(http.Handler) http
 			}
 
 			ttl, _ := rdb.TTL(r.Context(), key).Result()
+			if ttl < 0 {
+				ttl = window
+			}
 
-			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(requestsPerMinute))
-			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(max(0, requestsPerMinute-int(count))))
+			w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
+			w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(max(0, limit-int(count))))
 			w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(ttl).Unix(), 10))
 
-			if int(count) > requestsPerMinute {
+			if int(count) > limit {
 				w.Header().Set("Retry-After", strconv.FormatInt(int64(ttl.Seconds()), 10))
 				http.Error(w, `{"error":"rate limit exceeded"}`, http.StatusTooManyRequests)
 				return

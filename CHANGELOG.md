@@ -4,6 +4,9 @@
 
 ### Added
 
+- **Areas UX P0**: Rich area cards (score, progress bar, counters, icon bg, hover accent), detail page `/areas/:id`, delete confirmation dialog with linked entity counts
+- **Areas UX P1**: Icon picker popover (grid + search), empty state with CTA, filter bar (active/inactive toggle + name search)
+
 - **Task power-ups backend** (Phase 1A): labels CRUD, sections CRUD, sub-tasks via parent_id, position ordering, duration_minutes, reopen/reorder endpoints, label assignment on tasks
 - **Task power-ups frontend** (Phase 1B): Todoist-style UI rewrite with flat rows, priority-colored checkboxes, inline quick-add, hover-revealed actions, section grouping, sub-task nesting, label picker/manager, filter bar (status/area/section/label), full edit dialog
 - **Smart keyboard shortcuts**: `Q` opens quick-add; type `p1`–`p4` to set priority; type `hoje`/`amanha`/`dd/mm` to set due date; live token preview pills

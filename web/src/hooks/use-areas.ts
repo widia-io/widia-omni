@@ -1,11 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import type { LifeArea } from "@/types/api";
+import type { LifeArea, AreaWithStats, AreaSummary } from "@/types/api";
 
 export function useAreas() {
   return useQuery({
     queryKey: ["areas"],
-    queryFn: () => api<LifeArea[]>("/api/v1/areas"),
+    queryFn: () => api<AreaWithStats[]>("/api/v1/areas", { params: { include: "stats" } }),
+  });
+}
+
+export function useAreaSummary(id: string) {
+  return useQuery({
+    queryKey: ["areas", id, "summary"],
+    queryFn: () => api<AreaSummary>(`/api/v1/areas/${id}/summary`),
+    enabled: !!id,
   });
 }
 
@@ -24,6 +32,16 @@ export function useUpdateArea() {
     mutationFn: ({ id, ...data }: Partial<LifeArea> & { id: string }) =>
       api<LifeArea>(`/api/v1/areas/${id}`, { method: "PUT", body: JSON.stringify(data) }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["areas"] }),
+  });
+}
+
+export function useReorderArea() {
+  return useMutation({
+    mutationFn: ({ id, sort_order }: { id: string; sort_order: number }) =>
+      api<{ status: string }>(`/api/v1/areas/${id}/reorder`, {
+        method: "PATCH",
+        body: JSON.stringify({ sort_order }),
+      }),
   });
 }
 

@@ -2,6 +2,7 @@
 export
 
 .PHONY: dev dev-api dev-worker dev-web dev-all \
+       stop-api stop-web stop-dev restart-api restart-web restart-dev \
        build build-api build-worker build-web \
        test lint \
        migrate-up migrate-down sqlc-gen \
@@ -11,21 +12,24 @@ export
        install clean check
 
 PORT ?= 8080
+WEB_PORT ?= 5173
 STRIPE_EVENTS ?= checkout.session.completed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted
 STRIPE_FORWARD_URL ?= http://localhost:$(PORT)/webhooks/stripe
+PROJECT_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+WEB_DIR := $(PROJECT_ROOT)/web
 
 # ─── Development ─────────────────────────────────────────────
 
 dev: dev-api ## Run API server (default)
 
 dev-api: ## Run API server
-	go run ./cmd/api
+	cd $(PROJECT_ROOT) && go run ./cmd/api
 
 dev-worker: ## Run background worker
-	go run ./cmd/worker
+	cd $(PROJECT_ROOT) && go run ./cmd/worker
 
 dev-web: ## Run frontend dev server
-	cd web && npm run dev
+	cd $(WEB_DIR) && npm run dev -- --port $(WEB_PORT)
 
 dev-all: ## Run API + worker + web concurrently
 	@trap 'kill 0' EXIT; \
@@ -33,6 +37,44 @@ dev-all: ## Run API + worker + web concurrently
 	$(MAKE) dev-worker & \
 	$(MAKE) dev-web & \
 	wait
+
+stop-api: ## Stop process listening on API port
+	@pids=$$(lsof -tiTCP:$(PORT) -sTCP:LISTEN 2>/dev/null || true); \
+	if [ -n "$$pids" ]; then \
+		echo "Stopping API port $(PORT): $$pids"; \
+		kill $$pids 2>/dev/null || true; \
+		sleep 1; \
+		pids=$$(lsof -tiTCP:$(PORT) -sTCP:LISTEN 2>/dev/null || true); \
+		if [ -n "$$pids" ]; then \
+			echo "Force stopping API port $(PORT): $$pids"; \
+			kill -9 $$pids 2>/dev/null || true; \
+		fi; \
+	else \
+		echo "No process on API port $(PORT)"; \
+	fi
+
+stop-web: ## Stop process listening on frontend port
+	@pids=$$(lsof -tiTCP:$(WEB_PORT) -sTCP:LISTEN 2>/dev/null || true); \
+	if [ -n "$$pids" ]; then \
+		echo "Stopping WEB port $(WEB_PORT): $$pids"; \
+		kill $$pids 2>/dev/null || true; \
+		sleep 1; \
+		pids=$$(lsof -tiTCP:$(WEB_PORT) -sTCP:LISTEN 2>/dev/null || true); \
+		if [ -n "$$pids" ]; then \
+			echo "Force stopping WEB port $(WEB_PORT): $$pids"; \
+			kill -9 $$pids 2>/dev/null || true; \
+		fi; \
+	else \
+		echo "No process on WEB port $(WEB_PORT)"; \
+	fi
+
+stop-dev: stop-api stop-web ## Stop local API and frontend listeners
+
+restart-api: stop-api dev-api ## Restart API on configured port
+
+restart-web: stop-web dev-web ## Restart frontend on configured port
+
+restart-dev: stop-dev dev-all ## Stop ports and run API + worker + web
 
 # ─── Build ───────────────────────────────────────────────────
 
@@ -114,5 +156,5 @@ clean: ## Remove build artifacts
 # ─── Help ────────────────────────────────────────────────────
 
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | \
+	@grep -hE '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'

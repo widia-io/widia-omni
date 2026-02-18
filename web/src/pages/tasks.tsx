@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router";
 import {
   Plus, Star, ChevronDown, ChevronRight, ListTree, Clock,
   RotateCcw, Tags, FolderPlus, Check, MoreHorizontal, CalendarDays,
@@ -27,6 +28,11 @@ import {
   Dialog, DialogContent, DialogTitle,
 } from "@/components/ui/dialog";
 import { useWorkspaceUsage } from "@/hooks/use-settings";
+import {
+  areTaskFiltersEqual,
+  buildSearchParamsWithTaskFilter,
+  parseTaskFilterFromSearchParams,
+} from "@/lib/task-filters-url";
 import { cn } from "@/lib/cn";
 import type { Task, TaskPriority } from "@/types/api";
 
@@ -1193,7 +1199,10 @@ function CompletedSection({
 // ─── Main Page ────────────────────────────────────────
 
 export function Component() {
-  const [filter, setFilter] = useState<Record<string, string>>({});
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filter, setFilter] = useState<Record<string, string>>(() => (
+    parseTaskFilterFromSearchParams(searchParams)
+  ));
   const { data: tasks, isLoading } = useTasks(filter);
   const { data: areas } = useAreas();
   const { data: projects } = useProjects();
@@ -1214,6 +1223,18 @@ export function Component() {
     () => EMPTY_STATES[Math.floor(Math.random() * EMPTY_STATES.length)]!,
     [],
   );
+
+  useEffect(() => {
+    const fromUrl = parseTaskFilterFromSearchParams(searchParams);
+    setFilter((prev) => (areTaskFiltersEqual(prev, fromUrl) ? prev : fromUrl));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const nextSearchParams = buildSearchParamsWithTaskFilter(searchParams, filter);
+    if (nextSearchParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextSearchParams, { replace: true });
+    }
+  }, [filter, searchParams, setSearchParams]);
 
   const handleCreated = useCallback((id: string) => {
     setRecentIds((prev) => new Set(prev).add(id));
