@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Plus } from "lucide-react";
+import { Plus, LayoutGrid, Search, X } from "lucide-react";
 import { areaIconMap } from "@/lib/icons";
 import { useAreas, useCreateArea, useUpdateArea } from "@/hooks/use-areas";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { IconPicker } from "@/components/ui/icon-picker";
 import { cn } from "@/lib/cn";
 import type { LifeArea, AreaWithStats } from "@/types/api";
 
@@ -25,11 +26,33 @@ function getColorClasses(color: string) {
   return colorMap[color] ?? colorMap["orange"]!;
 }
 
+function FilterChip({
+  label, isActive, onClick,
+}: {
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+        isActive
+          ? "bg-accent-orange/10 text-accent-orange border-accent-orange/20"
+          : "bg-bg-card border-border text-text-muted hover:border-text-muted",
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function AreaFormDialog({ area, onClose }: { area?: LifeArea; onClose: () => void }) {
   const create = useCreateArea();
   const update = useUpdateArea();
   const [name, setName] = useState(area?.name ?? "");
-  const [icon, setIcon] = useState(area?.icon ?? "🎯");
+  const [icon, setIcon] = useState(area?.icon ?? "heart");
   const [color, setColor] = useState(area?.color ?? "orange");
   const [weight, setWeight] = useState(String(area?.weight ?? 1));
   const [isActive, setIsActive] = useState(area?.is_active ?? true);
@@ -54,8 +77,8 @@ export function AreaFormDialog({ area, onClose }: { area?: LifeArea; onClose: ()
         <Input value={name} onChange={(e) => setName(e.target.value)} required />
       </div>
       <div className="space-y-2">
-        <Label>Icone</Label>
-        <Input value={icon} onChange={(e) => setIcon(e.target.value)} />
+        <Label>Ícone</Label>
+        <IconPicker value={icon} onChange={setIcon} />
       </div>
       <div className="space-y-2">
         <Label>Cor</Label>
@@ -122,6 +145,17 @@ export function Component() {
   const { data: areas, isLoading } = useAreas();
   const [editArea, setEditArea] = useState<LifeArea | undefined>();
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
+
+  const filtered = (areas ?? []).filter((a) => {
+    if (!showInactive && !a.is_active) return false;
+    if (search && !a.name.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const hasFilters = search !== "" || showInactive;
+  const isEmpty = filtered.length === 0;
 
   if (isLoading) {
     return (
@@ -152,11 +186,51 @@ export function Component() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {(areas ?? []).map((area, i) => (
-          <AreaCard key={area.id} area={area} index={i} />
-        ))}
+      {/* ─── Filter bar ──────────────────────────── */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <FilterChip label="Ativas" isActive={!showInactive} onClick={() => setShowInactive(false)} />
+        <FilterChip label="Inativas" isActive={showInactive} onClick={() => setShowInactive(true)} />
+        <div className="relative ml-1">
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar áreas..."
+            className="w-44 rounded-full border border-border bg-bg-card py-1 pl-8 pr-2 text-xs outline-none placeholder:text-text-muted focus:border-text-muted"
+          />
+        </div>
+        {hasFilters && (
+          <button
+            onClick={() => { setSearch(""); setShowInactive(false); }}
+            className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-primary transition-colors"
+          >
+            <X size={12} /> Limpar
+          </button>
+        )}
       </div>
+
+      {/* ─── Area grid / empty state ─────────────── */}
+      {isEmpty ? (
+        <div className="flex flex-col items-center gap-3 py-16 text-text-muted">
+          <LayoutGrid className="h-10 w-10" />
+          <div className="text-center">
+            <p className="text-sm font-medium text-text-primary">Organize sua vida em áreas</p>
+            <p className="mt-1 text-xs">Crie sua primeira área para começar.</p>
+            <button
+              onClick={() => setOpen(true)}
+              className="mt-3 text-xs font-medium text-accent-orange transition-opacity hover:opacity-80"
+            >
+              + Nova área
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((area, i) => (
+            <AreaCard key={area.id} area={area} index={i} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
