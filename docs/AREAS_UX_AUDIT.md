@@ -24,6 +24,18 @@ Tasks é experiência madura (~1600 linhas), múltiplos padrões de interação,
 - `web/src/components/ui/confirm-dialog.tsx` — reusable confirm dialog
 - `web/src/routes/index.tsx` — `areas/:id` route
 
+### P1 Implemented — `feat/areas-ux-upgrade`
+
+| Item | Status | Notes |
+|---|---|---|
+| 4. Icon picker | Done | Popover grid of `areaIconMap` icons with search, reusable `IconPicker` component |
+| 5. Empty state | Done | Centered LayoutGrid icon + message + CTA opens create dialog |
+| 6. Filter/search | Done | FilterChip Ativas/Inativas toggle + inline search + "Limpar" reset |
+
+**Files changed:**
+- `web/src/components/ui/icon-picker.tsx` — new reusable icon picker popover
+- `web/src/pages/areas.tsx` — IconPicker in form, FilterChip, search, empty state
+
 ---
 
 ## 1. O que Tasks faz bem (e Areas não tem)
@@ -90,15 +102,15 @@ Checkbox `is_active` existe no form, sem indicação visual no card nem filtro.
 
 3. ~~**Delete com confirmação**~~: `ConfirmDialog` com variant destructive, mostra contagem de entidades vinculadas.
 
-### P1 — Impacto alto, esforço médio
+### P1 — Impacto alto, esforço médio — DONE
 
-4. **Icon picker**: Substituir text input por grid de ícones Lucide (já mapeados em `areaIconMap`). Popover com busca.
+4. ~~**Icon picker**~~: Popover grid com todos ícones de `areaIconMap`, busca por nome, seleção com highlight. Componente reutilizável `icon-picker.tsx`.
 
-5. **Empty state**: Mensagem + CTA como Tasks. "Organize sua vida em áreas. Crie sua primeira área."
+5. ~~**Empty state**~~: Centered LayoutGrid icon + "Organize sua vida em áreas" + CTA "Nova área".
 
-6. **Filtro/busca**: Toggle ativo/inativo + busca por nome.
+6. ~~**Filtro/busca**~~: FilterChip Ativas/Inativas + search input + "Limpar" button. Client-side filtering.
 
-7. **Inline stats no card**:
+7. **Inline stats no card**: (already done in P0)
    ```
    ┌─────────────────────────┐
    │ 🏋️ Saúde          Score: 72 │
