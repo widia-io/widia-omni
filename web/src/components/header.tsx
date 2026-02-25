@@ -52,7 +52,7 @@ export function Header() {
     .toUpperCase();
 
   return (
-    <header className="animate-in mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-start md:justify-between">
+    <header className="relative z-40 animate-in mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-start md:justify-between">
       <div>
         <h1 className="text-[28px] font-bold tracking-tight">
           {getGreeting()},{" "}
@@ -108,7 +108,7 @@ export function Header() {
             )}
           </button>
           {showNotifs && (
-            <div className="absolute right-0 top-12 z-50">
+            <div className="absolute right-0 top-12 z-[60]">
               <NotificationPanel />
             </div>
           )}
