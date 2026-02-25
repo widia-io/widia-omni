@@ -1526,18 +1526,25 @@ export function Component() {
 
       {/* ─── Task list ───────────────────────────── */}
       {isEmpty ? (
-        <div className="flex flex-col items-center gap-3 py-16 text-text-muted">
-          <ListTree className="h-10 w-10" />
-          <div className="text-center">
-            <p className="text-sm font-medium text-text-primary">{emptyState.title}</p>
-            <p className="mt-1 text-xs">{emptyState.desc}</p>
-            <button
-              onClick={() => setQuickAddTrigger((n) => n + 1)}
-              className="mt-3 text-xs font-medium text-accent-orange transition-opacity hover:opacity-80"
-            >
-              + Adicionar tarefa
-            </button>
+        <div className="space-y-4">
+          <div className="flex flex-col items-center gap-3 py-16 text-text-muted">
+            <ListTree className="h-10 w-10" />
+            <div className="text-center">
+              <p className="text-sm font-medium text-text-primary">{emptyState.title}</p>
+              <p className="mt-1 text-xs">{emptyState.desc}</p>
+              <button
+                onClick={() => setQuickAddTrigger((n) => n + 1)}
+                className="mt-3 text-xs font-medium text-accent-orange transition-opacity hover:opacity-80"
+              >
+                + Adicionar tarefa
+              </button>
+            </div>
           </div>
+          <InlineQuickAdd
+            onExpandedCreate={() => openCreate()}
+            onCreated={handleCreated}
+            trigger={quickAddTrigger}
+          />
         </div>
       ) : (
         <div>

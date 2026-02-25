@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -246,7 +247,15 @@ func (s *TaskService) Create(ctx context.Context, wsID uuid.UUID, limits *domain
 	if err != nil {
 		return nil, err
 	}
-	if !limits.CanCreateTask(counters.TasksCreatedToday) {
+	todayCount := counters.TasksCreatedToday
+	today := time.Now().In(counters.TasksTodayDate.Location())
+	if counters.TasksTodayDate.Year() != today.Year() ||
+		counters.TasksTodayDate.Month() != today.Month() ||
+		counters.TasksTodayDate.Day() != today.Day() {
+		todayCount = 0
+	}
+
+	if !limits.CanCreateTask(todayCount) {
 		observability.EntitlementLimitReachedTotal.WithLabelValues("tasks").Inc()
 		return nil, errors.New("daily task limit reached")
 	}
