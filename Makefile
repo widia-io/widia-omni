@@ -139,10 +139,10 @@ infra-status: ## Show infra container status
 # ─── Stripe ───────────────────────────────────────────────
 
 stripe-listen: ## Listen Stripe webhooks and forward to local API
-	stripe listen --events $(STRIPE_EVENTS) --forward-to $(STRIPE_FORWARD_URL)
+	stripe listen --api-key $(STRIPE_SECRET_KEY) --events $(STRIPE_EVENTS) --forward-to $(STRIPE_FORWARD_URL)
 
 stripe-webhook-secret: ## Print webhook secret for current local forward setup
-	stripe listen --events $(STRIPE_EVENTS) --forward-to $(STRIPE_FORWARD_URL) --print-secret
+	stripe listen --api-key $(STRIPE_SECRET_KEY) --events $(STRIPE_EVENTS) --forward-to $(STRIPE_FORWARD_URL) --print-secret
 
 # ─── Observability (Prometheus + Grafana + Loki) ──────────────
 
