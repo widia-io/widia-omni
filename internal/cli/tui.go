@@ -513,13 +513,13 @@ func (m tuiModel) updateTaskForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "left", "h":
 		if m.taskFocus == 2 {
 			m.taskPriority = (m.taskPriority + len(taskPriorities) - 1) % len(taskPriorities)
+			return m, nil
 		}
-		return m, nil
 	case "right", "l":
 		if m.taskFocus == 2 {
 			m.taskPriority = (m.taskPriority + 1) % len(taskPriorities)
+			return m, nil
 		}
-		return m, nil
 	case "enter":
 		if m.taskFocus < 2 {
 			m.taskFocus++
