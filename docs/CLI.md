@@ -19,32 +19,49 @@ Esse comando:
 
 ## Instalação via package manager
 
-### Homebrew (macOS/Linux)
+### Homebrew (macOS)
 
-Após configurar o tap publicado pelo release, os usuários podem instalar com:
+Com o tap publicado, instale via Homebrew:
 
 ```bash
-brew tap widia-io/tap
-brew install widia
+brew tap widia-io/tap https://github.com/widia-io/homebrew-tap
+brew install --cask widia
+```
+
+Se já tiver o tap configurado localmente:
+
+```bash
+brew install --cask widia
 ```
 
 ### Scoop (Windows)
 
-Após publicar no bucket do Scoop, os usuários podem instalar com:
+Após o bucket estar disponível, instale com:
 
 ```bash
 scoop bucket add widia https://github.com/widia-io/scoop-bucket.git
 scoop install widia
 ```
 
+Se o bucket já existir, atualize antes do install:
+
+```bash
+scoop update widia
+scoop install widia
+```
+
 ## Configuração para publicar em package managers
 
-No `goreleaser`, a publicação para Homebrew e Scoop usa estes tokens/segredos:
+A publicação no GoReleaser já está configurada em `/.goreleaser.yml` nos blocos `homebrew_casks` e `scoops`.
+
+Para funcionamento automático no GitHub Actions, adicione os segredos do repositório:
 
 - `HOMEBREW_TAP_GITHUB_TOKEN`: PAT com permissão para gravar no repositório `widia-io/homebrew-tap`.
 - `SCOOP_BUCKET_GITHUB_TOKEN`: PAT com permissão para gravar no repositório `widia-io/scoop-bucket`.
 
-Se não configurar os dois segredos, a etapa de release ainda publica no GitHub, mas pode pular/ falhar a publicação desses fórmulas.
+Mais detalhes de bootstrap e fluxo de publicação dos repositórios ficam em: `docs/package-managers/README.md`.
+
+Se os segredos não estiverem configurados, a release ainda publica no GitHub, mas a etapa de publicação dos package managers pode pular/falhar.
 
 ## Instalacao alternativa via Go
 

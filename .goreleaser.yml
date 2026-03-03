@@ -26,26 +26,27 @@ builds:
 archives:
   - id: cli
     name_template: "widia-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format: tar.gz
+    formats:
+      - tar.gz
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 
-brews:
+homebrew_casks:
   - name: widia
     description: "Interface CLI em modo TUI para gerenciar tarefas, áreas, projetos e espaços de trabalho"
     homepage: "https://github.com/widia-io/widia-omni"
+    binaries:
+      - widia
     repository:
       owner: widia-io
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
     commit_author:
       name: github-actions[bot]
       email: 41898282+github-actions[bot]@users.noreply.github.com
-    test: 'system "#{bin}/widia", "version"'
-    install: bin.install "widia"
 
 scoops:
   - name: widia
