@@ -10,7 +10,7 @@ import (
 	cli "github.com/widia-io/widia-omni/internal/cli"
 )
 
-const defaultAPIURL = "http://localhost:8080"
+const defaultAPIURL = "https://api.meufoco.app"
 const defaultVersion = "desenvolvimento"
 
 var (
