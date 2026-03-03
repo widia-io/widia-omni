@@ -4,6 +4,7 @@ export
 .PHONY: dev dev-api dev-worker dev-web dev-all \
        stop-api stop-web stop-dev restart-api restart-web restart-dev \
        build build-api build-worker build-cli build-web \
+       release-cli release-cli-snapshot \
        test lint \
        migrate-up migrate-down sqlc-gen \
        infra-up infra-down infra-status \
@@ -91,6 +92,12 @@ build-cli: ## Build CLI binary
 
 build-web: ## Build frontend
 	cd web && npm run build
+
+release-cli: ## Build and publish CLI release artifacts to GitHub (requires tags + token)
+	goreleaser release --clean
+
+release-cli-snapshot: ## Build CLI release assets without publishing
+	goreleaser release --snapshot --clean --skip=publish
 
 # ─── Quality ─────────────────────────────────────────────────
 

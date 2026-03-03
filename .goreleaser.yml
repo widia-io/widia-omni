@@ -1,0 +1,49 @@
+version: 2
+
+project_name: widia
+
+builds:
+  - id: cli
+    main: ./cmd/cli
+    binary: widia
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    flags:
+      - -trimpath
+
+archives:
+  - id: cli
+    name_template: "widia-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: checksums.txt
+
+dist: dist
+
+release:
+  draft: false
+  prerelease: auto
+  mode: replace
+
+changelog:
+  sort: desc
+  filters:
+    exclude:
+      - '^docs\(cli\):'
+      - '^chore\(cli\):'
