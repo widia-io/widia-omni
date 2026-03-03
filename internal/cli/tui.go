@@ -135,11 +135,17 @@ type createAreaResultMsg struct {
 type taskActionResultMsg struct {
 	task   *Task
 	reopen bool
+	undo   bool
 	err    error
 }
 
 type workspaceSwitchResultMsg struct {
 	err error
+}
+
+type taskAction struct {
+	taskID string
+	reopen bool
 }
 
 type tuiModel struct {
@@ -176,6 +182,8 @@ type tuiModel struct {
 	areaName  textinput.Model
 	areaSlug  textinput.Model
 	areaFocus int
+
+	lastTaskAction *taskAction
 
 	errorText string
 	infoText  string
@@ -337,6 +345,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.sidebarCursor = 0
 		m.contentCursor = 0
 		m.loginPassword.SetValue("")
+		m.lastTaskAction = nil
 		m.loading = true
 		return m, tea.Batch(
 			loadUserStateCmd(m.ctx, m.client),
@@ -391,8 +400,19 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.reopen {
 			verb = "reopened"
 		}
+		if msg.undo {
+			verb = "undone (" + verb + ")"
+		}
 		if msg.task != nil {
 			m.infoText = fmt.Sprintf("Task %s: %s", verb, msg.task.Title)
+			if msg.undo {
+				m.lastTaskAction = nil
+			} else {
+				m.lastTaskAction = &taskAction{
+					taskID: msg.task.ID,
+					reopen: !msg.reopen,
+				}
+			}
 		}
 		m.errorText = ""
 		m.loading = true
@@ -618,6 +638,13 @@ func (m tuiModel) updateTasksView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.contentCursor = wrapCursorUp(m.contentCursor, len(m.tasks))
 	case "down", "j":
 		m.contentCursor = wrapCursorDown(m.contentCursor, len(m.tasks))
+	case "u":
+		if m.lastTaskAction == nil {
+			m.errorText = "Nada para desfazer"
+			return m, nil
+		}
+		m.loading = true
+		return m, undoTaskCmd(m.ctx, m.client, *m.lastTaskAction)
 	case "f":
 		m.loading = true
 		m.tasksCompleted = !m.tasksCompleted
@@ -1028,7 +1055,7 @@ func (m tuiModel) renderFooter() string {
 	}
 	switch m.section {
 	case sectionTasks:
-		return "up/down: select  enter/x: toggle done  f: filter  n: new task  tab: sidebar  r: refresh"
+		return "up/down: select  enter/x: toggle done  f: filter  u: undo  n: new task  tab: sidebar  r: refresh"
 	case sectionAreas:
 		return "up/down: select  n/enter: new area  tab: sidebar  r: refresh"
 	case sectionWorkspaces:
@@ -1113,6 +1140,7 @@ func resetToLogin(m tuiModel) tuiModel {
 	m.usage = nil
 	m.profile = nil
 	m.workspace = nil
+	m.lastTaskAction = nil
 	m.loading = false
 	m.loginEmail.Focus()
 	m.loginPassword.Blur()
@@ -1198,6 +1226,17 @@ func reopenTaskCmd(ctx context.Context, client *Client, id string) tea.Cmd {
 	return func() tea.Msg {
 		task, err := client.ReopenTask(ctx, id)
 		return taskActionResultMsg{task: task, reopen: true, err: err}
+	}
+}
+
+func undoTaskCmd(ctx context.Context, client *Client, action taskAction) tea.Cmd {
+	return func() tea.Msg {
+		if action.reopen {
+			task, err := client.ReopenTask(ctx, action.taskID)
+			return taskActionResultMsg{task: task, reopen: true, undo: true, err: err}
+		}
+		task, err := client.CompleteTask(ctx, action.taskID)
+		return taskActionResultMsg{task: task, reopen: false, undo: true, err: err}
 	}
 }
 
