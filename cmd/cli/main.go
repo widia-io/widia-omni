@@ -22,7 +22,11 @@ var (
 func main() {
 	ctx := context.Background()
 
-	apiURL := firstNonEmpty(os.Getenv("WIDIA_API_URL"), defaultAPIURL)
+	apiURL := firstNonEmpty(
+		os.Getenv("MEUFOCO_API_URL"),
+		os.Getenv("WIDIA_API_URL"),
+		defaultAPIURL,
+	)
 	sessionPath, err := cli.DefaultSessionPath()
 	if err != nil {
 		fmt.Printf("Não foi possível determinar o caminho de sessão: %v\n", err)
@@ -102,20 +106,20 @@ func fullVersion() string {
 	if commit != "" {
 		gitCommit = commit
 	}
-	return fmt.Sprintf("widia-cli %s (%s) em %s", version, gitCommit, buildDate)
+	return fmt.Sprintf("meufoco-cli %s (%s) em %s", version, gitCommit, buildDate)
 }
 
 func printUsage() {
-	fmt.Println("widia-cli", fullVersion())
+	fmt.Println("meufoco-cli", fullVersion())
 	fmt.Println("Uso:")
-	fmt.Println("  widia               abre a interface interativa")
-	fmt.Println("  widia login         entrar no sistema")
-	fmt.Println("  widia logout        sair da sessao")
-	fmt.Println("  widia status        checar autenticacao atual")
-	fmt.Println("  widia version       ver informacoes da versao")
-	fmt.Println("  widia -help         exibir esta mensagem")
-	fmt.Println("  widia -version      exibir versao do binary")
+	fmt.Println("  meufoco               abre a interface interativa")
+	fmt.Println("  meufoco login         entrar no sistema")
+	fmt.Println("  meufoco logout        sair da sessao")
+	fmt.Println("  meufoco status        checar autenticacao atual")
+	fmt.Println("  meufoco version       ver informacoes da versao")
+	fmt.Println("  meufoco -help         exibir esta mensagem")
+	fmt.Println("  meufoco -version      exibir versao do binary")
 	fmt.Println()
 	fmt.Println("Configuracao:")
-	fmt.Println("  WIDIA_API_URL       URL da API (padrao:", defaultAPIURL, ")")
+	fmt.Println("  MEUFOCO_API_URL     URL da API (padrao:", defaultAPIURL, ")")
 }

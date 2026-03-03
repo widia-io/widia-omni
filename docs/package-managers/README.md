@@ -1,6 +1,6 @@
 # Publicação em Package Managers
 
-Este projeto publica o CLI `widia` automaticamente para:
+Este projeto publica o CLI `meufoco` automaticamente para:
 
 - Homebrew Cask (`homebrew_casks`) -> `widia-io/homebrew-tap`
 - Scoop (`scoops`) -> `widia-io/scoop-bucket`
@@ -33,19 +33,19 @@ A criação pode ser manual; o GoReleaser cria/atualiza os manifests quando a re
 - `homebrew-tap`:
   - Branch padrão: `main`
   - Pasta gerada: `Casks/`
-  - Arquivo gerado por release: `Casks/widia.rb`
+  - Arquivo gerado por release: `Casks/meufoco.rb`
 
 - `scoop-bucket`:
   - Branch padrão: `main`
-  - Arquivo gerado por release: `widia.json`
+  - Arquivo gerado por release: `meufoco.json`
 
 ## Como a publicação funciona
 
 1. No push de tag (ou `workflow_dispatch`), workflow `release-cli` roda o GoReleaser.
 2. O GoReleaser gera:
    - archives multiplataforma no `dist/`
-   - `Casks/widia.rb`
-   - `scoop/widia.json`
+  - `Casks/meufoco.rb`
+  - `scoop/meufoco.json`
 3. Os artefatos são publicados no GitHub Releases.
 4. O GoReleaser faz commit dos manifests nos repositórios configurados.
 
@@ -55,21 +55,21 @@ A criação pode ser manual; o GoReleaser cria/atualiza os manifests quando a re
 
 ```bash
 brew tap widia-io/tap https://github.com/widia-io/homebrew-tap
-brew install --cask widia
+brew install --cask meufoco
 ```
 
 - Testar instalação Scoop:
 
 ```bash
-scoop bucket add widia https://github.com/widia-io/scoop-bucket.git
-scoop install widia
-scoop update widia
+scoop bucket add meufoco https://github.com/widia-io/scoop-bucket.git
+scoop install meufoco
+scoop update meufoco
 ```
 
 - Verificar que o binário bate versão:
 
 ```bash
-widia version
+meufoco version
 ```
 
 ## Script de bootstrap/validação

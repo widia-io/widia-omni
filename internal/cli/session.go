@@ -28,7 +28,7 @@ func DefaultSessionPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(configDir, "widia", "cli", "session.json"), nil
+	return filepath.Join(configDir, "meufoco", "cli", "session.json"), nil
 }
 
 func NewSessionStore(path string) (*SessionStore, error) {

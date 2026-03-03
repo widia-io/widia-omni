@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OWNER="${WIDIA_PM_OWNER:-widia-io}"
-HOMEBREW_TAP_REPO="${WIDIA_HOMEBREW_TAP_REPO:-${OWNER}/homebrew-tap}"
-SCOOP_BUCKET_REPO="${WIDIA_SCOOP_BUCKET_REPO:-${OWNER}/scoop-bucket}"
-SOURCE_REPO="${WIDIA_SOURCE_REPO:-}"
+OWNER="${MEUFOCO_PM_OWNER:-${WIDIA_PM_OWNER:-widia-io}}"
+HOMEBREW_TAP_REPO="${MEUFOCO_HOMEBREW_TAP_REPO:-${WIDIA_HOMEBREW_TAP_REPO:-${OWNER}/homebrew-tap}}"
+SCOOP_BUCKET_REPO="${MEUFOCO_SCOOP_BUCKET_REPO:-${WIDIA_SCOOP_BUCKET_REPO:-${OWNER}/scoop-bucket}}"
+SOURCE_REPO="${MEUFOCO_SOURCE_REPO:-${WIDIA_SOURCE_REPO:-}}"
 CREATE_MISSING=false
 CHECK_TOKEN_ACCESS=false
 STRICT=false
-DEFAULT_BRANCH="${WIDIA_PM_DEFAULT_BRANCH:-main}"
+DEFAULT_BRANCH="${MEUFOCO_PM_DEFAULT_BRANCH:-${WIDIA_PM_DEFAULT_BRANCH:-main}}"
 
 usage() {
   cat <<'USAGE'
@@ -124,9 +124,9 @@ ensure_repo() {
 
   if [[ "$bootstrap" == homebrew ]]; then
     write_repo_file "$repo" "Casks/.gitkeep" "# placeholder\n"
-    write_repo_file "$repo" "README.md" "# homebrew-tap\n\nRepositório do tap Homebrew para o CLI widia.\n\n\n"
+    write_repo_file "$repo" "README.md" "# homebrew-tap\n\nRepositório do tap Homebrew para o CLI meufoco.\n\n\n"
   else
-    write_repo_file "$repo" "README.md" "# scoop-bucket\n\nRepositório do bucket Scoop para o CLI widia.\n\n\n"
+    write_repo_file "$repo" "README.md" "# scoop-bucket\n\nRepositório do bucket Scoop para o CLI meufoco.\n\n\n"
   fi
 
   echo "Criado: $repo"
@@ -231,8 +231,8 @@ main() {
   fi
 
   log_section "Validação de repositórios"
-  ensure_repo "$HOMEBREW_TAP_REPO" "Homebrew tap for widia CLI" homebrew
-  ensure_repo "$SCOOP_BUCKET_REPO" "Scoop bucket for widia CLI" scoop
+  ensure_repo "$HOMEBREW_TAP_REPO" "Homebrew tap for meufoco CLI" homebrew
+  ensure_repo "$SCOOP_BUCKET_REPO" "Scoop bucket for meufoco CLI" scoop
 
   log_section "Validação de secrets no repositório fonte ($SOURCE_REPO)"
   if secret_exists "$SOURCE_REPO" "HOMEBREW_TAP_GITHUB_TOKEN"; then

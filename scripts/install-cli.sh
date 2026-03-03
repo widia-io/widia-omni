@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="${WIDIA_CLI_REPO:-widia-io/widia-omni}"
-VERSION="${WIDIA_CLI_VERSION:-latest}"
-INSTALL_DIR="${WIDIA_CLI_INSTALL_DIR:-/usr/local/bin}"
-CLI_NAME="widia"
-GITHUB_TOKEN="${WIDIA_CLI_GITHUB_TOKEN:-${GITHUB_TOKEN:-${GH_TOKEN:-${GITHUB_ACCESS_TOKEN:-}}}}"
+REPO="${MEUFOCO_CLI_REPO:-${WIDIA_CLI_REPO:-widia-io/widia-omni}}"
+VERSION="${MEUFOCO_CLI_VERSION:-${WIDIA_CLI_VERSION:-latest}}"
+INSTALL_DIR="${MEUFOCO_CLI_INSTALL_DIR:-${WIDIA_CLI_INSTALL_DIR:-/usr/local/bin}}"
+CLI_NAME="meufoco"
+GITHUB_TOKEN="${MEUFOCO_CLI_GITHUB_TOKEN:-${WIDIA_CLI_GITHUB_TOKEN:-${GITHUB_TOKEN:-${GH_TOKEN:-${GITHUB_ACCESS_TOKEN:-}}}}"
 
 if [ -z "$CLI_NAME" ]; then
   echo "Nome do CLI invalido" >&2

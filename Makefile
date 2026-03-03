@@ -89,7 +89,7 @@ build-worker: ## Build worker binary
 	go build -o bin/worker ./cmd/worker
 
 build-cli: ## Build CLI binary
-	go build -o bin/widia ./cmd/cli
+	go build -o bin/meufoco ./cmd/cli
 
 build-web: ## Build frontend
 	cd web && npm run build

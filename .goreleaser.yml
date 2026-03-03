@@ -1,11 +1,11 @@
 version: 2
 
-project_name: widia
+project_name: meufoco
 
 builds:
   - id: cli
     main: ./cmd/cli
-    binary: widia
+    binary: meufoco
     goos:
       - linux
       - darwin
@@ -25,7 +25,7 @@ builds:
 
 archives:
   - id: cli
-    name_template: "widia-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "meufoco-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz
     format_overrides:
@@ -34,11 +34,11 @@ archives:
           - zip
 
 homebrew_casks:
-  - name: widia
+  - name: meufoco
     description: "Interface CLI em modo TUI para gerenciar tarefas, áreas, projetos e espaços de trabalho"
     homepage: "https://github.com/widia-io/widia-omni"
     binaries:
-      - widia
+      - meufoco
     repository:
       owner: widia-io
       name: homebrew-tap
@@ -49,7 +49,7 @@ homebrew_casks:
       email: 41898282+github-actions[bot]@users.noreply.github.com
 
 scoops:
-  - name: widia
+  - name: meufoco
     description: "Interface CLI em modo TUI para gerenciar tarefas, áreas, projetos e espaços de trabalho"
     homepage: "https://github.com/widia-io/widia-omni"
     repository:
