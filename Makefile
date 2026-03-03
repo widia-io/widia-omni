@@ -3,7 +3,7 @@ export
 
 .PHONY: dev dev-api dev-worker dev-web dev-all \
        stop-api stop-web stop-dev restart-api restart-web restart-dev \
-       build build-api build-worker build-web \
+       build build-api build-worker build-cli build-web \
        test lint \
        migrate-up migrate-down sqlc-gen \
        infra-up infra-down infra-status \
@@ -78,13 +78,16 @@ restart-dev: stop-dev dev-all ## Stop ports and run API + worker + web
 
 # ─── Build ───────────────────────────────────────────────────
 
-build: build-api build-worker build-web ## Build everything
+build: build-api build-worker build-cli build-web ## Build everything
 
 build-api: ## Build API binary
 	go build -o bin/api ./cmd/api
 
 build-worker: ## Build worker binary
 	go build -o bin/worker ./cmd/worker
+
+build-cli: ## Build CLI binary
+	go build -o bin/widia ./cmd/cli
 
 build-web: ## Build frontend
 	cd web && npm run build
