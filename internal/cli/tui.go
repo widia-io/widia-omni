@@ -31,14 +31,15 @@ const (
 )
 
 var sectionNames = []string{
-	"Dashboard",
-	"Tasks",
-	"Areas",
-	"Workspaces",
-	"Session",
+	"Painel",
+	"Tarefas",
+	"Áreas",
+	"Espaços de trabalho",
+	"Sessão",
 }
 
 var taskPriorities = []string{"low", "medium", "high", "critical"}
+var taskPriorityLabels = []string{"Baixa", "Média", "Alta", "Crítica"}
 
 var (
 	clrTextPrimary   = lipgloss.Color("252")
@@ -199,39 +200,39 @@ func RunTUI(ctx context.Context, client *Client) error {
 
 func newTUIModel(ctx context.Context, client *Client) tuiModel {
 	email := textinput.New()
-	email.Placeholder = "email"
-	email.Prompt = "Email: "
+	email.Placeholder = "e-mail"
+	email.Prompt = "E-mail: "
 	email.CharLimit = 120
 	email.Width = 42
 
 	password := textinput.New()
-	password.Placeholder = "password"
-	password.Prompt = "Password: "
+	password.Placeholder = "senha"
+	password.Prompt = "Senha: "
 	password.CharLimit = 120
 	password.Width = 42
 	password.EchoMode = textinput.EchoPassword
 	password.EchoCharacter = '*'
 
 	title := textinput.New()
-	title.Placeholder = "Task title"
-	title.Prompt = "Title: "
+	title.Placeholder = "Título da tarefa"
+	title.Prompt = "Título: "
 	title.CharLimit = 180
 	title.Width = 60
 
 	desc := textinput.New()
-	desc.Placeholder = "Description (optional)"
-	desc.Prompt = "Description: "
+	desc.Placeholder = "Descrição (opcional)"
+	desc.Prompt = "Descrição: "
 	desc.CharLimit = 300
 	desc.Width = 60
 
 	areaName := textinput.New()
-	areaName.Placeholder = "Area name"
-	areaName.Prompt = "Name: "
+	areaName.Placeholder = "Nome da área"
+	areaName.Prompt = "Nome: "
 	areaName.CharLimit = 120
 	areaName.Width = 60
 
 	areaSlug := textinput.New()
-	areaSlug.Placeholder = "area-slug"
+	areaSlug.Placeholder = "slug-da-área"
 	areaSlug.Prompt = "Slug: "
 	areaSlug.CharLimit = 120
 	areaSlug.Width = 60
@@ -340,7 +341,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.mode = modeApp
 		m.errorText = ""
-		m.infoText = "Logged in"
+		m.infoText = "Login realizado"
 		m.focusSidebar = true
 		m.section = sectionDashboard
 		m.sidebarCursor = 0
@@ -360,7 +361,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m = resetToLogin(m)
-		m.infoText = "Session cleared"
+		m.infoText = "Sessão encerrada"
 		return m, nil
 	case createTaskResultMsg:
 		m.loading = false
@@ -368,7 +369,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errorText = msg.err.Error()
 			return m, nil
 		}
-		m.infoText = fmt.Sprintf("Task created: %s", msg.task.Title)
+		m.infoText = fmt.Sprintf("Tarefa criada: %s", msg.task.Title)
 		m.errorText = ""
 		m.resetTaskForm()
 		m.mode = modeApp
@@ -383,7 +384,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errorText = msg.err.Error()
 			return m, nil
 		}
-		m.infoText = fmt.Sprintf("Area created: %s", msg.area.Name)
+		m.infoText = fmt.Sprintf("Área criada: %s", msg.area.Name)
 		m.errorText = ""
 		m.resetAreaForm()
 		m.mode = modeApp
@@ -398,15 +399,15 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errorText = msg.err.Error()
 			return m, nil
 		}
-		verb := "completed"
+		verb := "concluída"
 		if msg.reopen {
-			verb = "reopened"
+			verb = "reaberta"
 		}
 		if msg.undo {
-			verb = "undone (" + verb + ")"
+			verb = "desfeita (" + verb + ")"
 		}
 		if msg.task != nil {
-			m.infoText = fmt.Sprintf("Task %s: %s", verb, msg.task.Title)
+			m.infoText = fmt.Sprintf("Tarefa %s: %s", verb, msg.task.Title)
 			if msg.undo {
 				m.lastTaskAction = nil
 				m.lastTaskActionLabel = ""
@@ -415,9 +416,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					taskID: msg.task.ID,
 					reopen: !msg.reopen,
 				}
-				actionLabel := "completed"
+				actionLabel := "concluiu"
 				if msg.reopen {
-					actionLabel = "reopened"
+					actionLabel = "reabriu"
 				}
 				m.lastTaskActionLabel = fmt.Sprintf("%s %s", actionLabel, msg.task.Title)
 			}
@@ -432,7 +433,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.errorText = ""
-		m.infoText = "Workspace switched"
+		m.infoText = "Espaço de trabalho alterado"
 		m.loading = true
 		return m, tea.Batch(
 			loadUserStateCmd(m.ctx, m.client),
@@ -476,7 +477,7 @@ func (m tuiModel) updateLogin(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		email := strings.TrimSpace(m.loginEmail.Value())
 		password := strings.TrimSpace(m.loginPassword.Value())
 		if email == "" || password == "" {
-			m.errorText = "Email and password are required"
+			m.errorText = "E-mail e senha são obrigatórios"
 			return m, nil
 		}
 		m.loading = true
@@ -529,7 +530,7 @@ func (m tuiModel) updateTaskForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		title := strings.TrimSpace(m.taskTitle.Value())
 		description := strings.TrimSpace(m.taskDesc.Value())
 		if title == "" {
-			m.errorText = "Task title is required"
+			m.errorText = "O título da tarefa é obrigatório"
 			return m, nil
 		}
 		priority := taskPriorities[m.taskPriority]
@@ -572,14 +573,14 @@ func (m tuiModel) updateAreaForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		name := strings.TrimSpace(m.areaName.Value())
 		slug := strings.TrimSpace(m.areaSlug.Value())
 		if name == "" {
-			m.errorText = "Area name is required"
+			m.errorText = "Nome da área é obrigatório"
 			return m, nil
 		}
 		if slug == "" {
 			slug = slugify(name)
 		}
 		if slug == "" {
-			m.errorText = "Invalid slug"
+			m.errorText = "Slug inválido"
 			return m, nil
 		}
 		m.loading = true
@@ -710,7 +711,7 @@ func (m tuiModel) updateWorkspacesView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m tuiModel) updateSessionView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	actions := []string{"Logout", "Quit"}
+	actions := []string{"Sair da sessão", "Sair"}
 	switch msg.String() {
 	case "up", "k":
 		m.contentCursor = wrapCursorUp(m.contentCursor, len(actions))
@@ -773,7 +774,7 @@ func (m tuiModel) viewLogin() string {
 	}
 	panelWidth := min(76, max(56, m.width-8))
 	title := headerStyle.Render("WIDIA CLI")
-	sub := subHeaderStyle.Render("Interactive terminal workspace")
+	sub := subHeaderStyle.Render("Espaço de trabalho interativo no terminal")
 	line := strings.Repeat("-", max(10, panelWidth-4))
 
 	content := []string{
@@ -783,10 +784,10 @@ func (m tuiModel) viewLogin() string {
 		m.loginEmail.View(),
 		m.loginPassword.View(),
 		"",
-		footerStyle.Render("Enter: next/submit  Tab: switch field  q: quit"),
+		footerStyle.Render("Enter: próximo/confirmar  Tab: trocar campo  q: sair"),
 	}
 	if m.loading {
-		content = append(content, infoStyle.Render("Authenticating..."))
+		content = append(content, infoStyle.Render("Autenticando..."))
 	}
 	if m.errorText != "" {
 		content = append(content, errorStyle.Render(m.errorText))
@@ -805,17 +806,17 @@ func (m tuiModel) viewTaskForm() string {
 	}
 	panelWidth := min(88, max(62, m.width-8))
 	content := []string{
-		headerStyle.Render("New Task"),
-		subHeaderStyle.Render("Create a task without leaving the keyboard"),
+		headerStyle.Render("Nova tarefa"),
+		subHeaderStyle.Render("Crie uma tarefa sem sair do teclado"),
 		strings.Repeat("-", max(10, panelWidth-4)),
 		m.taskTitle.View(),
 		m.taskDesc.View(),
-		fmt.Sprintf("Priority: %s", renderPrioritySelector(m.taskPriority)),
+		fmt.Sprintf("Prioridade: %s", renderPrioritySelector(m.taskPriority)),
 		"",
-		footerStyle.Render("Enter: next/submit  Left/Right: priority  Esc: cancel"),
+		footerStyle.Render("Enter: próximo/confirmar  Setas: prioridade  Esc: cancelar"),
 	}
 	if m.loading {
-		content = append(content, infoStyle.Render("Creating task..."))
+		content = append(content, infoStyle.Render("Criando tarefa..."))
 	}
 	if m.errorText != "" {
 		content = append(content, errorStyle.Render(m.errorText))
@@ -830,16 +831,16 @@ func (m tuiModel) viewAreaForm() string {
 	}
 	panelWidth := min(88, max(62, m.width-8))
 	content := []string{
-		headerStyle.Render("New Area"),
-		subHeaderStyle.Render("Create an area from a focused form"),
+		headerStyle.Render("Nova área"),
+		subHeaderStyle.Render("Crie uma área no formulário em foco"),
 		strings.Repeat("-", max(10, panelWidth-4)),
 		m.areaName.View(),
 		m.areaSlug.View(),
 		"",
-		footerStyle.Render("Enter: next/submit  Esc: cancel"),
+		footerStyle.Render("Enter: próximo/confirmar  Esc: cancelar"),
 	}
 	if m.loading {
-		content = append(content, infoStyle.Render("Creating area..."))
+		content = append(content, infoStyle.Render("Criando área..."))
 	}
 	if m.errorText != "" {
 		content = append(content, errorStyle.Render(m.errorText))
@@ -856,7 +857,7 @@ func (m tuiModel) viewApp() string {
 		m.height = 32
 	}
 
-	userLabel := "unknown"
+	userLabel := "desconhecido"
 	if m.profile != nil && strings.TrimSpace(m.profile.Email) != "" {
 		userLabel = m.profile.Email
 	}
@@ -866,7 +867,7 @@ func (m tuiModel) viewApp() string {
 	}
 
 	header := headerStyle.Render("WIDIA CLI")
-	subHeader := subHeaderStyle.Render(fmt.Sprintf("User: %s   Workspace: %s", userLabel, workspaceLabel))
+	subHeader := subHeaderStyle.Render(fmt.Sprintf("Usuário: %s   Espaço: %s", userLabel, workspaceLabel))
 
 	sidebarW := 26
 	if m.width < 86 {
@@ -880,7 +881,7 @@ func (m tuiModel) viewApp() string {
 
 	footer := m.renderFooter()
 	if m.loading {
-		footer = "Loading...  " + footer
+		footer = "Carregando...  " + footer
 	}
 
 	return rootStyle.Render(
@@ -896,7 +897,7 @@ func (m tuiModel) viewApp() string {
 
 func (m tuiModel) renderSidebar() string {
 	var out []string
-	out = append(out, "Sections")
+	out = append(out, "Seções")
 	out = append(out, "")
 	for i, name := range sectionNames {
 		marker := "  "
@@ -914,8 +915,8 @@ func (m tuiModel) renderSidebar() string {
 		out = append(out, style.Render(line))
 	}
 	out = append(out, "")
-	out = append(out, subHeaderStyle.Render("Tab switches focus"))
-	out = append(out, subHeaderStyle.Render("1..5 jumps section"))
+	out = append(out, subHeaderStyle.Render("Tab troca foco"))
+	out = append(out, subHeaderStyle.Render("1..5 muda de seção"))
 	return strings.Join(out, "\n")
 }
 
@@ -948,28 +949,28 @@ func (m tuiModel) renderMainContent(width int) string {
 
 func (m tuiModel) renderDashboard() []string {
 	if m.usage == nil {
-		return []string{"No dashboard data yet. Press r to refresh."}
+		return []string{"Sem dados do painel ainda. Pressione r para atualizar."}
 	}
 	rows := []string{
-		fmt.Sprintf("Areas            %d / %d", m.usage.Counters.AreasCount, m.usage.Limits.MaxAreas),
-		fmt.Sprintf("Goals            %d / %d", m.usage.Counters.GoalsCount, m.usage.Limits.MaxGoals),
-		fmt.Sprintf("Habits           %d / %d", m.usage.Counters.HabitsCount, m.usage.Limits.MaxHabits),
-		fmt.Sprintf("Projects         %d / %d", m.usage.Counters.ProjectsCount, m.usage.Limits.MaxProjects),
-		fmt.Sprintf("Members          %d / %d", m.usage.Counters.MembersCount, m.usage.Limits.MaxMembers),
-		fmt.Sprintf("Tasks Today      %d / %d", m.usage.Counters.TasksCreatedToday, m.usage.Limits.MaxTasksPerDay),
-		fmt.Sprintf("Transactions Mo  %d / %d", m.usage.Counters.TransactionsMonth, m.usage.Limits.MaxTransactions),
+		fmt.Sprintf("Áreas             %d / %d", m.usage.Counters.AreasCount, m.usage.Limits.MaxAreas),
+		fmt.Sprintf("Metas             %d / %d", m.usage.Counters.GoalsCount, m.usage.Limits.MaxGoals),
+		fmt.Sprintf("Hábitos           %d / %d", m.usage.Counters.HabitsCount, m.usage.Limits.MaxHabits),
+		fmt.Sprintf("Projetos          %d / %d", m.usage.Counters.ProjectsCount, m.usage.Limits.MaxProjects),
+		fmt.Sprintf("Membros           %d / %d", m.usage.Counters.MembersCount, m.usage.Limits.MaxMembers),
+		fmt.Sprintf("Tarefas hoje      %d / %d", m.usage.Counters.TasksCreatedToday, m.usage.Limits.MaxTasksPerDay),
+		fmt.Sprintf("Transações/mês  %d / %d", m.usage.Counters.TransactionsMonth, m.usage.Limits.MaxTransactions),
 	}
 	return rows
 }
 
 func (m tuiModel) renderTasks() []string {
-	filter := "Pending"
+	filter := "Pendentes"
 	if m.tasksCompleted {
-		filter = "Completed"
+		filter = "Concluídas"
 	}
-	lines := []string{fmt.Sprintf("Filter: %s", filter)}
+	lines := []string{fmt.Sprintf("Filtro: %s", filter)}
 	if len(m.tasks) == 0 {
-		lines = append(lines, "", "No tasks found.")
+		lines = append(lines, "", "Nenhuma tarefa encontrada.")
 		return lines
 	}
 	lines = append(lines, "")
@@ -978,11 +979,11 @@ func (m tuiModel) renderTasks() []string {
 		if i == m.contentCursor && !m.focusSidebar {
 			cursor = "> "
 		}
-		status := "todo"
+		status := "pendente"
 		if task.IsCompleted {
-			status = "done"
+			status = "concluída"
 		}
-		line := fmt.Sprintf("%s[%s] %-8s %s", cursor, status, task.Priority, task.Title)
+		line := fmt.Sprintf("%s[%s] %-9s %s", cursor, status, renderTaskPriority(task.Priority), task.Title)
 		style := lipgloss.NewStyle().Foreground(clrTextPrimary)
 		if i == m.contentCursor && !m.focusSidebar {
 			style = style.Background(clrPanelSelected)
@@ -994,7 +995,7 @@ func (m tuiModel) renderTasks() []string {
 
 func (m tuiModel) renderAreas() []string {
 	if len(m.areas) == 0 {
-		return []string{"No areas found. Press n to create one."}
+		return []string{"Nenhuma área encontrada. Pressione n para criar uma."}
 	}
 	lines := []string{}
 	for i, area := range m.areas {
@@ -1002,9 +1003,9 @@ func (m tuiModel) renderAreas() []string {
 		if i == m.contentCursor && !m.focusSidebar {
 			cursor = "> "
 		}
-		active := "inactive"
+		active := "inativa"
 		if area.IsActive {
-			active = "active"
+			active = "ativa"
 		}
 		line := fmt.Sprintf("%s%-20s %-18s %s", cursor, area.Name, area.Slug, active)
 		style := lipgloss.NewStyle().Foreground(clrTextPrimary)
@@ -1018,7 +1019,7 @@ func (m tuiModel) renderAreas() []string {
 
 func (m tuiModel) renderWorkspaces() []string {
 	if len(m.workspaces) == 0 {
-		return []string{"No workspaces found."}
+		return []string{"Nenhum espaço de trabalho encontrado."}
 	}
 	lines := []string{}
 	for i, workspace := range m.workspaces {
@@ -1028,7 +1029,7 @@ func (m tuiModel) renderWorkspaces() []string {
 		}
 		defaultTag := ""
 		if workspace.IsDefault {
-			defaultTag = " default"
+			defaultTag = " padrão"
 		}
 		line := fmt.Sprintf("%s%-20s %-10s %s%s", cursor, workspace.Name, workspace.Role, workspace.Slug, defaultTag)
 		style := lipgloss.NewStyle().Foreground(clrTextPrimary)
@@ -1041,8 +1042,8 @@ func (m tuiModel) renderWorkspaces() []string {
 }
 
 func (m tuiModel) renderSession() []string {
-	actions := []string{"Logout", "Quit"}
-	lines := []string{"Session actions", ""}
+	actions := []string{"Sair da sessão", "Sair"}
+	lines := []string{"Ações da sessão", ""}
 	for i, action := range actions {
 		cursor := "  "
 		if i == m.contentCursor && !m.focusSidebar {
@@ -1059,23 +1060,23 @@ func (m tuiModel) renderSession() []string {
 
 func (m tuiModel) renderFooter() string {
 	if m.focusSidebar {
-		return "up/down: navigate sections  enter: open  tab: focus content  r: refresh  q: quit"
+		return "up/down: navegar seções  enter: abrir  tab: focar menu lateral  r: atualizar  q: sair"
 	}
 	switch m.section {
 	case sectionTasks:
-		footer := "up/down: select  enter/x: toggle done  f: filter  u: undo  n: new task  tab: sidebar  r: refresh"
+		footer := "up/down: selecionar  enter/x: alternar concluída  f: filtro  u: desfazer  n: nova tarefa  tab: menu lateral  r: atualizar"
 		if m.lastTaskActionLabel != "" {
 			return fmt.Sprintf("%s  |  Última ação: %s [u]", footer, m.lastTaskActionLabel)
 		}
 		return footer
 	case sectionAreas:
-		return "up/down: select  n/enter: new area  tab: sidebar  r: refresh"
+		return "up/down: selecionar  n/enter: nova área  tab: menu lateral  r: atualizar"
 	case sectionWorkspaces:
-		return "up/down: select  enter: switch workspace  tab: sidebar  r: refresh"
+		return "up/down: selecionar  enter: trocar espaço de trabalho  tab: menu lateral  r: atualizar"
 	case sectionSession:
-		return "up/down: select  enter: run action  tab: sidebar"
+		return "up/down: selecionar  enter: executar ação  tab: menu lateral"
 	default:
-		return "tab: sidebar/content  r: refresh  q: quit"
+		return "tab: menu lateral/conteúdo  r: atualizar  q: sair"
 	}
 }
 
@@ -1134,7 +1135,7 @@ func (m *tuiModel) handleAPIError(err error) {
 	}
 	if isAuthError(err) {
 		*m = resetToLogin(*m)
-		m.errorText = "Session expired. Please login again"
+		m.errorText = "Sessão expirada. Faça login novamente"
 		return
 	}
 	m.errorText = err.Error()
@@ -1262,7 +1263,8 @@ func switchWorkspaceCmd(ctx context.Context, client *Client, workspaceID string)
 
 func renderPrioritySelector(selected int) string {
 	parts := make([]string, 0, len(taskPriorities))
-	for i, value := range taskPriorities {
+	for i := range taskPriorities {
+		value := taskPriorityLabels[i]
 		if i == selected {
 			parts = append(parts, lipgloss.NewStyle().Foreground(clrAccent).Bold(true).Render("["+value+"]"))
 			continue
@@ -1270,6 +1272,15 @@ func renderPrioritySelector(selected int) string {
 		parts = append(parts, value)
 	}
 	return strings.Join(parts, "  ")
+}
+
+func renderTaskPriority(value string) string {
+	for i, priority := range taskPriorities {
+		if value == priority && i < len(taskPriorityLabels) {
+			return taskPriorityLabels[i]
+		}
+	}
+	return value
 }
 
 func clampCursor(cursor, total int) int {
