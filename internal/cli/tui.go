@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -40,6 +42,18 @@ var sectionNames = []string{
 
 var taskPriorities = []string{"low", "medium", "high", "critical"}
 var taskPriorityLabels = []string{"Baixa", "Média", "Alta", "Crítica"}
+
+const (
+	taskFocusTitle = iota
+	taskFocusDescription
+	taskFocusDueDate
+	taskFocusPriority
+	taskFocusArea
+	taskFocusProject
+	taskFocusDuration
+	taskFocusLabels
+	taskFocusCount = 8
+)
 
 var (
 	clrTextPrimary   = lipgloss.Color("252")
@@ -110,6 +124,16 @@ type areasStateMsg struct {
 	err   error
 }
 
+type projectsStateMsg struct {
+	projects []Project
+	err      error
+}
+
+type labelsStateMsg struct {
+	labels []Label
+	err    error
+}
+
 type workspacesStateMsg struct {
 	workspaces []WorkspaceListItem
 	err        error
@@ -170,15 +194,23 @@ type tuiModel struct {
 	tasks      []Task
 	areas      []Area
 	workspaces []WorkspaceListItem
+	projects   []Project
+	labels     []Label
 
 	loginEmail    textinput.Model
 	loginPassword textinput.Model
 	loginFocus    int
 
-	taskTitle    textinput.Model
-	taskDesc     textinput.Model
-	taskPriority int
-	taskFocus    int
+	taskTitle          textinput.Model
+	taskDesc           textinput.Model
+	taskDueDate        textinput.Model
+	taskDuration       textinput.Model
+	taskPriority       int
+	taskAreaIdx        int
+	taskProjectIdx     int
+	taskLabelCursor    int
+	taskSelectedLabels map[string]bool
+	taskFocus          int
 
 	areaName  textinput.Model
 	areaSlug  textinput.Model
@@ -225,6 +257,18 @@ func newTUIModel(ctx context.Context, client *Client) tuiModel {
 	desc.CharLimit = 300
 	desc.Width = 60
 
+	dueDate := textinput.New()
+	dueDate.Placeholder = "AAAA-MM-DD (opcional)"
+	dueDate.Prompt = "Data: "
+	dueDate.CharLimit = 16
+	dueDate.Width = 60
+
+	duration := textinput.New()
+	duration.Placeholder = "ex: 30, 45m, 1h30m"
+	duration.Prompt = "Duração (min): "
+	duration.CharLimit = 16
+	duration.Width = 60
+
 	areaName := textinput.New()
 	areaName.Placeholder = "Nome da área"
 	areaName.Prompt = "Nome: "
@@ -243,20 +287,26 @@ func newTUIModel(ctx context.Context, client *Client) tuiModel {
 	}
 
 	m := tuiModel{
-		ctx:            ctx,
-		client:         client,
-		mode:           mode,
-		section:        sectionDashboard,
-		sidebarCursor:  0,
-		focusSidebar:   true,
-		tasksCompleted: false,
-		loginEmail:     email,
-		loginPassword:  password,
-		taskTitle:      title,
-		taskDesc:       desc,
-		taskPriority:   1,
-		areaName:       areaName,
-		areaSlug:       areaSlug,
+		ctx:                ctx,
+		client:             client,
+		mode:               mode,
+		section:            sectionDashboard,
+		sidebarCursor:      0,
+		focusSidebar:       true,
+		tasksCompleted:     false,
+		loginEmail:         email,
+		loginPassword:      password,
+		taskTitle:          title,
+		taskDesc:           desc,
+		taskDueDate:        dueDate,
+		taskDuration:       duration,
+		taskPriority:       1,
+		taskAreaIdx:        -1,
+		taskProjectIdx:     -1,
+		taskLabelCursor:    0,
+		taskSelectedLabels: map[string]bool{},
+		areaName:           areaName,
+		areaSlug:           areaSlug,
 	}
 	if mode == modeApp {
 		m.loading = true
@@ -322,6 +372,25 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.areas = msg.areas
 		m.contentCursor = clampCursor(m.contentCursor, len(m.areas))
+		m.ensureTaskFormAreaDefaults()
+		return m, nil
+	case projectsStateMsg:
+		m.loading = false
+		if msg.err != nil {
+			m.handleAPIError(msg.err)
+			return m, nil
+		}
+		m.projects = msg.projects
+		m.ensureTaskFormProjectDefaults()
+		return m, nil
+	case labelsStateMsg:
+		m.loading = false
+		if msg.err != nil {
+			m.handleAPIError(msg.err)
+			return m, nil
+		}
+		m.labels = msg.labels
+		m.ensureTaskFormLabelCursor()
 		return m, nil
 	case workspacesStateMsg:
 		m.loading = false
@@ -503,46 +572,125 @@ func (m tuiModel) updateTaskForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "ctrl+c":
 		return m, tea.Quit
-	case "tab", "down":
-		m.taskFocus = (m.taskFocus + 1) % 3
+	case "tab":
+		m.taskFocus = (m.taskFocus + 1) % taskFocusCount
 		m.applyTaskFocus()
 		return m, nil
-	case "shift+tab", "up":
-		m.taskFocus = (m.taskFocus + 2) % 3
+	case "shift+tab":
+		m.taskFocus = (m.taskFocus + taskFocusCount - 1) % taskFocusCount
 		m.applyTaskFocus()
 		return m, nil
 	case "left", "h":
-		if m.taskFocus == 2 {
+		switch m.taskFocus {
+		case taskFocusPriority:
 			m.taskPriority = (m.taskPriority + len(taskPriorities) - 1) % len(taskPriorities)
+			return m, nil
+		case taskFocusArea:
+			m.taskAreaIdx = prevTaskSelectionIdx(m.taskAreaIdx, len(m.areas))
+			return m, nil
+		case taskFocusProject:
+			m.taskProjectIdx = prevTaskSelectionIdx(m.taskProjectIdx, len(m.projects))
 			return m, nil
 		}
 	case "right", "l":
-		if m.taskFocus == 2 {
+		switch m.taskFocus {
+		case taskFocusPriority:
 			m.taskPriority = (m.taskPriority + 1) % len(taskPriorities)
+			return m, nil
+		case taskFocusArea:
+			m.taskAreaIdx = nextTaskSelectionIdx(m.taskAreaIdx, len(m.areas))
+			return m, nil
+		case taskFocusProject:
+			m.taskProjectIdx = nextTaskSelectionIdx(m.taskProjectIdx, len(m.projects))
+			return m, nil
+		}
+	case "up":
+		switch m.taskFocus {
+		case taskFocusArea:
+			m.taskAreaIdx = prevTaskSelectionIdx(m.taskAreaIdx, len(m.areas))
+			return m, nil
+		case taskFocusProject:
+			m.taskProjectIdx = prevTaskSelectionIdx(m.taskProjectIdx, len(m.projects))
+			return m, nil
+		case taskFocusLabels:
+			m.taskLabelCursor = wrapCursorUp(m.taskLabelCursor, len(m.labels))
+			return m, nil
+		}
+	case "down":
+		switch m.taskFocus {
+		case taskFocusArea:
+			m.taskAreaIdx = nextTaskSelectionIdx(m.taskAreaIdx, len(m.areas))
+			return m, nil
+		case taskFocusProject:
+			m.taskProjectIdx = nextTaskSelectionIdx(m.taskProjectIdx, len(m.projects))
+			return m, nil
+		case taskFocusLabels:
+			m.taskLabelCursor = wrapCursorDown(m.taskLabelCursor, len(m.labels))
+			return m, nil
+		}
+	case " ":
+		if m.taskFocus == taskFocusLabels {
+			m.toggleTaskLabelSelection()
 			return m, nil
 		}
 	case "enter":
-		if m.taskFocus < 2 {
+		if m.taskFocus < taskFocusLabels {
 			m.taskFocus++
 			m.applyTaskFocus()
 			return m, nil
 		}
 		title := strings.TrimSpace(m.taskTitle.Value())
 		description := strings.TrimSpace(m.taskDesc.Value())
+		dueDate, err := parseTaskDueDate(strings.TrimSpace(m.taskDueDate.Value()))
+		if err != nil {
+			m.errorText = err.Error()
+			return m, nil
+		}
+		duration, err := parseTaskDuration(strings.TrimSpace(m.taskDuration.Value()))
+		if err != nil {
+			m.errorText = err.Error()
+			return m, nil
+		}
 		if title == "" {
 			m.errorText = "O título da tarefa é obrigatório"
 			return m, nil
 		}
 		priority := taskPriorities[m.taskPriority]
+		var desc *string
+		if description != "" {
+			desc = &description
+		}
+		areaID := taskSelectionID(m.taskAreaIdx, m.areas)
+		projectID := taskProjectSelectionID(m.taskProjectIdx, m.projects)
 		m.loading = true
-		return m, createTaskCmd(m.ctx, m.client, title, description, priority)
+		return m, createTaskCmd(
+			m.ctx,
+			m.client,
+			TaskCreateRequest{
+				Title:           title,
+				Description:     desc,
+				Priority:        priority,
+				AreaID:          areaID,
+				ProjectID:       projectID,
+				DueDate:         dueDate,
+				DurationMinutes: duration,
+				LabelIDs:        m.taskSelectedLabelIDs(),
+			},
+		)
 	}
 
 	var cmd tea.Cmd
-	if m.taskFocus == 0 {
+	switch m.taskFocus {
+	case taskFocusTitle:
 		m.taskTitle, cmd = m.taskTitle.Update(msg)
-	} else if m.taskFocus == 1 {
+	case taskFocusDescription:
 		m.taskDesc, cmd = m.taskDesc.Update(msg)
+	case taskFocusDueDate:
+		m.taskDueDate, cmd = m.taskDueDate.Update(msg)
+	case taskFocusDuration:
+		m.taskDuration, cmd = m.taskDuration.Update(msg)
+	case taskFocusLabels:
+		return m, nil
 	}
 	return m, cmd
 }
@@ -659,11 +807,17 @@ func (m tuiModel) updateTasksView(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.tasksCompleted = !m.tasksCompleted
 		return m, loadTasksStateCmd(m.ctx, m.client, m.tasksCompleted)
 	case "n":
+		m.resetTaskForm()
 		m.mode = modeTaskForm
-		m.taskFocus = 0
+		m.taskFocus = taskFocusTitle
 		m.applyTaskFocus()
 		m.errorText = ""
-		return m, textinput.Blink
+		return m, tea.Batch(
+			textinput.Blink,
+			loadAreasStateCmd(m.ctx, m.client),
+			loadProjectsStateCmd(m.ctx, m.client),
+			loadLabelsStateCmd(m.ctx, m.client),
+		)
 	case "x", "enter":
 		if len(m.tasks) == 0 {
 			return m, nil
@@ -805,16 +959,28 @@ func (m tuiModel) viewTaskForm() string {
 		m.width = 100
 	}
 	panelWidth := min(88, max(62, m.width-8))
+
+	areaName := taskSelectionDisplayName(m.taskAreaIdx, m.areas, "Nenhuma")
+	projectName := taskProjectSelectionDisplayName(m.taskProjectIdx, m.projects, "Nenhum")
+	selectedLabels := taskSelectedLabelsSummary(m.labels, m.taskSelectedLabels)
 	content := []string{
 		headerStyle.Render("Nova tarefa"),
 		subHeaderStyle.Render("Crie uma tarefa sem sair do teclado"),
 		strings.Repeat("-", max(10, panelWidth-4)),
 		m.taskTitle.View(),
 		m.taskDesc.View(),
+		m.taskDueDate.View(),
 		fmt.Sprintf("Prioridade: %s", renderPrioritySelector(m.taskPriority)),
+		fmt.Sprintf("Área: %s", areaName),
+		fmt.Sprintf("Projeto: %s", projectName),
+		m.taskDuration.View(),
+		fmt.Sprintf("Etiquetas: %s", selectedLabels),
 		"",
-		footerStyle.Render("Enter: próximo/confirmar  Setas: prioridade  Esc: cancelar"),
 	}
+	content = append(content, m.renderTaskAreaSelection()...)
+	content = append(content, m.renderTaskProjectSelection()...)
+	content = append(content, m.renderTaskLabelsSelection()...)
+	content = append(content, footerStyle.Render("Tab: próximo  Shift+Tab: anterior  Enter: avançar/salvar  Esc: cancelar"))
 	if m.loading {
 		content = append(content, infoStyle.Render("Criando tarefa..."))
 	}
@@ -1058,6 +1224,60 @@ func (m tuiModel) renderSession() []string {
 	return lines
 }
 
+func (m tuiModel) renderTaskAreaSelection() []string {
+	if m.taskFocus != taskFocusArea {
+		return nil
+	}
+	lines := []string{"", "Área (←/→/↑/↓):"}
+	lines = append(lines, "  [Sem área]")
+	for i, area := range m.areas {
+		cursor := "  "
+		if i == m.taskAreaIdx {
+			cursor = "> "
+		}
+		lines = append(lines, fmt.Sprintf("%s%s", cursor, area.Name))
+	}
+	return lines
+}
+
+func (m tuiModel) renderTaskProjectSelection() []string {
+	if m.taskFocus != taskFocusProject {
+		return nil
+	}
+	lines := []string{"", "Projeto (←/→/↑/↓):"}
+	lines = append(lines, "  [Sem projeto]")
+	for i, project := range m.projects {
+		cursor := "  "
+		if i == m.taskProjectIdx {
+			cursor = "> "
+		}
+		lines = append(lines, fmt.Sprintf("%s%s", cursor, project.Title))
+	}
+	return lines
+}
+
+func (m tuiModel) renderTaskLabelsSelection() []string {
+	if m.taskFocus != taskFocusLabels {
+		return nil
+	}
+	lines := []string{"", "Etiquetas (espaço: alternar):"}
+	if len(m.labels) == 0 {
+		return append(lines, "  Nenhuma etiqueta disponível.")
+	}
+	for i, label := range m.labels {
+		selected := "[ ]"
+		if m.taskSelectedLabels != nil && m.taskSelectedLabels[label.ID] {
+			selected = "[x]"
+		}
+		cursor := "  "
+		if i == m.taskLabelCursor {
+			cursor = "> "
+		}
+		lines = append(lines, fmt.Sprintf("%s%s %s", cursor, selected, label.Name))
+	}
+	return lines
+}
+
 func (m tuiModel) renderFooter() string {
 	if m.focusSidebar {
 		return "up/down: navegar seções  enter: abrir  tab: focar menu lateral  r: atualizar  q: sair"
@@ -1092,15 +1312,31 @@ func (m *tuiModel) applyLoginFocus() {
 
 func (m *tuiModel) applyTaskFocus() {
 	switch m.taskFocus {
-	case 0:
+	case taskFocusTitle:
 		m.taskTitle.Focus()
 		m.taskDesc.Blur()
-	case 1:
+		m.taskDueDate.Blur()
+		m.taskDuration.Blur()
+	case taskFocusDescription:
 		m.taskTitle.Blur()
 		m.taskDesc.Focus()
+		m.taskDueDate.Blur()
+		m.taskDuration.Blur()
+	case taskFocusDueDate:
+		m.taskTitle.Blur()
+		m.taskDesc.Blur()
+		m.taskDueDate.Focus()
+		m.taskDuration.Blur()
+	case taskFocusDuration:
+		m.taskTitle.Blur()
+		m.taskDesc.Blur()
+		m.taskDueDate.Blur()
+		m.taskDuration.Focus()
 	default:
 		m.taskTitle.Blur()
 		m.taskDesc.Blur()
+		m.taskDueDate.Blur()
+		m.taskDuration.Blur()
 	}
 }
 
@@ -1117,8 +1353,14 @@ func (m *tuiModel) applyAreaFocus() {
 func (m *tuiModel) resetTaskForm() {
 	m.taskTitle.SetValue("")
 	m.taskDesc.SetValue("")
+	m.taskDueDate.SetValue("")
+	m.taskDuration.SetValue("")
 	m.taskPriority = 1
-	m.taskFocus = 0
+	m.taskAreaIdx = -1
+	m.taskProjectIdx = -1
+	m.taskLabelCursor = 0
+	m.taskSelectedLabels = map[string]bool{}
+	m.taskFocus = taskFocusTitle
 	m.applyTaskFocus()
 }
 
@@ -1127,6 +1369,187 @@ func (m *tuiModel) resetAreaForm() {
 	m.areaSlug.SetValue("")
 	m.areaFocus = 0
 	m.applyAreaFocus()
+}
+
+func (m *tuiModel) ensureTaskFormAreaDefaults() {
+	if m.taskAreaIdx >= len(m.areas) {
+		m.taskAreaIdx = -1
+	}
+}
+
+func (m *tuiModel) ensureTaskFormProjectDefaults() {
+	if m.taskProjectIdx >= len(m.projects) {
+		m.taskProjectIdx = -1
+	}
+}
+
+func (m *tuiModel) ensureTaskFormLabelCursor() {
+	if len(m.labels) == 0 {
+		m.taskLabelCursor = 0
+		return
+	}
+	if m.taskLabelCursor < 0 || m.taskLabelCursor >= len(m.labels) {
+		m.taskLabelCursor = 0
+	}
+	for _, lbl := range m.labels {
+		if m.taskSelectedLabels != nil && m.taskSelectedLabels[lbl.ID] {
+			return
+		}
+	}
+}
+
+func (m *tuiModel) taskSelectedLabelIDs() []string {
+	if len(m.labels) == 0 || len(m.taskSelectedLabels) == 0 {
+		return nil
+	}
+	ids := make([]string, 0, len(m.taskSelectedLabels))
+	for _, label := range m.labels {
+		if m.taskSelectedLabels[label.ID] {
+			ids = append(ids, label.ID)
+		}
+	}
+	return ids
+}
+
+func (m *tuiModel) toggleTaskLabelSelection() {
+	if len(m.labels) == 0 {
+		return
+	}
+	if m.taskLabelCursor < 0 || m.taskLabelCursor >= len(m.labels) {
+		m.taskLabelCursor = 0
+	}
+	id := m.labels[m.taskLabelCursor].ID
+	if m.taskSelectedLabels == nil {
+		m.taskSelectedLabels = map[string]bool{}
+	}
+	if m.taskSelectedLabels[id] {
+		delete(m.taskSelectedLabels, id)
+		return
+	}
+	m.taskSelectedLabels[id] = true
+}
+
+func taskSelectionDisplayName(idx int, areas []Area, noneLabel string) string {
+	if idx < 0 || idx >= len(areas) {
+		return noneLabel
+	}
+	return areas[idx].Name
+}
+
+func taskProjectSelectionDisplayName(idx int, projects []Project, noneLabel string) string {
+	if idx < 0 || idx >= len(projects) {
+		return noneLabel
+	}
+	return projects[idx].Title
+}
+
+func taskSelectedLabelsSummary(labels []Label, selected map[string]bool) string {
+	items := make([]string, 0)
+	for _, label := range labels {
+		if selected != nil && selected[label.ID] {
+			items = append(items, label.Name)
+		}
+	}
+	if len(items) == 0 {
+		return "nenhuma"
+	}
+	return strings.Join(items, ", ")
+}
+
+func taskSelectionID(idx int, areas []Area) *string {
+	if idx < 0 || idx >= len(areas) {
+		return nil
+	}
+	id := areas[idx].ID
+	return &id
+}
+
+func taskProjectSelectionID(idx int, projects []Project) *string {
+	if idx < 0 || idx >= len(projects) {
+		return nil
+	}
+	id := projects[idx].ID
+	return &id
+}
+
+func nextTaskSelectionIdx(current, total int) int {
+	if total <= 0 {
+		return -1
+	}
+	if current >= total-1 {
+		return -1
+	}
+	return current + 1
+}
+
+func prevTaskSelectionIdx(current, total int) int {
+	if total <= 0 {
+		return -1
+	}
+	if current <= 0 {
+		return total - 1
+	}
+	if current == -1 {
+		return total - 1
+	}
+	return current - 1
+}
+
+func parseTaskDueDate(raw string) (*string, error) {
+	if raw == "" {
+		return nil, nil
+	}
+	parsed, err := time.Parse("2006-01-02", raw)
+	if err != nil {
+		return nil, errors.New("data inválida, use AAAA-MM-DD")
+	}
+	value := parsed.Format("2006-01-02")
+	return &value, nil
+}
+
+func parseTaskDuration(raw string) (*int, error) {
+	if raw == "" {
+		return nil, nil
+	}
+	if raw[0] == '+' {
+		raw = raw[1:]
+	}
+	if strings.Contains(raw, ":") {
+		parts := strings.SplitN(raw, ":", 2)
+		if len(parts) != 2 {
+			return nil, errors.New("duração inválida, use minutos ou formato HH:MM")
+		}
+		hours, err := strconv.Atoi(parts[0])
+		if err != nil {
+			return nil, errors.New("duração inválida, use minutos ou formato HH:MM")
+		}
+		minutes, err := strconv.Atoi(parts[1])
+		if err != nil {
+			return nil, errors.New("duração inválida, use minutos ou formato HH:MM")
+		}
+		if hours < 0 || minutes < 0 {
+			return nil, errors.New("duração não pode ser negativa")
+		}
+		total := hours*60 + minutes
+		return &total, nil
+	}
+
+	value, err := time.ParseDuration(raw)
+	if err == nil {
+		total := int(value.Minutes())
+		if total < 0 {
+			return nil, errors.New("duração não pode ser negativa")
+		}
+		return &total, nil
+	}
+	minutes, err := strconv.Atoi(raw)
+	if err != nil {
+		return nil, errors.New("duração inválida, use minutos ou formato HH:MM")
+	}
+	if minutes < 0 {
+		return nil, errors.New("duração não pode ser negativa")
+	}
+	return &minutes, nil
 }
 
 func (m *tuiModel) handleAPIError(err error) {
@@ -1153,8 +1576,11 @@ func resetToLogin(m tuiModel) tuiModel {
 	m.usage = nil
 	m.profile = nil
 	m.workspace = nil
+	m.projects = nil
+	m.labels = nil
 	m.lastTaskAction = nil
 	m.lastTaskActionLabel = ""
+	m.taskSelectedLabels = nil
 	m.loading = false
 	m.loginEmail.Focus()
 	m.loginPassword.Blur()
@@ -1194,6 +1620,20 @@ func loadAreasStateCmd(ctx context.Context, client *Client) tea.Cmd {
 	}
 }
 
+func loadProjectsStateCmd(ctx context.Context, client *Client) tea.Cmd {
+	return func() tea.Msg {
+		projects, err := client.ListProjects(ctx)
+		return projectsStateMsg{projects: projects, err: err}
+	}
+}
+
+func loadLabelsStateCmd(ctx context.Context, client *Client) tea.Cmd {
+	return func() tea.Msg {
+		labels, err := client.ListLabels(ctx)
+		return labelsStateMsg{labels: labels, err: err}
+	}
+}
+
 func loadWorkspacesStateCmd(ctx context.Context, client *Client) tea.Cmd {
 	return func() tea.Msg {
 		items, err := client.ListWorkspaces(ctx)
@@ -1215,9 +1655,9 @@ func logoutCmd(ctx context.Context, client *Client) tea.Cmd {
 	}
 }
 
-func createTaskCmd(ctx context.Context, client *Client, title, description, priority string) tea.Cmd {
+func createTaskCmd(ctx context.Context, client *Client, req TaskCreateRequest) tea.Cmd {
 	return func() tea.Msg {
-		task, err := client.CreateTask(ctx, title, description, priority)
+		task, err := client.CreateTask(ctx, req)
 		return createTaskResultMsg{task: task, err: err}
 	}
 }

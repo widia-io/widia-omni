@@ -122,14 +122,30 @@ type Task struct {
 	Priority    string `json:"priority"`
 }
 
+type Project struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+type Label struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Color string `json:"color"`
+}
+
 type taskUpdateRequest struct {
 	Position int `json:"position"`
 }
 
 type TaskCreateRequest struct {
-	Title       string  `json:"title"`
-	Description *string `json:"description,omitempty"`
-	Priority    string  `json:"priority"`
+	Title           string   `json:"title"`
+	Description     *string  `json:"description,omitempty"`
+	Priority        string   `json:"priority"`
+	AreaID          *string  `json:"area_id,omitempty"`
+	ProjectID       *string  `json:"project_id,omitempty"`
+	DueDate         *string  `json:"due_date,omitempty"`
+	DurationMinutes *int     `json:"duration_minutes,omitempty"`
+	LabelIDs        []string `json:"label_ids,omitempty"`
 }
 
 type areaCreateRequest struct {
@@ -248,18 +264,20 @@ func (c *Client) ListTasks(ctx context.Context, completed *bool) ([]Task, error)
 	return out, err
 }
 
-func (c *Client) CreateTask(ctx context.Context, title, description string, priority string) (*Task, error) {
-	if priority == "" {
-		priority = "medium"
+func (c *Client) CreateTask(ctx context.Context, req TaskCreateRequest) (*Task, error) {
+	if req.Priority == "" {
+		req.Priority = "medium"
 	}
-	var desc *string
-	if strings.TrimSpace(description) != "" {
-		desc = &description
+	if req.Description != nil {
+		description := strings.TrimSpace(*req.Description)
+		if description == "" {
+			req.Description = nil
+		} else {
+			req.Description = &description
+		}
 	}
-	req := TaskCreateRequest{
-		Title:       title,
-		Description: desc,
-		Priority:    priority,
+	if strings.TrimSpace(req.Title) == "" {
+		return nil, errors.New("título é obrigatório")
 	}
 	var out Task
 	err := c.request(ctx, http.MethodPost, "/api/v1/tasks", req, &out, true)
@@ -298,6 +316,18 @@ func (c *Client) CreateArea(ctx context.Context, name, slug string) (*Area, erro
 	var out Area
 	err := c.request(ctx, http.MethodPost, "/api/v1/areas", req, &out, true)
 	return &out, err
+}
+
+func (c *Client) ListProjects(ctx context.Context) ([]Project, error) {
+	var out []Project
+	err := c.request(ctx, http.MethodGet, "/api/v1/projects", nil, &out, true)
+	return out, err
+}
+
+func (c *Client) ListLabels(ctx context.Context) ([]Label, error) {
+	var out []Label
+	err := c.request(ctx, http.MethodGet, "/api/v1/labels", nil, &out, true)
+	return out, err
 }
 
 func (c *Client) request(ctx context.Context, method, path string, payload any, out any, withAuth bool) error {

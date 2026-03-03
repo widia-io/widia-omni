@@ -204,7 +204,12 @@ func createTaskFlow(ctx context.Context, reader *bufio.Reader, client *Client) e
 	}
 
 	priorities := []string{"low", "medium", "high", "critical"}
-	task, err := client.CreateTask(ctx, title, description, priorities[priority])
+	req := TaskCreateRequest{
+		Title:       title,
+		Description: &description,
+		Priority:    priorities[priority],
+	}
+	task, err := client.CreateTask(ctx, req)
 	if err != nil {
 		return err
 	}
