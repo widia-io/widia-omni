@@ -24,6 +24,15 @@ const tierBadge: Record<PlanTier, "default" | "orange" | "blue"> = {
   premium: "blue",
 };
 
+const LAST_TIER_KEY = "widia-last-tier";
+
+function readCachedTier(): PlanTier | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(LAST_TIER_KEY);
+  if (raw === "free" || raw === "pro" || raw === "premium") return raw;
+  return null;
+}
+
 export function Header() {
   const user = useAuthStore((s) => s.user);
   const { data: unreadCount } = useNotificationCount();
@@ -31,6 +40,7 @@ export function Header() {
   const { data: subscription } = useSubscription();
   const { data: workspaces } = useWorkspaces();
   const switchWorkspace = useSwitchWorkspace();
+  const [cachedTier, setCachedTier] = useState<PlanTier | null>(() => readCachedTier());
   const [showNotifs, setShowNotifs] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +52,16 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  useEffect(() => {
+    if (!subscription?.tier) return;
+    setCachedTier(subscription.tier);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LAST_TIER_KEY, subscription.tier);
+    }
+  }, [subscription?.tier]);
+
   const defaultWorkspace = workspaces?.find((w) => w.is_default) ?? workspaces?.[0];
+  const tierToShow = subscription?.tier ?? cachedTier;
 
   const initials = (user?.display_name ?? "U")
     .split(" ")
@@ -85,10 +104,10 @@ export function Header() {
             </SelectContent>
           </Select>
         )}
-        {subscription && (
+        {tierToShow && (
           <Link to="/billing" title="Gerenciar plano">
-            <Badge variant={tierBadge[subscription.tier]} className="rounded-full px-2.5 py-1 text-[11px]">
-              {tierLabel[subscription.tier]}
+            <Badge variant={tierBadge[tierToShow]} className="rounded-full px-2.5 py-1 text-[11px]">
+              {tierLabel[tierToShow]}
             </Badge>
           </Link>
         )}

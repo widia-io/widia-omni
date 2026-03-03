@@ -34,6 +34,17 @@ async function refreshToken(): Promise<boolean> {
   }
 }
 
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshTokenOnce(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshToken().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit & { params?: Record<string, string> } = {},
@@ -61,7 +72,8 @@ export async function api<T>(
   let res = await fetch(url, { ...init, headers });
 
   if (res.status === 401 && accessToken) {
-    const refreshed = await refreshToken();
+    // Avoid a refresh storm when several queries fail with 401 simultaneously.
+    const refreshed = await refreshTokenOnce();
     if (refreshed) {
       const newToken = useAuthStore.getState().accessToken;
       headers["Authorization"] = `Bearer ${newToken}`;
