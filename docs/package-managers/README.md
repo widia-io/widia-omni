@@ -13,6 +13,12 @@ A publicação é feita no workflow `Release CLI` via GoReleaser.
    - `github.com/widia-io/homebrew-tap`
    - `github.com/widia-io/scoop-bucket`
 
+Observacao:
+
+- O Homebrew/Scoop consumem `url` dos artefatos de `releases` sem autenticação.
+  Se o repositório `widia-io/widia-omni` for privado, a instalação por package manager não
+  funcionará para usuários sem token do GitHub. Nessa situação, mantenha um repositório de releases público ou use o instalador com token.
+
 2. Garantir permissões:
    - Token PAT com `contents: write` para cada repositório.
 

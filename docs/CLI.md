@@ -6,6 +6,13 @@
 curl -fsSL https://raw.githubusercontent.com/widia-io/widia-omni/main/scripts/install-cli.sh | bash
 ```
 
+Para repositório privado (exige autenticação), use um token com leitura do repositório:
+
+```bash
+export WIDIA_CLI_GITHUB_TOKEN=<token>
+curl -H "Authorization: token ${WIDIA_CLI_GITHUB_TOKEN}" -fsSL https://raw.githubusercontent.com/widia-io/widia-omni/main/scripts/install-cli.sh | bash
+```
+
 Esse comando:
 - detecta seu sistema (Linux/macOS, amd64/arm64),
 - consulta a release mais recente do GitHub,
@@ -16,6 +23,7 @@ Esse comando:
 
 - `WIDIA_CLI_VERSION`: define a versão (ex.: `v1.0.0`).
 - `WIDIA_CLI_INSTALL_DIR`: altera o diretório de instalação (padrão `/usr/local/bin`).
+- `WIDIA_CLI_GITHUB_TOKEN`: token para repositórios privados.
 
 ## Instalação via package manager
 
@@ -78,9 +86,9 @@ O CLI é empacotado no formato:
 - `widia-cli_<versao>_windows_<arch>.zip` para Windows.
 
 Exemplos:
-- `widia-cli_v1.0.0_linux_amd64.tar.gz`
-- `widia-cli_v1.0.0_darwin_arm64.tar.gz`
-- `widia-cli_v1.0.0_windows_amd64.zip`
+- `widia-cli_1.0.0_linux_amd64.tar.gz`
+- `widia-cli_1.0.0_darwin_arm64.tar.gz`
+- `widia-cli_1.0.0_windows_amd64.zip`
 
 ## Publicação de release (desenvolvedor)
 
