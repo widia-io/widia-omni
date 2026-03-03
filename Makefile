@@ -18,6 +18,7 @@ STRIPE_EVENTS ?= checkout.session.completed,customer.subscription.created,custom
 STRIPE_FORWARD_URL ?= http://localhost:$(PORT)/webhooks/stripe
 PROJECT_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 WEB_DIR := $(PROJECT_ROOT)/web
+GORELEASER := $(shell command -v goreleaser 2>/dev/null || echo "go run github.com/goreleaser/goreleaser/v2@latest")
 
 # ─── Development ─────────────────────────────────────────────
 
@@ -94,10 +95,10 @@ build-web: ## Build frontend
 	cd web && npm run build
 
 release-cli: ## Build and publish CLI release artifacts to GitHub (requires tags + token)
-	goreleaser release --clean
+	$(GORELEASER) release --clean
 
 release-cli-snapshot: ## Build CLI release assets without publishing
-	goreleaser release --snapshot --clean --skip=publish
+	$(GORELEASER) release --snapshot --clean --skip=publish
 
 # ─── Quality ─────────────────────────────────────────────────
 
