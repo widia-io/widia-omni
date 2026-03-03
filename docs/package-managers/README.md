@@ -65,3 +65,40 @@ scoop update widia
 ```bash
 widia version
 ```
+
+## Script de bootstrap/validação
+
+Existe um script para automatizar checagem de repositórios e secrets:
+
+```bash
+scripts/bootstrap-package-managers.sh
+```
+
+Comportamento padrão:
+- valida se os repositórios `homebrew-tap` e `scoop-bucket` existem,
+- valida se os secrets `HOMEBREW_TAP_GITHUB_TOKEN` e `SCOOP_BUCKET_GITHUB_TOKEN` existem no repositório fonte.
+
+Opções úteis:
+
+```bash
+scripts/bootstrap-package-managers.sh --create
+```
+
+- `--create`: cria os repositórios de package managers faltantes e adiciona arquivos mínimos de bootstrap.
+
+```bash
+scripts/bootstrap-package-managers.sh --create --check-token-access --strict
+```
+
+- `--check-token-access`: valida acesso real dos tokens (via variável de ambiente) aos repositórios.
+- `--strict`: falha se `HOMEBREW_TAP_GITHUB_TOKEN` ou `SCOOP_BUCKET_GITHUB_TOKEN` não estiverem exportados.
+- `--owner`: altera o dono dos repositórios (padrão `widia-io`).
+- `--homebrew-repo` / `--scoop-repo`: sobrescreve cada repositório manualmente.
+
+Exemplo completo local (sem criar repositórios):
+
+```bash
+export HOMEBREW_TAP_GITHUB_TOKEN=***
+export SCOOP_BUCKET_GITHUB_TOKEN=***
+scripts/bootstrap-package-managers.sh --check-token-access --strict
+```
