@@ -183,7 +183,8 @@ type tuiModel struct {
 	areaSlug  textinput.Model
 	areaFocus int
 
-	lastTaskAction *taskAction
+	lastTaskAction      *taskAction
+	lastTaskActionLabel string
 
 	errorText string
 	infoText  string
@@ -346,6 +347,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.contentCursor = 0
 		m.loginPassword.SetValue("")
 		m.lastTaskAction = nil
+		m.lastTaskActionLabel = ""
 		m.loading = true
 		return m, tea.Batch(
 			loadUserStateCmd(m.ctx, m.client),
@@ -407,11 +409,17 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.infoText = fmt.Sprintf("Task %s: %s", verb, msg.task.Title)
 			if msg.undo {
 				m.lastTaskAction = nil
+				m.lastTaskActionLabel = ""
 			} else {
 				m.lastTaskAction = &taskAction{
 					taskID: msg.task.ID,
 					reopen: !msg.reopen,
 				}
+				actionLabel := "completed"
+				if msg.reopen {
+					actionLabel = "reopened"
+				}
+				m.lastTaskActionLabel = fmt.Sprintf("%s %s", actionLabel, msg.task.Title)
 			}
 		}
 		m.errorText = ""
@@ -1055,7 +1063,11 @@ func (m tuiModel) renderFooter() string {
 	}
 	switch m.section {
 	case sectionTasks:
-		return "up/down: select  enter/x: toggle done  f: filter  u: undo  n: new task  tab: sidebar  r: refresh"
+		footer := "up/down: select  enter/x: toggle done  f: filter  u: undo  n: new task  tab: sidebar  r: refresh"
+		if m.lastTaskActionLabel != "" {
+			return fmt.Sprintf("%s  |  Última ação: %s [u]", footer, m.lastTaskActionLabel)
+		}
+		return footer
 	case sectionAreas:
 		return "up/down: select  n/enter: new area  tab: sidebar  r: refresh"
 	case sectionWorkspaces:
@@ -1141,6 +1153,7 @@ func resetToLogin(m tuiModel) tuiModel {
 	m.profile = nil
 	m.workspace = nil
 	m.lastTaskAction = nil
+	m.lastTaskActionLabel = ""
 	m.loading = false
 	m.loginEmail.Focus()
 	m.loginPassword.Blur()
