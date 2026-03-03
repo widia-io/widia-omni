@@ -3,7 +3,8 @@ export
 
 .PHONY: dev dev-api dev-worker dev-web dev-all \
        stop-api stop-web stop-dev restart-api restart-web restart-dev \
-       build build-api build-worker build-web \
+       build build-api build-worker build-cli build-web \
+       release-cli release-cli-snapshot \
        test lint \
        migrate-up migrate-down sqlc-gen \
        infra-up infra-down infra-status \
@@ -17,6 +18,7 @@ STRIPE_EVENTS ?= checkout.session.completed,customer.subscription.created,custom
 STRIPE_FORWARD_URL ?= http://localhost:$(PORT)/webhooks/stripe
 PROJECT_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 WEB_DIR := $(PROJECT_ROOT)/web
+GORELEASER := $(shell command -v goreleaser 2>/dev/null || echo "go run github.com/goreleaser/goreleaser/v2@latest")
 
 # ─── Development ─────────────────────────────────────────────
 
@@ -78,7 +80,7 @@ restart-dev: stop-dev dev-all ## Stop ports and run API + worker + web
 
 # ─── Build ───────────────────────────────────────────────────
 
-build: build-api build-worker build-web ## Build everything
+build: build-api build-worker build-cli build-web ## Build everything
 
 build-api: ## Build API binary
 	go build -o bin/api ./cmd/api
@@ -86,8 +88,17 @@ build-api: ## Build API binary
 build-worker: ## Build worker binary
 	go build -o bin/worker ./cmd/worker
 
+build-cli: ## Build CLI binary
+	go build -o bin/widia ./cmd/cli
+
 build-web: ## Build frontend
 	cd web && npm run build
+
+release-cli: ## Build and publish CLI release artifacts to GitHub (requires tags + token)
+	$(GORELEASER) release --clean
+
+release-cli-snapshot: ## Build CLI release assets without publishing
+	$(GORELEASER) release --snapshot --clean --skip=publish
 
 # ─── Quality ─────────────────────────────────────────────────
 
