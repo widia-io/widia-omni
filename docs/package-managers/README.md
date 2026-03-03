@@ -43,9 +43,9 @@ A criação pode ser manual; o GoReleaser cria/atualiza os manifests quando a re
 
 1. No push de tag (ou `workflow_dispatch`), workflow `release-cli` roda o GoReleaser.
 2. O GoReleaser gera:
-   - archives multiplataforma no `dist/`
+  - archives multiplataforma no `dist/`
   - `Casks/meufoco.rb`
-  - `scoop/meufoco.json`
+  - `meufoco.json`
 3. Os artefatos são publicados no GitHub Releases.
 4. O GoReleaser faz commit dos manifests nos repositórios configurados.
 
