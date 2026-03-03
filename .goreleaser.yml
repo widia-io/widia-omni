@@ -31,6 +31,34 @@ archives:
       - goos: windows
         format: zip
 
+brews:
+  - name: widia
+    description: "Interface CLI em modo TUI para gerenciar tarefas, áreas, projetos e espaços de trabalho"
+    homepage: "https://github.com/widia-io/widia-omni"
+    repository:
+      owner: widia-io
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    commit_author:
+      name: github-actions[bot]
+      email: 41898282+github-actions[bot]@users.noreply.github.com
+    test: 'system "#{bin}/widia", "version"'
+    install: bin.install "widia"
+
+scoops:
+  - name: widia
+    description: "Interface CLI em modo TUI para gerenciar tarefas, áreas, projetos e espaços de trabalho"
+    homepage: "https://github.com/widia-io/widia-omni"
+    repository:
+      owner: widia-io
+      name: scoop-bucket
+      token: "{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}"
+    commit_author:
+      name: github-actions[bot]
+      email: 41898282+github-actions[bot]@users.noreply.github.com
+
 checksum:
   name_template: checksums.txt
 
